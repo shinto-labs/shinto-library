@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: shinto
+Version: 0.1.0
+Summary: Shinto Labs default python library
+Home-page: http://www.shintolabs.nl
+Author: Tommy van Schie
+Author-email: tommy@shintolabs.nl
+Requires-Dist: pyyaml
