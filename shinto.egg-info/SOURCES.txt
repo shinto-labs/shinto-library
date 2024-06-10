@@ -1,9 +1,0 @@
-setup.py
-shinto/__init__.py
-shinto/config.py
-shinto/logging.py
-shinto.egg-info/PKG-INFO
-shinto.egg-info/SOURCES.txt
-shinto.egg-info/dependency_links.txt
-shinto.egg-info/requires.txt
-shinto.egg-info/top_level.txt
