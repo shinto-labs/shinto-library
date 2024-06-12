@@ -5,15 +5,16 @@ import logging
 import sys
 
 
-SHINTO_LOG_FORMAT='%(asctime)s.%(msecs)03d - [%(process)06d] %(name)s - %(levelname)s - %(message)s'
-SHINTO_LOG_DATEFMT='%Y-%m-%d %H:%M:%S'
+SHINTO_LOG_FORMAT = '%(asctime)s.%(msecs)03d - [%(process)06d] %(name)s - %(levelname)s - %(message)s'
+SHINTO_LOG_DATEFMT = '%Y-%m-%d %H:%M:%S'
+
 
 def setup_logging(
-            application_name: str = None,
-            loglevel: str = logging.WARNING,
-            log_to_stdout: bool = True,
-            log_to_file: bool = True,
-            log_filename: str = None):
+        application_name: str = None,
+        loglevel: str = logging.WARNING,
+        log_to_stdout: bool = True,
+        log_to_file: bool = True,
+        log_filename: str = None):
     """
     Setup logging, format etc.
     """
@@ -44,3 +45,47 @@ def setup_logging(
         logger.addHandler(file_handler)
 
     logging.root = logger
+
+
+def setup_uvicorn_log_config(
+        loglevel: str = logging.WARNING,
+        log_to_stdout: bool = True,
+        log_to_file: bool = True,
+        log_filename: str = None):
+    """
+    Setup logging for uvicorn
+    """
+    formatters = {
+        "default": {
+            "()": "uvicorn.logging.DefaultFormatter",
+            "fmt": SHINTO_LOG_FORMAT,
+            "datefmt": SHINTO_LOG_DATEFMT,
+        },
+    }
+    handlers = {}
+    loggers = {
+        "uvicorn": {"handlers": [], "level": loglevel, "propagate": False},
+        "uvicorn.error": {"handlers": [], "level": loglevel, "propagate": False},
+        "uvicorn.access": {"handlers": [], "level": loglevel, "propagate": False},
+    }
+    if log_to_stdout:
+        handlers.update({"default": {"formatter": "default",
+                        "class": "logging.StreamHandler", "stream": "ext://sys.stderr"}})
+        loggers["uvicorn"]["handlers"].append("default")
+        loggers["uvicorn.error"]["handlers"].append("default")
+        handlers.update({"access": {"formatter": "default",
+                        "class": "logging.StreamHandler", "stream": "ext://sys.stdout"}})
+        loggers["uvicorn.access"]["handlers"].append("access")
+    if log_to_file and log_filename:
+        handlers.update(
+            {"file": {"formatter": "default", "class": "logging.FileHandler", "filename": log_filename}})
+        loggers["uvicorn"]["handlers"].append("file")
+        loggers["uvicorn.error"]["handlers"].append("file")
+        loggers["uvicorn.access"]["handlers"].append("file")
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": formatters,
+        "handlers": handlers,
+        "loggers": loggers,
+    }
