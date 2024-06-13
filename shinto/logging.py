@@ -3,6 +3,7 @@ Logging setup
 """
 import logging
 import sys
+from typing import Union
 
 
 SHINTO_LOG_FORMAT = '%(asctime)s.%(msecs)03d - [%(process)06d] %(name)s - %(levelname)s - %(message)s'
@@ -11,7 +12,7 @@ SHINTO_LOG_DATEFMT = '%Y-%m-%d %H:%M:%S'
 
 def setup_logging(
         application_name: str = None,
-        loglevel: str | int = logging.WARNING,
+        loglevel: Union[str, int] = logging.WARNING,
         log_to_stdout: bool = True,
         log_to_file: bool = True,
         log_filename: str = None):
@@ -48,7 +49,7 @@ def setup_logging(
 
 
 def generate_uvicorn_log_config(
-        loglevel: str | int = logging.WARNING,
+        loglevel: Union[str, int] = logging.WARNING,
         log_to_stdout: bool = True,
         log_to_file: bool = True,
         log_filename: str = None) -> dict:
