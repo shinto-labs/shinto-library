@@ -11,7 +11,7 @@ SHINTO_LOG_DATEFMT = '%Y-%m-%d %H:%M:%S'
 
 def setup_logging(
         application_name: str = None,
-        loglevel: str = logging.WARNING,
+        loglevel: str | int = logging.WARNING,
         log_to_stdout: bool = True,
         log_to_file: bool = True,
         log_filename: str = None):
@@ -47,13 +47,27 @@ def setup_logging(
     logging.root = logger
 
 
-def setup_uvicorn_log_config(
-        loglevel: str = logging.WARNING,
+def generate_uvicorn_log_config(
+        loglevel: str | int = logging.WARNING,
         log_to_stdout: bool = True,
         log_to_file: bool = True,
-        log_filename: str = None):
+        log_filename: str = None) -> dict:
     """
-    Setup logging for uvicorn
+    Generate logging configuration for uvicorn
+
+    Parameters:
+    - loglevel (str | int): The logging level to be set for the Uvicorn loggers.
+      Can be specified as a string (e.g., "info", "warning") or as an integer (logging.INFO, logging.WARNING).
+      Defaults to logging.WARNING. See Uvicorn LOG_LEVELS for more information.
+    - log_to_stdout (bool): If True, logs will be output to standard error and standard output,
+      depending on the logger. Defaults to True.
+    - log_to_file (bool): If True, logs will also be written to a file specified by `log_filename`.
+      Defaults to True.
+    - log_filename (str): The filename of the log file. If `log_to_file` is True but `log_filename` is None,
+      no file logging will be set up. Defaults to None.
+
+    Returns:
+    dict: A dictionary containing the logging configuration for Uvicorn.
     """
     formatters = {
         "default": {
@@ -68,6 +82,7 @@ def setup_uvicorn_log_config(
         "uvicorn.error": {"handlers": [], "level": loglevel, "propagate": False},
         "uvicorn.access": {"handlers": [], "level": loglevel, "propagate": False},
     }
+
     if log_to_stdout:
         handlers.update({"default": {"formatter": "default",
                         "class": "logging.StreamHandler", "stream": "ext://sys.stderr"}})
@@ -81,6 +96,7 @@ def setup_uvicorn_log_config(
             {"file": {"formatter": "default", "class": "logging.FileHandler", "filename": log_filename}})
         for logger_name in loggers.keys():
             loggers[logger_name]["handlers"].append("file")
+
     return {
         "version": 1,
         "disable_existing_loggers": False,
