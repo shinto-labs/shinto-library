@@ -79,9 +79,8 @@ def setup_uvicorn_log_config(
     if log_to_file and log_filename:
         handlers.update(
             {"file": {"formatter": "default", "class": "logging.FileHandler", "filename": log_filename}})
-        loggers["uvicorn"]["handlers"].append("file")
-        loggers["uvicorn.error"]["handlers"].append("file")
-        loggers["uvicorn.access"]["handlers"].append("file")
+        for logger_name in loggers.keys():
+            loggers[logger_name]["handlers"].append("file")
     return {
         "version": 1,
         "disable_existing_loggers": False,
