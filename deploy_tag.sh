@@ -9,6 +9,14 @@ if [ -z "$VERSION_NUMBER" ]; then
     exit 1
 fi
 
+read -p "Are you sure you want merge development into main and create a tag with version $VERSION_NUMBER? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo "Exiting without merging and tagging."
+    exit 1
+fi
+
 echo "Get latest development changes and change branch to main."
 git checkout development && git pull && git checkout main && git pull
 
@@ -17,6 +25,3 @@ git merge development --commit --no-ff -m "Merge into main Version: $VERSION_NUM
 
 echo "Pushing changes to main branch and tags."
 git push origin main $VERSION_NUMBER
-
-echo "Creating a release."
-git release create "$VERSION_NUMBER" --title "Release $VERSION_NUMBER" --notes "Release $VERSION_NUMBER"
