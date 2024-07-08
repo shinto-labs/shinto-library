@@ -2,17 +2,17 @@
 
 set -e
 
-VERSION_NUMBER=$(grep 'version=' setup.py | sed "s/.*='\\(.*\\)',/\\1/")
+VERSION_NUMBER=$(grep 'version=' setup.py | sed "s/.*version=['\"]\\([^'\"]*\\)['\"],/\\1/")
 
 if [ -z "$VERSION_NUMBER" ]; then
     echo "Version number could not be extracted from setup.py"
     exit 1
 fi
 
-read -p "Are you sure you want merge development into main and create a tag with version $VERSION_NUMBER? (y/n) " -n 1 -r
+read -p """Make sure you pushed the latest changes to the development branch.
+Are you sure you want merge development into main and create a tag with version $VERSION_NUMBER? (y/n)""" -n 1 -r
 echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Exiting without merging and tagging."
     exit 1
 fi

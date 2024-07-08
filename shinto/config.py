@@ -1,30 +1,25 @@
-"""
-Config File handling
-"""
-import os
+"""Config File handling."""
+
+import configparser
+import copy
 import io
 import json
-import copy
-import configparser
+import os
+from typing import Any, Dict
 
 import yaml
 
-
-CONFIG_YAML = 'YAML'
-CONFIG_JSON = 'JSON'
-CONFIG_INI  = 'INI'
+CONFIG_YAML = "YAML"
+CONFIG_JSON = "JSON"
+CONFIG_INI = "INI"
 
 
 class ConfigError(Exception):
-    """
-    Gets raised when an unsupported config file type is found
-    """
+    """Gets raised when an unsupported config file type is found."""
 
 
-def load_config_file(file_path: str, defaults = None) -> dict:
-    """
-    Load config from file
-    """
+def load_config_file(file_path: str, defaults=None) -> Dict[str, Any]:
+    """Load config from file."""
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Config file not found: {file_path}")
 
@@ -32,16 +27,18 @@ def load_config_file(file_path: str, defaults = None) -> dict:
     file_extension = file_extension.lower()
 
     config_data = defaults
-    if file_extension in ['.yaml', '.yml']:
+    if file_extension in [".yaml", ".yml"]:
         with open(file_path, "r", encoding="utf-8") as yaml_file:
             config_data.update(yaml.safe_load(yaml_file))
-    elif file_extension in ['.json', '.js']:
+    elif file_extension in [".json", ".js"]:
         with open(file_path, "r", encoding="utf-8") as yaml_file:
             config_data.update(json.load(yaml_file))
     elif file_extension == ".ini":
         config = configparser.ConfigParser()
         config.read(file_path)
-        config_data.update({section: dict(config.items(section)) for section in config.sections()})
+        config_data.update(
+            {section: dict(config.items(section)) for section in config.sections()}
+        )
     else:
         raise ConfigError(f"Unsupported config file extension: {file_extension}")
 
@@ -49,9 +46,7 @@ def load_config_file(file_path: str, defaults = None) -> dict:
 
 
 def replace_passwords(data):
-    """
-    Replace all passwords in dict object before visualizing it.
-    """
+    """Replace all passwords in dict object before visualizing it."""
     if isinstance(data, dict):
         for key, value in data.items():
             if key.lower() in ["password", "pass", "passwd"]:
@@ -64,10 +59,7 @@ def replace_passwords(data):
 
 
 def output_config(configdata: dict, output_config_type: str = CONFIG_YAML) -> str:
-    """
-    Dump config dict to a output_config_type (yaml, json, ini)
-    """
-
+    """Dump config dict to a output_config_type (yaml, json, ini)."""
     config_data = replace_passwords(copy.deepcopy(configdata))
 
     if output_config_type == CONFIG_YAML:
