@@ -1,0 +1,29 @@
+name: Ruff format check code.
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  ruff-format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Check code format
+        run: |
+          ruff check .
+
+          if [[ $(ruff check .) != "All checks passed!" ]]; then
+            echo "One or more files are not formatted correctly."
+            exit 1
+          fi
