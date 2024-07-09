@@ -11,12 +11,13 @@ SHINTO_LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 
 def setup_logging(
-    application_name: str = None,
-    loglevel: Union[str, int] = logging.WARNING,
-    log_to_stdout: bool = True,
-    log_to_file: bool = True,
-    log_filename: str = None,
-):
+        application_name: str = None,
+        loglevel: Union[str, int] = logging.WARNING,
+        log_to_stdout: bool = True,
+        log_to_file: bool = True,
+        log_to_journald: bool = False,
+        log_filename: str = None):
+
     """Set up logging, format etc."""
     if not application_name:
         application_name = sys.argv[0]
@@ -44,6 +45,16 @@ def setup_logging(
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
+    # Setup journald logging if requested
+    if log_to_journald:
+        try:
+            from systemd.journal import JournalHandler
+            journald_handler = JournalHandler()
+            journald_handler.setFormatter(formatter)
+            logger.addHandler(journald_handler)
+        except ImportError:
+            logger.error("Failed to import systemd.journal. Journal logging not available.")
+
     logging.root = logger
 
 
@@ -51,6 +62,7 @@ def generate_uvicorn_log_config(
     loglevel: Union[str, int] = logging.WARNING,
     log_to_stdout: bool = True,
     log_to_file: bool = True,
+    log_to_journald: bool = False,
     log_filename: str = None,
 ) -> dict:
     """Generate logging configuration for uvicorn.
@@ -104,6 +116,7 @@ def generate_uvicorn_log_config(
             }
         )
         loggers["uvicorn.access"]["handlers"].append("access")
+    
     if log_to_file and log_filename:
         handlers.update(
             {
@@ -116,6 +129,27 @@ def generate_uvicorn_log_config(
         )
         for logger_value in loggers.values():
             logger_value["handlers"].append("file")
+
+    if log_to_journald:
+        try:
+            from systemd.journal import JournalHandler
+            handlers.update(
+                {
+                    "journald": {
+                        "formatter": "default",
+                        "class": "systemd.journal.JournalHandler",
+                    }
+                }
+            )
+            for logger_value in loggers.values():
+                logger_value["handlers"].append("journald")
+        except ImportError:
+            loggers["uvicorn"]["level"] = "ERROR"
+            loggers["uvicorn.error"]["level"] = "ERROR"
+            loggers["uvicorn.access"]["level"] = "ERROR"
+            loggers["uvicorn"]["handlers"] = []
+            loggers["uvicorn.error"]["handlers"] = []
+            loggers["uvicorn.access"]["handlers"] = []
 
     return {
         "version": 1,
