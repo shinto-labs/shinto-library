@@ -46,12 +46,12 @@ class TestUvicornEntrypoint(unittest.TestCase):
     def test_run_fastapi_app(self):
         """Test that the FastAPI app can be run."""
         server_thread = threading.Thread(
-            target=run_fastapi_app, args=(app, "localhost", 80010, False), daemon=True
+            target=run_fastapi_app, args=(app, "0.0.0.0", 40010, False), daemon=True
         )
         server_thread.start()
         self.assertTrue(server_thread.is_alive())
 
-        conn = http.client.HTTPConnection("localhost", 80010)
+        conn = http.client.HTTPConnection("localhost", 40010)
         conn.request("GET", "/")
         response = conn.getresponse()
         response_data = ast.literal_eval(response.read().decode())
@@ -63,12 +63,12 @@ class TestUvicornEntrypoint(unittest.TestCase):
         loglevel = logging.INFO
         logging.root.setLevel(loglevel)
         server_thread = threading.Thread(
-            target=run_fastapi_app, args=(app, "localhost", 80011, False), daemon=True
+            target=run_fastapi_app, args=(app, "0.0.0.0", 40011, False), daemon=True
         )
         server_thread.start()
         self.assertTrue(server_thread.is_alive())
 
-        conn = http.client.HTTPConnection("localhost", 80011)
+        conn = http.client.HTTPConnection("localhost", 40011)
         conn.request("GET", "/loggers")
         response = conn.getresponse()
         response_data = ast.literal_eval(response.read().decode())
