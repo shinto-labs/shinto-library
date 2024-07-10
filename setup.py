@@ -21,4 +21,3 @@ setup(
         "all": ["psycopg[pool]==3.2.1", "jsonschema==4.23.0", "uvicorn==0.30.1"],
     },
 )
-
