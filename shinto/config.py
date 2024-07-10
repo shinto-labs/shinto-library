@@ -5,7 +5,7 @@ import copy
 import io
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import yaml
 
@@ -18,29 +18,56 @@ class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
 
 
-def load_config_file(file_path: str, defaults=None) -> Dict[str, Any]:
+def _verify_config(data: Dict[str, Any], required_params: Dict[str, Any]):
+    """Verify if required params are present in the config data."""
+    for key, value in required_params.items():
+        if key not in data.keys():
+            raise KeyError(f"Required parameter not found in config: {key}")
+
+        if isinstance(value, dict):
+            _verify_config(data[key], value)
+    return data
+
+
+def load_config_file(
+    file_path: str,
+    defaults=None,
+    start_element: List[str] = None,
+    required_params: List[str] = None,
+) -> Dict[str, Any]:
     """Load config from file."""
+    start_element = start_element or []
+    required_params = required_params or []
+
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Config file not found: {file_path}")
 
     _, file_extension = os.path.splitext(file_path)
     file_extension = file_extension.lower()
 
-    config_data = defaults
+    config = defaults
     if file_extension in [".yaml", ".yml"]:
         with open(file_path, "r", encoding="utf-8") as yaml_file:
-            config_data.update(yaml.safe_load(yaml_file))
+            config.update(yaml.safe_load(yaml_file))
     elif file_extension in [".json", ".js"]:
         with open(file_path, "r", encoding="utf-8") as yaml_file:
-            config_data.update(json.load(yaml_file))
+            config.update(json.load(yaml_file))
     elif file_extension == ".ini":
-        config = configparser.ConfigParser()
-        config.read(file_path)
-        config_data.update(
-            {section: dict(config.items(section)) for section in config.sections()}
-        )
+        config_data = configparser.ConfigParser()
+        config_data.read(file_path)
+        config.update({section: dict(config.items(section)) for section in config.sections()})
     else:
         raise ConfigError(f"Unsupported config file extension: {file_extension}")
+
+    if len(start_element) > 0:
+        for item in start_element:
+            try:
+                config = config[item]
+            except KeyError as e:
+                raise KeyError(f"Invalid item path in config file: {start_element}.") from e
+
+    if len(required_params) > 0:
+        _verify_config(config, required_params)
 
     return config_data
 
