@@ -15,5 +15,5 @@ def push_metrics(application_name, metric_name, value):
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO metrics (application_name, metric_name, value) VALUES (%s, %s, %s)",
-                (application_name, metric_name, value))
-
+                (application_name, metric_name, value),
+            )

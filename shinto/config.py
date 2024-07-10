@@ -55,9 +55,9 @@ def load_config_file(
     elif file_extension == ".ini":
         config_data = configparser.ConfigParser()
         config_data.read(file_path)
-        config.update({
-            section: dict(config_data.items(section)) for section in config_data.sections()
-        })
+        config.update(
+            {section: dict(config_data.items(section)) for section in config_data.sections()}
+        )
     else:
         raise ConfigError(f"Unsupported config file extension: {file_extension}")
 
