@@ -1,0 +1,46 @@
+name: Test XML processor
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-coverage-xmlprocessor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv && pipenv requirements --dev > requirements.txt && pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          nose2 -s tests -C --coverage=shinto --coverage-report=term
+          coverage report -m > coverage.txt
+
+      - name: Check coverage
+        run: |
+          # Extract the total coverage percentage
+          COVERAGE=$(grep -Po 'TOTAL\s+\d+\s+\d+\s+\K\d+%' coverage.txt | tr -d '%')
+          echo "Total coverage: $COVERAGE%"
+
+          # Fail the job if coverage is less than 90%
+          if [ $COVERAGE -lt 90 ]; then
+            echo "Code coverage ($COVERAGE%) is below the threshold of 90%"
+            exit 1
+          else
+            echo "Code coverage ($COVERAGE%) meets the threshold of 90%"
+          fi
