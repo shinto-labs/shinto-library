@@ -55,7 +55,9 @@ def load_config_file(
     elif file_extension == ".ini":
         config_data = configparser.ConfigParser()
         config_data.read(file_path)
-        config.update({section: dict(config.items(section)) for section in config.sections()})
+        config.update({
+            section: dict(config_data.items(section)) for section in config_data.sections()
+        })
     else:
         raise ConfigError(f"Unsupported config file extension: {file_extension}")
 
@@ -69,7 +71,7 @@ def load_config_file(
     if len(required_params) > 0:
         _verify_config(config, required_params)
 
-    return config_data
+    return config
 
 
 def replace_passwords(data):

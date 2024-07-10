@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """Setup file for the shinto package."""
 
 from setuptools import setup
@@ -20,3 +21,4 @@ setup(
         "all": ["psycopg[pool]==3.2.1", "jsonschema==4.23.0", "uvicorn==0.30.1"],
     },
 )
+

@@ -77,7 +77,7 @@ class DatabaseConnection:
         """Close the database connection pool."""
         await self._pool.close()
 
-    async def execute_query(self, query: str) -> List[Tuple]:
+    async def execute_query(self, query: str, **kwargs) -> List[Tuple]:
         """Execute a query on the database."""
         data = None
 
@@ -85,7 +85,7 @@ class DatabaseConnection:
             async with self._pool.connection() as conn:
                 async with conn.cursor() as cur:
                     try:
-                        await cur.execute(query)
+                        await cur.execute(query, **kwargs)
                         data = await cur.fetchall()
                     except psycopg.Error as e:
                         logging.error("Error executing query: %s", str(e))
