@@ -11,6 +11,7 @@ setuptools = "==70.2.0"
 shinto = {path= ".", extras = ["all"], editable=true} # editable=true is the same as python setup.py develop
 ruff = "==0.5.1"
 nose2 = {extras = ["coverage_plugin"], version = "==0.15.1"}
+fastapi = "==0.111.0"
 
 [requires]
 python_version = "3.12"
