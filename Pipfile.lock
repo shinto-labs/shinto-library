@@ -142,6 +142,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==0.15.1"
         },
+        "prometheus-client": {
+            "hashes": [
+                "sha256:287629d00b147a32dcb2be0b9df905da599b2d82f80377083ec8463309a4bb89",
+                "sha256:cde524a85bce83ca359cc837f28b8c0db5cac7aa653a588fd7e84ba061c329e7"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==0.20.0"
+        },
         "psycopg": {
             "extras": [
                 "pool"
@@ -378,10 +386,14 @@
             "version": "==2024.1"
         },
         "uvicorn": {
+            "extras": [
+                "standard"
+            ],
             "hashes": [
                 "sha256:cd17daa7f3b9d7a24de3617820e634d0933b69eed8e33a516071174427238c81",
                 "sha256:d46cd8e0fd80240baffbcd9ec1012a712938754afcf81bce56c024c1656aece8"
             ],
+            "markers": "python_version >= '3.8'",
             "version": "==0.30.1"
         }
     }
