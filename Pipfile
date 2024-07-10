@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# Shinto is a library/package so packages should be installed in setup.py
+setuptools = "==70.2.0"
+
+[dev-packages]
+shinto = {path= ".", extras = ["all"], editable=true}
+ruff = "==0.5.1"
+nose2 = {extras = ["coverage_plugin"], version = "==0.15.1"}
+
+[requires]
+python_version = "3.12"

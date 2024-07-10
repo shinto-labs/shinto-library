@@ -4,11 +4,15 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from typing import List, Tuple
 
-import jsonschema
-import psycopg
-import psycopg_pool
+try:
+    import jsonschema
+    import psycopg
+    import psycopg_pool
+except ImportError as e:
+    raise ImportError("Database module requires shinto['database'] or shinto['all'] extras.") from e
 
 from .config import load_config_file
 
@@ -45,6 +49,9 @@ class DatabaseConnection:
         If arguments are provided, they take precedence over environment variables.
 
         """
+        if sys.platform.startswith("win"):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
         if use_env:
             database = database or os.environ.get("PGDATABASE")
             user = user or os.environ.get("PGUSER")
@@ -172,36 +179,28 @@ def database_connection_from_config(
         start_element: Path to the database connection parameters in the configuration file.
         Should be used if the connection parameters are not at the root level of the config file.
 
+    The configuration file should have the following parameters:
+        minconn: Minimum number of connections in the pool.
+        maxconn: Maximum number of connections in the pool.
+        database: Database name.
+        user: Username.
+        password: Password.
+        host: Hostname.
+        port: Port number.
+
     """
-    start_element = start_element or []
-    config_filename = os.path.abspath(config_filename)
-    config = dict(load_config_file(config_filename))
-
-    # Get parameters from start_element in config file
-    if len(start_element) > 0:
-        for item in start_element:
-            try:
-                config = config[item]
-            except KeyError as e:
-                raise KeyError(f"Invalid item path in config file: {start_element}.") from e
-
-    # Check for required parameters
     required_params = {
-        "minconn",
-        "maxconn",
-        "database",
-        "user",
-        "password",
-        "host",
-        "port",
+        "minconn": None,
+        "maxconn": None,
+        "database": None,
+        "user": None,
+        "password": None,
+        "host": None,
+        "port": None,
     }
 
-    config_keys = set(config.keys())
-    missing_params = required_params - config_keys
-    if missing_params:
-        raise KeyError(f"Missing connection parameters in config file: {', '.join(missing_params)}")
-    invalid_params = config_keys - required_params
-    if invalid_params:
-        raise KeyError(f"Invalid connection parameters in config file: {', '.join(invalid_params)}")
+    config = load_config_file(
+        config_filename, required_params=required_params, start_element=start_element
+    )
 
     return DatabaseConnection(**config)
