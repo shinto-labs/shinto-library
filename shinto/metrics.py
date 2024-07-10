@@ -2,7 +2,10 @@
 
 import logging
 
-from psycopg import connect
+try:
+    from psycopg import connect
+except ImportError as e:
+    raise ImportError("Metrics module requires shinto['database'] or shinto['all'] extras.") from e
 
 
 def push_metrics(application_name, metric_name, value):
