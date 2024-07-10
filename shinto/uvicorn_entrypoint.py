@@ -2,7 +2,7 @@
 
 import copy
 import logging
-from typing import List
+from typing import Any, List
 
 from .config import load_config_file
 from .logging import setup_logging
@@ -14,11 +14,12 @@ except ImportError as e:
     raise ImportError("Uvicorn module requires shinto['uvicorn'] or shinto['all'] extras.") from e
 
 
-def run_fastapi_app(app: str, host: str, port: int, reload: bool, logger: logging.Logger = None):
-    """Run the uvicorn server with the given FastApi app.
+def run_fastapi_app(app: Any, host: str, port: int, reload: bool, logger: logging.Logger = None):
+    """
+    Run the uvicorn server with the given FastApi app.
 
     Args:
-        app: FastAPI application path e.g. src.app:app.
+        app: FastAPI application path e.g. src.app:app or FastAPI instance.
         host: Host to run the server on.
         port: Port to run the server on.
         reload: Enable auto-reload.
@@ -29,20 +30,23 @@ def run_fastapi_app(app: str, host: str, port: int, reload: bool, logger: loggin
 
     log_config = copy.deepcopy(LOGGING_CONFIG)
     for uvicorn_logger in log_config["loggers"]:
-        uvicorn_logger["handlers"] = logger.handlers
-        uvicorn_logger["level"] = logger.level
-        uvicorn_logger["propagate"] = True
+        log_config["loggers"][uvicorn_logger]["handlers"] = []
+        log_config["loggers"][uvicorn_logger]["level"] = logger.level
+        log_config["loggers"][uvicorn_logger]["propagate"] = True
     log_config["formatters"] = {}
     log_config["handlers"] = {}
+
+    logging.info("Starting uvicorn server with log config: %s", log_config)
 
     uvicorn.run(app=app, host=host, port=port, log_config=log_config, reload=reload)
 
 
-def run_fastapi_app_using_config(app: str, config_filename: str, start_element: List[str] = None):
-    """Run the uvicorn server with the given config file.
+def run_fastapi_app_using_config(app: Any, config_filename: str, start_element: List[str] = None):
+    """
+    Run the uvicorn server with the given config file.
 
     Args:
-        app: FastAPI application path e.g. src.app:app.
+        app: FastAPI application path e.g. src.app:app or FastAPI instance.
         config_filename: Path to the config file.
         start_element: Path to the database connection parameters in the configuration file.
         Should be used if the connection parameters are not at the root level of the config file.
