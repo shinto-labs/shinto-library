@@ -33,7 +33,8 @@ class DatabaseConnection:
         port: int = None,
         use_env: bool = False,
     ):
-        """Initialize the database class.
+        """
+        Initialize the database class.
 
         Args:
             minconn: (defaults to 1) Minimum number of connections in the pool.
@@ -172,7 +173,8 @@ class DatabaseConnection:
 def database_connection_from_config(
     config_filename: str, start_element: List[str] = None
 ) -> DatabaseConnection:
-    """Create a database connection from a configuration file.
+    """
+    Create a database connection from a configuration file.
 
     Args:
         config_filename: Path to the configuration file.

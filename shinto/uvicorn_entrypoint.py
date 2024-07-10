@@ -15,7 +15,8 @@ except ImportError as e:
 
 
 def run_fastapi_app(app: str, host: str, port: int, reload: bool, logger: logging.Logger = None):
-    """Run the uvicorn server with the given FastApi app.
+    """
+    Run the uvicorn server with the given FastApi app.
 
     Args:
         app: FastAPI application path e.g. src.app:app.
@@ -39,7 +40,8 @@ def run_fastapi_app(app: str, host: str, port: int, reload: bool, logger: loggin
 
 
 def run_fastapi_app_using_config(app: str, config_filename: str, start_element: List[str] = None):
-    """Run the uvicorn server with the given config file.
+    """
+    Run the uvicorn server with the given config file.
 
     Args:
         app: FastAPI application path e.g. src.app:app.

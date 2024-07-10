@@ -8,9 +8,9 @@ To release a tag run: `./release.sh` or `bash ./release.sh` on Windows.
 
 
 ## Tests
- Tests use Nose2 
+ Tests use ruff and Nose2 
 
-### test prerequisits
+### Prerequisits
 
 Make a Python Virtual Env
 `python3 -m venv test-env`
