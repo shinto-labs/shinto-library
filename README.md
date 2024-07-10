@@ -2,29 +2,29 @@
 
 Library for shared config and connections for Shinto repositories
 
-## Release
+## Prerequisites
 
-To release a tag run: `./release.sh` or `bash ./release.sh` on Windows.
+- make
+- python
 
+### Extra Windows prerequisites:
 
-## Tests
- Tests use ruff and Nose2 
+- Git Bash (make sure installation path is added to env variables e.g. C:\Program Files\Git\bin)
 
-### Prerequisits
+## Actions
 
-Make a Python Virtual Env
-`python3 -m venv test-env`
+Full list of commands in: [Makefile](./Makefile)
 
-Access the virtual Env
-`source test-env/bin/activate`
+Make sure to install the dependencies with `make install`
 
-Install libraries needed for testing:
-```
-pip install nose2
-python ./setup.py develop
-```
+### Release
 
-### Run tests
-(first access test-env: `source ./test-env/bin/activate`)
+Run `make release`
 
-`./run-tests.sh`
+This merges development into main and creates a release with the provided tag.
+
+### Tests
+
+Unit test: `make test`
+Unit test with coverage: `make test_coverage`
+Check ruff format: `make ruff`
