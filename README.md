@@ -18,14 +18,16 @@ Full list of commands in: [Makefile](./Makefile)
 
 Make sure to install the dependencies with `make install`
 
-### Release
+### Release / Deployment
 
 Run `make release`
 
 This merges development into main and creates a release with the provided tag.
 
-### Tests
+### Testing
 
-Unit test: `make test`
-Unit test with coverage: `make test_coverage`
-Check ruff format: `make ruff`
+#### Run unit tests: `make test`
+
+#### Run unit tests with coverage: `make test_coverage`
+
+#### Check ruff format: `make ruff`
