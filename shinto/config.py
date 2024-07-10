@@ -45,7 +45,7 @@ def load_config_file(
     _, file_extension = os.path.splitext(file_path)
     file_extension = file_extension.lower()
 
-    config = defaults
+    config = defaults or {}
     if file_extension in [".yaml", ".yml"]:
         with open(file_path, "r", encoding="utf-8") as yaml_file:
             config.update(yaml.safe_load(yaml_file))

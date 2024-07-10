@@ -1,8 +1,18 @@
 """Test the config module."""
 
+import os
+import tempfile
 import unittest
 
 from shinto import config
+
+temp_dir = ""
+
+
+def setUpModule():
+    """Set up a tmp folder."""
+    global temp_dir
+    temp_dir = tempfile.mkdtemp()
 
 
 class TestConfig(unittest.TestCase):
@@ -11,19 +21,28 @@ class TestConfig(unittest.TestCase):
     def test_load_config_file(self):
         """Test loading config files."""
         # Test loading a YAML config file
-        yaml_file_path = "/path/to/config.yaml"
+        yaml_file_path = os.path.join(temp_dir, "config.yaml")
+        open(yaml_file_path, "w").write("test: value")
+        self.assertTrue(os.path.isfile(yaml_file_path))
         yaml_config = config.load_config_file(yaml_file_path)
         self.assertIsInstance(yaml_config, dict)
+        self.assertDictEqual(yaml_config, {"test": "value"})
 
         # Test loading a JSON config file
-        json_file_path = "/path/to/config.json"
+        json_file_path = os.path.join(temp_dir, "config.json")
+        open(json_file_path, "w").write('{"test": "value"}')
+        self.assertTrue(os.path.isfile(json_file_path))
         json_config = config.load_config_file(json_file_path)
         self.assertIsInstance(json_config, dict)
+        self.assertDictEqual(json_config, {"test": "value"})
 
         # Test loading an INI config file
-        ini_file_path = "/path/to/config.ini"
+        ini_file_path = os.path.join(temp_dir, "config.ini")
+        open(ini_file_path, "w").write("[test]\nkey = value")
+        self.assertTrue(os.path.isfile(ini_file_path))
         ini_config = config.load_config_file(ini_file_path)
         self.assertIsInstance(ini_config, dict)
+        self.assertDictEqual(ini_config, {"test": {"key": "value"}})
 
         # Test loading a non-existent config file
         non_existent_file_path = "/path/to/non_existent_config.yaml"
