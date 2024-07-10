@@ -67,7 +67,8 @@ def generate_uvicorn_log_config(
     log_to_journald: bool = False,
     log_filename: str = None,
 ) -> dict:
-    """Generate logging configuration for uvicorn.
+    """
+    Generate logging configuration for uvicorn.
 
     Args:
         loglevel: Log level for the logger.
