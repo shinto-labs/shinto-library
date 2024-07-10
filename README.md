@@ -6,8 +6,9 @@ Library for shared config and connections for Shinto repositories
 
 - make
 - python
+- git
 
-### Extra Windows prerequisites:
+#### Aditional Windows prerequisites:
 
 - Git Bash (make sure installation path is added to env variables e.g. C:\Program Files\Git\bin)
 
