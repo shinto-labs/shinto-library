@@ -1,7 +1,7 @@
+from setuptools import setup
+
 #!/usr/bin/env python3
 """Setup file for the shinto package."""
-
-from setuptools import setup
 
 setup(
     name="shinto",
@@ -9,7 +9,9 @@ setup(
     description="Shinto Labs default python library",
     author="Tommy van Schie",
     author_email="tommy@shintolabs.nl",
+    maintainer="Shinto Labs BV",
+    maintainer_email="info@shintolabs.nl",
     url="http://www.shintolabs.nl",
     packages=["shinto"],
-    install_requires=["pyyaml", "psycopg[pool]", "jsonschema"],
+    install_requires=["pyyaml", "psycopg[pool]", "jsonschema", "prometheus_client"],
 )
