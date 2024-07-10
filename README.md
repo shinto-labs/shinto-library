@@ -1,6 +1,6 @@
 # Shinto Library
 
-Library for shared config and connections for Shinto repositories
+Library for shared modules in Shinto repositories
 
 ## Prerequisites
 
