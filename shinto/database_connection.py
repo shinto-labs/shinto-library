@@ -95,25 +95,27 @@ class DatabaseConnection:
 
         return data
 
-    async def write_records(self, query: str, records: List[Tuple]) -> bool:
+    async def write_records(self, query: str, records: List[Tuple]) -> int:
         """Write data records to the database."""
         try:
             async with self._pool.connection() as conn:
                 async with conn.cursor() as cur:
                     try:
                         await cur.execute(query, records)
+                        affected_rows = cur.affected_rows
                         await conn.commit()
-                        return True
                     except psycopg.Error as e:
                         logging.error(
                             "Performing rollback, " + "Error writing records to database: %s",
                             str(e),
                         )
                         await conn.rollback()
-                        return False
+                        affected_rows = -1
         except psycopg.Error as e:
             logging.error("Error setting up database connection: %s", str(e))
-            return False
+            affected_rows = -2
+
+        return affected_rows
 
     async def execute_json_query(
         self, query: str, schema_filenames: List[str] = None
