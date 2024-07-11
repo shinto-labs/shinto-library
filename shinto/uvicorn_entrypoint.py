@@ -2,19 +2,27 @@
 
 import copy
 import logging
-from typing import Any, List
+from typing import Any, Callable
 
 from .config import load_config_file
 from .logging import setup_logging
 
 try:
     import uvicorn
+    from uvicorn._types import ASGIApplication
     from uvicorn.config import LOGGING_CONFIG
 except ImportError as e:
-    raise ImportError("Uvicorn module requires shinto['uvicorn'] or shinto['all'] extras.") from e
+    msg = "Uvicorn module requires shinto['uvicorn'] or shinto['all'] extras."
+    raise ImportError(msg) from e
 
 
-def run_fastapi_app(app: Any, host: str, port: int, reload: bool, logger: logging.Logger = None):
+def run_fastapi_app(
+    app: ASGIApplication | Callable[..., Any] | str,
+    host: str,
+    port: int,
+    reload: bool,
+    logger: logging.Logger | None = None,
+):
     """
     Run the uvicorn server with the given FastApi app.
 
@@ -41,7 +49,11 @@ def run_fastapi_app(app: Any, host: str, port: int, reload: bool, logger: loggin
     uvicorn.run(app=app, host=host, port=port, log_config=log_config, reload=reload)
 
 
-def run_fastapi_app_using_config(app: Any, config_filename: str, start_element: List[str] = None):
+def run_fastapi_app_using_config(
+    app: ASGIApplication | Callable[..., Any] | str,
+    config_filename: str,
+    start_element: list[str] | None = None,
+):
     """
     Run the uvicorn server with the given config file.
 
