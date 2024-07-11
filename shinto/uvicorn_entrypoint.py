@@ -94,7 +94,9 @@ def run_fastapi_app_using_config(
     }
 
     config = load_config_file(
-        config_filename, required_params=required_params, start_element=start_element
+        config_filename,
+        required_params=required_params,
+        start_element=start_element,
     )
 
     setup_logging(**config["logging"])

@@ -6,7 +6,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 
-from .json_schema import async_validate_json_against_schemas, validate_json_against_schemas
+from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
 
 try:
     import psycopg
