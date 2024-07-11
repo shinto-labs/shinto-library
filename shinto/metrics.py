@@ -3,15 +3,17 @@
 import json
 import os
 
-DEFAULT_PROMETHEUS_COLLECTER_PATH = os.getenv("PROMETHEUS_COLLECTER_PATH", "/var/lib/node_exporter/textfile_collector")
-DEFAULT_PERSISTANT_METRIC_JSONFILE = os.getenv("PERSISTANT_METRIC_JSONFILE", "/var/lib/shinto/metrics.json")
+DEFAULT_PROMETHEUS_COLLECTER_PATH = os.getenv(
+    "PROMETHEUS_COLLECTER_PATH", "/var/lib/node_exporter/textfile_collector"
+)
+DEFAULT_PERSISTANT_METRIC_JSONFILE = os.getenv(
+    "PERSISTANT_METRIC_JSONFILE", "/var/lib/shinto/metrics.json"
+)
 
 
 def push_metric(
-        application_name,
-        metric,
-        value,
-        prometheus_collecter_path=DEFAULT_PROMETHEUS_COLLECTER_PATH ):
+    application_name, metric, value, prometheus_collecter_path=DEFAULT_PROMETHEUS_COLLECTER_PATH
+):
     """
     Push a metric to the Prometheus Pushgateway.
 
@@ -67,7 +69,7 @@ class PersistantMetrics:
         with open(self._metric_file, "w") as metric_file:
             json.dump(self._metrics, metric_file)
 
-    def push_metric(self, application_name, metric, value = 0):
+    def push_metric(self, application_name, metric, value=0):
         """
         Push a metric to the Prometheus Pushgateway.
 
@@ -96,13 +98,15 @@ class PersistantMetrics:
             except TypeError:
                 self._metrics[f"{application_name}_{metric}"] = 1
         else:
-            self._metrics[f"{application_name}_{metric}"] =  1
+            self._metrics[f"{application_name}_{metric}"] = 1
 
         self._save_metrics()
         push_metric(application_name, metric, self._metrics[f"{application_name}_{metric}"])
         return self._metrics[f"{application_name}_{metric}"]
 
+
 _persistant_metrics = None
+
 
 def init_persistant_metrics(metric_file=DEFAULT_PERSISTANT_METRIC_JSONFILE) -> PersistantMetrics:
     """Initialize the persistant metrics."""
@@ -110,9 +114,9 @@ def init_persistant_metrics(metric_file=DEFAULT_PERSISTANT_METRIC_JSONFILE) -> P
     _persistant_metrics = PersistantMetrics(metric_file)
     return _persistant_metrics
 
+
 def _get_persistant_metrics() -> PersistantMetrics:
     global _persistant_metrics
     if _persistant_metrics is None:
         _persistant_metrics = init_persistant_metrics()
     return _persistant_metrics
-

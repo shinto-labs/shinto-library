@@ -7,7 +7,8 @@ __all__ = [
     "output_config",
     "push_metric",
     "init_persistant_metrics",
-    "inc_persistant_counter",]
+    "inc_persistant_counter",
+]
 
 from .config import load_config_file, output_config
 from .logging import setup_logging

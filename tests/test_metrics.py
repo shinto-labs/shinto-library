@@ -10,6 +10,7 @@ APPLICATION_NAME = "my_app"
 METRIC_PATH = "/tmp"
 METRIC_NAME = "request"
 
+
 class TestMetrics(unittest.TestCase):
     """Test the metrics module."""
 
@@ -25,14 +26,15 @@ class TestMetrics(unittest.TestCase):
         push_metric(APPLICATION_NAME, METRIC_NAME, 100, METRIC_PATH)
 
         metric_file_path = os.path.join(METRIC_PATH, f"{APPLICATION_NAME}_{METRIC_NAME}.prom")
-        self.assertTrue(os.path.exists( metric_file_path ))
+        self.assertTrue(os.path.exists(metric_file_path))
 
-        with open(metric_file_path , "r") as f:
+        with open(metric_file_path, "r") as f:
             data = f.read()
             self.assertIn(f"{APPLICATION_NAME}_{METRIC_NAME} = 100", data)
 
 
 METRICS_FILE_NAME = "/tmp/metrics.json"
+
 
 class TestPersistantMetrics(unittest.TestCase):
     """Test the metrics module."""
@@ -41,7 +43,7 @@ class TestPersistantMetrics(unittest.TestCase):
         """Tear down the test."""
         try:
             os.remove(METRICS_FILE_NAME)
-        except: # pylint: disable=broad-except # noqa: E722
+        except:  # pylint: disable=broad-except # noqa: E722
             pass
 
     def test_create_persistant_counter(self):
@@ -72,5 +74,5 @@ class TestPersistantMetrics(unittest.TestCase):
             self.assertEqual(counter_value, 42)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
