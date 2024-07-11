@@ -1,10 +1,9 @@
 """Test cases for the JSON schema module."""
 
 import asyncio
-from itertools import cycle
 import json
-import random
 import unittest
+from itertools import cycle
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 from shinto.jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
