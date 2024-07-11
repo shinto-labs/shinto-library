@@ -11,8 +11,6 @@ import jsonschema
 
 def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
-    validate_ok = True
-
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
@@ -22,18 +20,16 @@ def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> 
                 jsonschema.validate(data, schema)
             except jsonschema.SchemaError:
                 logging.exception("JSON schema error in %s", schema_filepath)
-                validate_ok = False
+                return False
             except jsonschema.ValidationError:
                 logging.exception("JSON validation error in %s", schema_filepath)
-                validate_ok = False
+                return False
 
-    return validate_ok
+    return True
 
 
 async def async_validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
-    validate_ok = True
-
     tasks: dict[asyncio.Future, str] = {}
     loop = asyncio.get_event_loop()
 
@@ -58,9 +54,9 @@ async def async_validate_json_against_schemas(data: object, schema_filenames: li
                 raise exception
         except jsonschema.SchemaError:
             logging.exception("JSON schema error in %s", schema_filepath)
-            validate_ok = False
+            return False
         except jsonschema.ValidationError:
             logging.exception("JSON validation error in %s", schema_filepath)
-            validate_ok = False
+            return False
 
-    return validate_ok
+    return True
