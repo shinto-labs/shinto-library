@@ -4,7 +4,7 @@ import json
 import unittest
 from unittest.mock import mock_open, patch
 
-from shinto.json_schema import validate_json_against_schemas
+from shinto.jsonschema import validate_json_against_schemas
 
 test_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
