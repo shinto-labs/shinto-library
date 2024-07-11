@@ -12,7 +12,8 @@ try:
     import psycopg
     import psycopg_pool
 except ImportError as e:
-    raise ImportError("Database module requires shinto['database'] or shinto['all'] extras.") from e
+    msg = "Database module requires shinto['database'] or shinto['all'] extras."
+    raise ImportError(msg) from e
 
 from .config import load_config_file
 
@@ -22,26 +23,26 @@ class BaseDatabaseConnection(ABC):
 
     def __init__(
         self,
-        minconn: int = None,
-        maxconn: int = None,
-        database: str = None,
-        user: str = None,
-        password: str = None,
-        host: str = None,
-        port: int = None,
+        minconn: int = 1,
+        maxconn: int = 3,
+        database: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
+        port: int = 6432,
         use_env: bool = False,
     ):
         """
         Initialize the database class.
 
         Args:
-            minconn: (defaults to 1) Minimum number of connections in the pool.
-            maxconn: (defaults to 3) Maximum number of connections in the pool.
+            minconn: Minimum number of connections in the pool.
+            maxconn: Maximum number of connections in the pool.
             database: Database name.
             user: Database user.
             password: Database password.
             host: Database host.
-            port: (defaults to 6432) Database port.
+            port: Database port.
             use_env: Use environment variables for connection parameters.
 
         Env variables can be provided as: `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
@@ -55,13 +56,10 @@ class BaseDatabaseConnection(ABC):
             host = host or os.environ.get("PGHOST")
             port = port or os.environ.get("PGPORT")
 
-        port = port or 6432
-        minconn = minconn or 1
-        maxconn = maxconn or 3
-
         missing_params = [param for param, value in locals().items() if value is None]
         if missing_params:
-            raise ValueError(f"Missing required parameters: {', '.join(missing_params)}")
+            msg = f"Missing required parameters: {', '.join(missing_params)}"
+            raise ValueError(msg)
 
         conninfo = f"dbname={database} user={user} password={password} host={host} port={port}"
         self._setup_connection_pool(minconn, maxconn, conninfo)
@@ -69,36 +67,30 @@ class BaseDatabaseConnection(ABC):
     @abstractmethod
     def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
         """Set up the database connection pool."""
-        pass
 
     @abstractmethod
     def connect(self):
         """Open the database connection pool."""
-        pass
 
     @abstractmethod
     def disconnect(self):
         """Close the database connection pool."""
-        pass
 
     @abstractmethod
     def execute_query(self, query: str) -> list[tuple]:
         """Execute a query on the database."""
-        pass
 
     @abstractmethod
     def write_records(self, query: str, records: list[tuple]) -> int:
         """Write data records to the database."""
-        pass
 
     @abstractmethod
     def execute_json_query(
         self,
         query: str,
-        schema_filenames: list[str] = None,
+        schema_filenames: list[str] | None = None,
     ) -> tuple[object, bool]:
         """Execute a query and validate the result against json schemas if provided."""
-        pass
 
 
 class DatabaseConnection(BaseDatabaseConnection):
@@ -108,7 +100,10 @@ class DatabaseConnection(BaseDatabaseConnection):
 
     def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
         self._pool = psycopg_pool.ConnectionPool(
-            conninfo=conninfo, min_size=minconn, max_size=maxconn, open=False
+            conninfo=conninfo,
+            min_size=minconn,
+            max_size=maxconn,
+            open=False,
         )
 
     def connect(self):  # noqa: D102, inherit doc string
@@ -125,10 +120,10 @@ class DatabaseConnection(BaseDatabaseConnection):
                 try:
                     cur.execute(query)
                     data = cur.fetchall()
-                except psycopg.Error as e:
-                    logging.error("Error executing query: %s", str(e))
-        except psycopg.OperationalError as e:
-            logging.error("Error setting up database connection: %s", str(e))
+                except psycopg.Error:
+                    logging.exception("Error executing query.")
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
 
         return data
 
@@ -140,21 +135,20 @@ class DatabaseConnection(BaseDatabaseConnection):
                     cur.executemany(query, records, returning=False)
                     affected_rows = cur.rowcount
                     conn.commit()
-                except psycopg.Error as e:
-                    logging.error(
-                        "Performing rollback, " + "Error writing records to database: %s",
-                        str(e),
-                    )
+                except psycopg.Error:
+                    logging.exception("Error writing records to database, performing rollback.")
                     conn.rollback()
                     affected_rows = -1
-        except psycopg.Error as e:
-            logging.error("Error setting up database connection: %s", str(e))
+        except psycopg.Error:
+            logging.exception("Error setting up database connection.")
             affected_rows = -2
 
         return affected_rows
 
     def execute_json_query(  # noqa: D102, inherit doc string
-        self, query: str, schema_filenames: list[str] = None
+        self,
+        query: str,
+        schema_filenames: list[str] | None = None,
     ) -> tuple[object, bool]:
         json_object = None
         schema_filenames = schema_filenames or []
@@ -190,7 +184,10 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
         self._pool = psycopg_pool.AsyncConnectionPool(
-            conninfo=conninfo, min_size=minconn, max_size=maxconn, open=False
+            conninfo=conninfo,
+            min_size=minconn,
+            max_size=maxconn,
+            open=False,
         )
 
     async def connect(self):  # noqa: D102, inherit doc string
@@ -207,10 +204,10 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
                 try:
                     await cur.execute(query)
                     data = await cur.fetchall()
-                except psycopg.Error as e:
-                    logging.error("Error executing query: %s", str(e))
-        except psycopg.OperationalError as e:
-            logging.error("Error setting up database connection: %s", str(e))
+                except psycopg.Error:
+                    logging.exception("Error executing query.")
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
 
         return data
 
@@ -222,21 +219,20 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
                     await cur.executemany(query, records, returning=False)
                     affected_rows = cur.rowcount
                     await conn.commit()
-                except psycopg.Error as e:
-                    logging.error(
-                        "Performing rollback, " + "Error writing records to database: %s",
-                        str(e),
-                    )
+                except psycopg.Error:
+                    logging.exception("Error writing records to database, performing rollback.")
                     await conn.rollback()
                     affected_rows = -1
-        except psycopg.Error as e:
-            logging.error("Error setting up database connection: %s", str(e))
+        except psycopg.Error:
+            logging.exception("Error setting up database connection.")
             affected_rows = -2
 
         return affected_rows
 
     async def execute_json_query(  # noqa: D102, inherit doc string
-        self, query: str, schema_filenames: list[str] = None
+        self,
+        query: str,
+        schema_filenames: list[str] | None = None,
     ) -> tuple[object, bool]:
         json_object = None
         schema_filenames = schema_filenames or []
@@ -263,7 +259,9 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
 
 
 def database_connection_from_config(
-    config_filename: str, start_element: list[str] = None, async_conn: bool = False
+    config_filename: str,
+    start_element: list[str] | None = None,
+    async_conn: bool = False,
 ) -> DatabaseConnection | AsyncDatabaseConnection:
     """
     Create a database connection from a configuration file.
@@ -285,20 +283,21 @@ def database_connection_from_config(
 
     """
     required_params = {
-        "minconn": None,
-        "maxconn": None,
         "database": None,
         "user": None,
         "password": None,
         "host": None,
-        "port": None,
     }
 
     config = load_config_file(
-        config_filename, required_params=required_params, start_element=start_element
+        config_filename,
+        required_params=required_params,
+        start_element=start_element,
     )
 
-    if not async_conn:
-        return DatabaseConnection(**config)
-    else:
-        return AsyncDatabaseConnection(**config)
+    params = {k: v for k, v in config.items() if v is not None and k != "use_env"}
+
+    if async_conn:
+        return AsyncDatabaseConnection(**params)
+
+    return DatabaseConnection(**params)
