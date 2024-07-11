@@ -1,22 +1,27 @@
 """metrics module."""
 
-import logging
+import os
 
-try:
-    from psycopg import connect
-except ImportError as e:
-    raise ImportError("Metrics module requires shinto['database'] or shinto['all'] extras.") from e
+DEFAULT_PROMETHEUS_COLLECTER_PATH="/var/lib/node_exporter/textfile_collector"
 
 
-def push_metrics(application_name, metric_name, value):
-    """Push a metric to a monitoring system."""
-    logging.info(
-        f"Pushing metric {metric_name} with value {value} for application {application_name}"
-    )
+def push_metric(
+        application_name,
+        metric,
+        value,
+        prometheus_collecter_path=DEFAULT_PROMETHEUS_COLLECTER_PATH ):
+    """
+    Push a metric to the Prometheus Pushgateway.
 
-    with connect("dbname=metrics") as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO metrics (application_name, metric_name, value) VALUES (%s, %s, %s)",
-                (application_name, metric_name, value),
-            )
+    Args:
+        application_name (str): The name of the application.
+        metric (str): The name of the metric.
+        value (int): The value of the metric.
+        prometheus_collecter_path (str): The path to where the Prometheus
+            textcollector will read prom files.
+
+    """
+    metric_file_path = os.path.join(prometheus_collecter_path, f"{application_name}_{metric}.prom")
+
+    with open(metric_file_path, "w") as metric_file:
+        metric_file.write(f"{application_name}_{metric} = {value}\n")
