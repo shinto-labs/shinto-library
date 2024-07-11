@@ -28,18 +28,22 @@ def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> 
     return True
 
 
+async def _async_validate_json_against_schemas_task(data: object, schema_filepath: Path) -> None:
+    """Validate JSON data against a schema."""
+    async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
+        schema = json.loads(await file.read())
+        jsonschema.validate(data, schema)
+
+
 async def async_validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
     tasks: dict[asyncio.Future, str] = {}
-    loop = asyncio.get_event_loop()
 
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
-        async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
-            schema = json.loads(await file.read())
-            task = loop.run_in_executor(None, jsonschema.validate, data, schema)
-            tasks[task] = schema_filepath
+        task = asyncio.create_task(_async_validate_json_against_schemas_task(data, schema_filepath))
+        tasks[task] = schema_filepath
 
     done, pending = await asyncio.wait(tasks.keys(), return_when=asyncio.FIRST_EXCEPTION)
 
