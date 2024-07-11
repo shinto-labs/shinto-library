@@ -1,45 +1,45 @@
 """Test the config module."""
 
-import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from shinto import config
-
-temp_dir = ""
-
-
-def setUpModule():
-    """Set up a tmp folder."""
-    global temp_dir
-    temp_dir = tempfile.mkdtemp()
 
 
 class TestConfig(unittest.TestCase):
     """Test the config module."""
 
+    @classmethod
+    def setUpClass(cls):
+        """Set up the test class."""
+        cls.temp_dir = tempfile.mkdtemp()
+
     def test_load_config_file(self):
         """Test loading config files."""
         # Test loading a YAML config file
-        yaml_file_path = os.path.join(temp_dir, "config.yaml")
-        open(yaml_file_path, "w").write("test: value")
-        self.assertTrue(os.path.isfile(yaml_file_path))
+        yaml_file_path = Path(self.temp_dir) / "config.yaml"
+        with Path(yaml_file_path).open("w") as yaml_file:
+            yaml_file.write("test: value")
+        self.assertTrue(Path(yaml_file_path).is_file())
         yaml_config = config.load_config_file(yaml_file_path)
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": "value"})
 
         # Test loading a JSON config file
-        json_file_path = os.path.join(temp_dir, "config.json")
-        open(json_file_path, "w").write('{"test": "value"}')
-        self.assertTrue(os.path.isfile(json_file_path))
+        json_file_path = Path(self.temp_dir) / "config.json"
+        with Path(json_file_path).open("w") as json_file:
+            json_file.write('{"test": "value"}')
+        self.assertTrue(Path(json_file_path).is_file())
         json_config = config.load_config_file(json_file_path)
         self.assertIsInstance(json_config, dict)
         self.assertDictEqual(json_config, {"test": "value"})
 
         # Test loading an INI config file
-        ini_file_path = os.path.join(temp_dir, "config.ini")
-        open(ini_file_path, "w").write("[test]\nkey = value")
-        self.assertTrue(os.path.isfile(ini_file_path))
+        ini_file_path = Path(self.temp_dir) / "config.ini"
+        with Path(ini_file_path).open("w") as ini_file:
+            ini_file.write("[test]\nkey = value")
+        self.assertTrue(Path(ini_file_path).is_file())
         ini_config = config.load_config_file(ini_file_path)
         self.assertIsInstance(ini_config, dict)
         self.assertDictEqual(ini_config, {"test": {"key": "value"}})
@@ -63,7 +63,7 @@ class TestConfig(unittest.TestCase):
                 "port": 5432,
                 "username": "admin",
                 "password": "secret",
-            }
+            },
         }
         yaml_output = config.output_config(yaml_config, config.CONFIG_YAML)
         self.assertIsInstance(yaml_output, str)
@@ -75,7 +75,7 @@ class TestConfig(unittest.TestCase):
                 "port": 5432,
                 "username": "admin",
                 "password": "secret",
-            }
+            },
         }
         json_output = config.output_config(json_config, config.CONFIG_JSON)
         self.assertIsInstance(json_output, str)
@@ -87,7 +87,7 @@ class TestConfig(unittest.TestCase):
                 "port": 5432,
                 "username": "admin",
                 "password": "secret",
-            }
+            },
         }
         ini_output = config.output_config(ini_config, config.CONFIG_INI)
         self.assertIsInstance(ini_output, str)
