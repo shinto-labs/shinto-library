@@ -61,7 +61,7 @@ class PersistantMetrics:
         os.makedirs(os.path.dirname(self._metric_file), exist_ok=True)
         # Write to file
         if os.path.exists(self._metric_file):
-            with open(self._metric_file, "r") as metric_file:
+            with open(self._metric_file) as metric_file:
                 self._metrics = json.load(metric_file) or {}
 
     def _save_metrics(self):

@@ -5,7 +5,7 @@ import copy
 import io
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -18,10 +18,10 @@ class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
 
 
-def _verify_config(data: Dict[str, Any], required_params: Dict[str, Any]):
+def _verify_config(data: dict[str, Any], required_params: list[str, Any]):
     """Verify if required params are present in the config data."""
     for key, value in required_params.items():
-        if key not in data.keys():
+        if key not in data:
             raise KeyError(f"Required parameter not found in config: {key}")
 
         if isinstance(value, dict):
@@ -32,9 +32,9 @@ def _verify_config(data: Dict[str, Any], required_params: Dict[str, Any]):
 def load_config_file(
     file_path: str,
     defaults=None,
-    start_element: List[str] = None,
-    required_params: List[str] = None,
-) -> Dict[str, Any]:
+    start_element: list[str] = None,
+    required_params: list[str] = None,
+) -> dict[str, Any]:
     """Load config from file."""
     start_element = start_element or []
     required_params = required_params or []
@@ -47,10 +47,10 @@ def load_config_file(
 
     config = defaults or {}
     if file_extension in [".yaml", ".yml"]:
-        with open(file_path, "r", encoding="utf-8") as yaml_file:
+        with open(file_path, encoding="utf-8") as yaml_file:
             config.update(yaml.safe_load(yaml_file))
     elif file_extension in [".json", ".js"]:
-        with open(file_path, "r", encoding="utf-8") as yaml_file:
+        with open(file_path, encoding="utf-8") as yaml_file:
             config.update(json.load(yaml_file))
     elif file_extension == ".ini":
         config_data = configparser.ConfigParser()
@@ -59,14 +59,16 @@ def load_config_file(
             {section: dict(config_data.items(section)) for section in config_data.sections()}
         )
     else:
-        raise ConfigError(f"Unsupported config file extension: {file_extension}")
+        msg = f"Unsupported config file extension: {file_extension}"
+        raise ConfigError(msg)
 
     if len(start_element) > 0:
         for item in start_element:
             try:
                 config = config[item]
             except KeyError as e:
-                raise KeyError(f"Invalid item path in config file: {start_element}.") from e
+                msg = f"Invalid item path in config file: {start_element}."
+                raise KeyError(msg) from e
 
     if len(required_params) > 0:
         _verify_config(config, required_params)

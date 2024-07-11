@@ -20,5 +20,5 @@ setup(
         "uvicorn": ["uvicorn==0.30.1"],
         "all": ["psycopg[pool]==3.2.1", "uvicorn==0.30.1"],
     },
-    python_requires=">=3.10",
+    python_requires=">=3.12",
 )

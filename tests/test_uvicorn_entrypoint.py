@@ -64,7 +64,7 @@ def wait_for_server_to_start(host: str, port: int, timeout: int = 5) -> bool:
                 conn.request("HEAD", "/")
                 conn.close()
                 server_up.set()
-            except ConnectionRefusedError:  # noqa: PERF203
+            except ConnectionRefusedError:
                 time.sleep(0.2)
 
     thread = threading.Thread(target=check_server)
