@@ -36,8 +36,8 @@ async def async_validate_json_against_schemas(data: object, schema_filenames: li
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
-        with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
-            schema = json.load(file)
+        async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
+            schema = json.loads(await file.read())
             task = loop.run_in_executor(None, jsonschema.validate, data, schema)
             tasks[task] = schema_filepath
 
