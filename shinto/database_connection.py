@@ -1,14 +1,14 @@
 """Database connection module to handle the database connection and queries."""
 
 import asyncio
-import json
 import logging
 import os
 import sys
 from abc import ABC, abstractmethod
 
+from .json_schema import async_validate_json_against_schemas, validate_json_against_schemas
+
 try:
-    import jsonschema
     import psycopg
     import psycopg_pool
 except ImportError as e:
@@ -100,11 +100,6 @@ class BaseDatabaseConnection(ABC):
         """Execute a query and validate the result against json schemas if provided."""
         pass
 
-    @abstractmethod
-    def validate_json_against_schemas(self, data: object, schema_filenames: list[str]):
-        """Validate a json object against schemas."""
-        pass
-
 
 class DatabaseConnection(BaseDatabaseConnection):
     """DatabaseConnection class to handle the database connection and queries."""
@@ -141,8 +136,9 @@ class DatabaseConnection(BaseDatabaseConnection):
         try:
             with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
-                    cur.executemany(query, records)
-                    affected_rows = cur.affected_rows
+                    # TODO: look at copy instead of executemany
+                    cur.executemany(query, records, returning=False)
+                    affected_rows = cur.rowcount
                     conn.commit()
                 except psycopg.Error as e:
                     logging.error(
@@ -157,13 +153,13 @@ class DatabaseConnection(BaseDatabaseConnection):
 
         return affected_rows
 
-    async def execute_json_query(  # noqa: D102, inherit doc string
+    def execute_json_query(  # noqa: D102, inherit doc string
         self, query: str, schema_filenames: list[str] = None
     ) -> tuple[object, bool]:
         json_object = None
         schema_filenames = schema_filenames or []
 
-        data = await self.execute_query(query)
+        data = self.execute_query(query)
         if (
             data is not None
             and isinstance(data, list)
@@ -177,37 +173,11 @@ class DatabaseConnection(BaseDatabaseConnection):
             return (None, False)
 
         if len(schema_filenames) > 0:
-            validate_ok = await self.validate_json_against_schemas(json_object, schema_filenames)
+            validate_ok = validate_json_against_schemas(json_object, schema_filenames)
         else:
             validate_ok = True
 
         return (json_object, validate_ok)
-
-    async def validate_json_against_schemas(self, data: object, schema_filenames: list[str]):  # noqa: D102, inherit doc string
-        validate_ok = True
-        tasks = []
-
-        loop = asyncio.get_event_loop()
-
-        for schema_filename in schema_filenames:
-            schema_filename = os.path.abspath(schema_filename)
-
-            with open(schema_filename, encoding="UTF-8") as file:
-                schema = json.load(file)
-                task = loop.run_in_executor(None, jsonschema.validate, data, schema)
-                tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for result, schema_filename in zip(results, schema_filenames):
-            if isinstance(result, Exception):
-                if isinstance(result, jsonschema.SchemaError):
-                    logging.error("JSON schema error in %s: %s", schema_filename, str(result))
-                elif isinstance(result, jsonschema.ValidationError):
-                    logging.error("JSON validation error in %s: %s", schema_filename, str(result))
-                validate_ok = False
-
-        return validate_ok
 
 
 class AsyncDatabaseConnection(BaseDatabaseConnection):
@@ -248,8 +218,9 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
         try:
             async with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
-                    await cur.executemany(query, records)
-                    affected_rows = cur.affected_rows
+                    # TODO: look at copy instead of executemany
+                    await cur.executemany(query, records, returning=False)
+                    affected_rows = cur.rowcount
                     await conn.commit()
                 except psycopg.Error as e:
                     logging.error(
@@ -284,37 +255,11 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
             return (None, False)
 
         if len(schema_filenames) > 0:
-            validate_ok = await self.validate_json_against_schemas(json_object, schema_filenames)
+            validate_ok = await async_validate_json_against_schemas(json_object, schema_filenames)
         else:
             validate_ok = True
 
         return (json_object, validate_ok)
-
-    async def validate_json_against_schemas(self, data: object, schema_filenames: list[str]):  # noqa: D102, inherit doc string
-        validate_ok = True
-        tasks = []
-
-        loop = asyncio.get_event_loop()
-
-        for schema_filename in schema_filenames:
-            schema_filename = os.path.abspath(schema_filename)
-
-            with open(schema_filename, encoding="UTF-8") as file:
-                schema = json.load(file)
-                task = loop.run_in_executor(None, jsonschema.validate, data, schema)
-                tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for result, schema_filename in zip(results, schema_filenames):
-            if isinstance(result, Exception):
-                if isinstance(result, jsonschema.SchemaError):
-                    logging.error("JSON schema error in %s: %s", schema_filename, str(result))
-                elif isinstance(result, jsonschema.ValidationError):
-                    logging.error("JSON validation error in %s: %s", schema_filename, str(result))
-                validate_ok = False
-
-        return validate_ok
 
 
 def database_connection_from_config(
