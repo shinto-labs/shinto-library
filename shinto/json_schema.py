@@ -3,33 +3,34 @@
 import asyncio
 import json
 import logging
-import os
+from pathlib import Path
 
+import anyio
 import jsonschema
 
 
-def validate_json_against_schemas(data: object, schema_filenames: list[str]):
+def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
     validate_ok = True
 
     for schema_filename in schema_filenames:
-        schema_filename = os.path.abspath(schema_filename)
+        schema_filepath = Path(schema_filename).resolve()
 
-        with open(schema_filename, encoding="UTF-8") as file:
+        with Path(schema_filepath).open(encoding="UTF-8") as file:
             schema = json.load(file)
             try:
                 jsonschema.validate(data, schema)
-            except jsonschema.SchemaError as e:
-                logging.error("JSON schema error in %s: %s", schema_filename, str(e))
+            except jsonschema.SchemaError:
+                logging.exception("JSON schema error in %s", schema_filepath)
                 validate_ok = False
-            except jsonschema.ValidationError as e:
-                logging.error("JSON validation error in %s: %s", schema_filename, str(e))
+            except jsonschema.ValidationError:
+                logging.exception("JSON validation error in %s", schema_filepath)
                 validate_ok = False
 
     return validate_ok
 
 
-async def async_validate_json_against_schemas(data: object, schema_filenames: list[str]):
+async def async_validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
     validate_ok = True
 
@@ -37,12 +38,12 @@ async def async_validate_json_against_schemas(data: object, schema_filenames: li
     loop = asyncio.get_event_loop()
 
     for schema_filename in schema_filenames:
-        schema_filename = os.path.abspath(schema_filename)
+        schema_filepath = Path(schema_filename).resolve()
 
-        with open(schema_filename, encoding="UTF-8") as file:
+        with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
             schema = json.load(file)
             task = loop.run_in_executor(None, jsonschema.validate, data, schema)
-            tasks[task] = schema_filename
+            tasks[task] = schema_filepath
 
     done, pending = await asyncio.wait(tasks.keys(), return_when=asyncio.FIRST_EXCEPTION)
 
@@ -50,13 +51,16 @@ async def async_validate_json_against_schemas(data: object, schema_filenames: li
         task.cancel()
 
     for task in done:
-        schema_filename = tasks[task]
-        exception = task.exception()
-        if exception:
-            if isinstance(exception, jsonschema.SchemaError):
-                logging.error("JSON schema error in %s: %s", schema_filename, str(exception))
-            elif isinstance(exception, jsonschema.ValidationError):
-                logging.error("JSON validation error in %s: %s", schema_filename, str(exception))
+        schema_filepath = tasks[task]
+        try:
+            exception = task.exception()
+            if exception:
+                raise exception
+        except jsonschema.SchemaError:
+            logging.exception("JSON schema error in %s", schema_filepath)
+            validate_ok = False
+        except jsonschema.ValidationError:
+            logging.exception("JSON validation error in %s", schema_filepath)
             validate_ok = False
 
     return validate_ok
