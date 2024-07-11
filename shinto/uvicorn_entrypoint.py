@@ -2,7 +2,8 @@
 
 import copy
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .config import load_config_file
 from .logging import setup_logging
@@ -31,7 +32,7 @@ def run_fastapi_app(
         host: Host to run the server on.
         port: Port to run the server on.
         reload: Enable auto-reload.
-        logger: (Defaults to root logger) Logger to use for the uvicorn server.
+        logger: Logger to use for the uvicorn server.
 
     """
     logger = logger or logging.root
