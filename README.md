@@ -7,6 +7,14 @@ Library for shared modules in Shinto repositories
 - make
 - python
 - git
+- a python virtual environment (optional)
+
+#### Setup Virtual Environment
+
+```
+python -m venv dev-env
+source dev-env/bin/activate
+``` 
 
 #### Aditional Windows prerequisites:
 
