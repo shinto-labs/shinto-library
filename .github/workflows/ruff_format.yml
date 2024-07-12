@@ -1,4 +1,4 @@
-name: Ruff format check code.
+name: Ruff format check
 
 on:
   push:
