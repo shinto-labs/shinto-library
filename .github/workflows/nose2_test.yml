@@ -1,4 +1,4 @@
-name: Test XML processor
+name: Unit test
 
 on:
   push:
