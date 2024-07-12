@@ -10,7 +10,7 @@ on:
       - main
 
 jobs:
-  test-coverage-xmlprocessor:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +30,22 @@ jobs:
         run: |
           nose2 -s tests -C --coverage=shinto --coverage-report=term
           coverage report -m > coverage.txt
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: coverage.txt
+
+  test-coverage:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v2
+        with:
+          name: coverage-report
 
       - name: Check coverage
         run: |
