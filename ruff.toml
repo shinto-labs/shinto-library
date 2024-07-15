@@ -7,7 +7,7 @@ ignore = [
     #### Modules
     "PT", # https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt. Using nose2 instead of pytest.
     "FBT", # https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt. Makes code more complex and less readable?
-    # "PTH", # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth. Normal method is fine?
+    "PTH", # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth. Normal method is fine?
     "EM", # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em . This is fine?
 
     #### Specific rules
