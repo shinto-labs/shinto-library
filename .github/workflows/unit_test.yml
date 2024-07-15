@@ -13,6 +13,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    outputs:
+      coverage: ${{ steps.coverage_output.outputs.coverage }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,26 +34,20 @@ jobs:
           nose2 -s tests -C --coverage=shinto --coverage-report=term
           coverage report -m > coverage.txt
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-report
-          path: coverage.txt
+      - name: Set coverage output
+        id: coverage_output
+        run: |
+          COVERAGE=$(grep -Po 'TOTAL\s+\d+\s+\d+\s+\K\d+%' coverage.txt | tr -d '%')
+          echo "::set-output name=coverage::$COVERAGE"
 
   test-coverage:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-
       - name: Check coverage
         run: |
-          # Extract the total coverage percentage
-          COVERAGE=$(grep -Po 'TOTAL\s+\d+\s+\d+\s+\K\d+%' coverage.txt | tr -d '%')
+          COVERAGE="${{ needs.test.outputs.coverage }}"
           echo "Total coverage: $COVERAGE%"
 
           # Fail the job if coverage is less than 90%
