@@ -1,1 +1,0 @@
-"""Shinto library integration tests."""

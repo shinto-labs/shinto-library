@@ -4,10 +4,28 @@ import logging
 import sys
 from importlib.util import find_spec
 
+from uvicorn.config import LOGGING_CONFIG as DEFAULT_UVICORN_LOGGING_CONFIG
+
 SHINTO_LOG_FORMAT = (
     "%(asctime)s.%(msecs)03d - [%(process)06d] %(name)s - %(levelname)s - %(message)s"
 )
 SHINTO_LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
+
+UVICORN_LOGGING_CONFIG = {
+    "loggers": {},
+}
+
+
+def _generate_uvicorn_logging_config():
+    for uvicorn_logger in DEFAULT_UVICORN_LOGGING_CONFIG["loggers"]:
+        UVICORN_LOGGING_CONFIG["loggers"][uvicorn_logger] = {
+            "handlers": [],
+            "level": "INFO",
+            "propagate": True,
+        }
+
+
+_generate_uvicorn_logging_config()
 
 
 def setup_logging(
