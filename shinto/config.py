@@ -18,22 +18,44 @@ class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
 
 
-def _verify_config(data: dict[str, Any], required_params: list[str, Any]):
-    """Verify if required params are present in the config data."""
+def _verify_data(data: dict[str, Any], required_params: dict[str, Any]) -> dict[str, Any]:
+    """
+    Verify the presence of required parameters within data.
+
+    Args:
+        data (dict): The config data to verify.
+        required_params (dict): The required parameters to verify.
+            Should be a dict with keys as the required parameter names and values as None or a dict.
+
+    Raises:
+        KeyError: If a required parameter is not found in the data.
+        ValueError: If the value of a required parameter is not None or a dict.
+
+    Example:
+    -------
+    data = {"key1": "value1", "key2": {"key3": "value3"}}
+
+    required_params = { "key1": None, "key2": {"key3": None}}
+
+    _verify_data(data, required_params)
+
+    """
     for key, value in required_params.items():
         if key not in data:
             raise KeyError(f"Required parameter not found in config: {key}")
 
         if isinstance(value, dict):
-            _verify_config(data[key], value)
+            _verify_data(data[key], value)
+        elif value is not None:
+            raise ValueError(f"Invalid value for required parameter: {key}. Must be dict or None.")
     return data
 
 
 def load_config_file(
     file_path: str,
-    defaults=None,
-    start_element: list[str] = None,
-    required_params: list[str] = None,
+    defaults: dict[str, Any] | None = None,
+    start_element: list[str] | None = None,
+    required_params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Load config from file."""
     start_element = start_element or []
@@ -56,7 +78,7 @@ def load_config_file(
         config_data = configparser.ConfigParser()
         config_data.read(file_path)
         config.update(
-            {section: dict(config_data.items(section)) for section in config_data.sections()}
+            {section: dict(config_data.items(section)) for section in config_data.sections()},
         )
     else:
         msg = f"Unsupported config file extension: {file_extension}"
@@ -71,12 +93,12 @@ def load_config_file(
                 raise KeyError(msg) from e
 
     if len(required_params) > 0:
-        _verify_config(config, required_params)
+        _verify_data(config, required_params)
 
     return config
 
 
-def replace_passwords(data):
+def replace_passwords(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
     """Replace all passwords in dict object before visualizing it."""
     if isinstance(data, dict):
         for key, value in data.items():
