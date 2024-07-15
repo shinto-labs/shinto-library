@@ -168,7 +168,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.execute.side_effect = psycopg.Error("Test error")
+        mock_cursor.execute.side_effect = psycopg.Error("Test execution error")
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
         self.mock_pool.connection.return_value = mock_conn
@@ -176,17 +176,23 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         result = self.db.execute_query(test_query)
 
         mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.fetchall.assert_not_called()
         self.assertIsNone(result)
 
     def test_execute_query_connection_error(self):
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
-        mock_conn.__enter__.side_effect = psycopg.OperationalError("Test error")
+        mock_cursor = MagicMock()
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+        mock_conn.__enter__.side_effect = psycopg.OperationalError("Test server error")
         self.mock_pool.connection.return_value = mock_conn
 
         result = self.db.execute_query(test_query)
 
+        mock_cursor.execute.assert_not_called()
+        mock_cursor.fetchall.assert_not_called()
         self.assertIsNone(result)
 
     def test_write_records(self):
@@ -195,10 +201,10 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.rowcount = 2
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
         self.mock_pool.connection.return_value = mock_conn
+        mock_cursor.rowcount = 2
 
         result = self.db.write_records(test_query, test_data)
 
@@ -213,10 +219,10 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.executemany.side_effect = psycopg.Error("Test error")
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
         self.mock_pool.connection.return_value = mock_conn
+        mock_cursor.executemany.side_effect = psycopg.Error("Test execution error")
 
         result = self.db.write_records(test_query, test_data)
 
@@ -229,8 +235,11 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         test_data = [("row1", "value1"), ("row2", "value2")]
 
         mock_conn = MagicMock()
-        mock_conn.__enter__.side_effect = psycopg.OperationalError("Test error")
+        mock_cursor = MagicMock()
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
         self.mock_pool.connection.return_value = mock_conn
+        mock_conn.__enter__.side_effect = psycopg.OperationalError("Test server error")
 
         result = self.db.write_records(test_query, test_data)
 
@@ -297,7 +306,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertFalse(validate_ok)
 
 
-class TestAsyncDatabaseConnection(BaseTestDatabaseConnection, unittest.IsolatedAsyncioTestCase):
+class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
     """Tests for the AsyncDatabaseConnection class."""
 
     db: AsyncDatabaseConnection = None
@@ -309,6 +318,10 @@ class TestAsyncDatabaseConnection(BaseTestDatabaseConnection, unittest.IsolatedA
         cls.mock_pool = MagicMock()
         mock_async_pool.return_value = cls.mock_pool
         cls.db = AsyncDatabaseConnection(**test_config)
+
+    def tearDown(self):
+        self.mock_pool.reset_mock()
+        self.mock_pool.connection.return_value.__aenter__.side_effect = None
 
     def test_database_creation(self):
         self.assertIsInstance(self.db, AsyncDatabaseConnection)
@@ -364,12 +377,12 @@ class TestAsyncDatabaseConnection(BaseTestDatabaseConnection, unittest.IsolatedA
 
         mock_conn = MagicMock()
         mock_cursor = AsyncMock()
-        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
-        self.mock_pool.connection.return_value.__aexit__.return_value = None
-        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
-        mock_conn.cursor.return_value.__aexit__.return_value = None
         mock_cursor.execute = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=expected_data)
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
 
         result = await self.db.execute_query(test_query)
 
@@ -382,49 +395,154 @@ class TestAsyncDatabaseConnection(BaseTestDatabaseConnection, unittest.IsolatedA
 
         mock_conn = MagicMock()
         mock_cursor = AsyncMock()
-        mock_cursor.execute.side_effect = psycopg.Error("Test error")
-        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
-        self.mock_pool.connection.return_value.__aexit__.return_value = None
+        mock_cursor.execute = AsyncMock(side_effect=psycopg.Error("Test execution error"))
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
 
         result = await self.db.execute_query(test_query)
 
+        mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.fetchall.assert_not_awaited()
         self.assertIsNone(result)
 
     async def test_execute_query_connection_error(self):
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
-        mock_conn.__aenter__.side_effect = psycopg.OperationalError("Test error")
-        self.mock_pool.connection.return_value = mock_conn
+        mock_cursor = AsyncMock()
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.side_effect = psycopg.OperationalError(
+            "Test server error",
+        )
 
         result = await self.db.execute_query(test_query)
 
+        mock_cursor.execute.assert_not_awaited()
+        mock_cursor.fetchall.assert_not_awaited()
         self.assertIsNone(result)
 
     async def test_write_records(self):
-        pass
+        test_query = "INSERT INTO test_table VALUES (%s, %s)"
+        test_data = [("row1", "value1"), ("row2", "value2")]
+
+        mock_conn = MagicMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.executemany.return_value = test_data
+        mock_cursor.rowcount = 2
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.commit = AsyncMock()
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
+
+        result = await self.db.write_records(test_query, test_data)
+
+        mock_cursor.executemany.assert_awaited_once_with(test_query, test_data, returning=False)
+        mock_conn.commit.assert_awaited_once()
+        self.assertIsInstance(result, int)
+        self.assertEqual(result, 2)
 
     async def test_write_records_error(self):
-        pass
+        test_query = "INSERT INTO test_table VALUES (%s, %s)"
+        test_data = [("row1", "value1"), ("row2", "value2")]
+
+        mock_conn = MagicMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.executemany.side_effect = psycopg.Error("Test execution error")
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.rollback = AsyncMock()
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
+
+        result = await self.db.write_records(test_query, test_data)
+
+        mock_cursor.executemany.assert_awaited_once_with(test_query, test_data, returning=False)
+        mock_conn.rollback.assert_awaited_once()
+        self.assertEqual(result, -1)
 
     async def test_write_records_connection_error(self):
-        pass
+        test_query = "INSERT INTO test_table VALUES (%s, %s)"
+        test_data = [("row1", "value1"), ("row2", "value2")]
 
-    async def test_execute_json_query(self):
-        pass
+        mock_conn = MagicMock()
+        mock_cursor = AsyncMock()
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.return_value = mock_conn
+        self.mock_pool.connection.return_value.__aexit__.return_value = None
+        self.mock_pool.connection.return_value.__aenter__.side_effect = psycopg.OperationalError(
+            "Test server error",
+        )
 
-    async def test_execute_json_query_error(self):
-        pass
+        result = await self.db.write_records(test_query, test_data)
 
-    @patch("shinto.database_connection.validate_json_against_schemas")
-    async def test_execute_json_query_with_validate_files(self, mock_validate: MagicMock):
-        pass
+        self.assertEqual(result, -2)
 
-    @patch("shinto.database_connection.validate_json_against_schemas")
-    async def test_execute_json_query_with_validate_files_fail(self, mock_validate: MagicMock):
-        pass
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query(self, mock_execute_query: AsyncMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [({"key": "value1"},)]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = await self.db.execute_json_query(test_query)
+
+        self.assertEqual(result, expected_data[0][0])
+        self.assertTrue(validate_ok)
+
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query_error(self, mock_execute_query: AsyncMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [({"key": "value1"},), ({"key": "value2"},)]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = await self.db.execute_json_query(test_query)
+
+        self.assertIsNone(result)
+        self.assertFalse(validate_ok)
+
+    @patch("shinto.database_connection.async_validate_json_against_schemas")
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query_with_validate_files(
+        self,
+        mock_execute_query: AsyncMock,
+        mock_validate: AsyncMock,
+    ):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [({"key": "value1"},)]
+
+        mock_execute_query.return_value = expected_data
+        mock_validate.return_value = True
+
+        result, validate_ok = await self.db.execute_json_query(test_query, ["test_schema.json"])
+
+        self.assertEqual(result, expected_data[0][0])
+        self.assertTrue(validate_ok)
+
+    @patch("shinto.database_connection.async_validate_json_against_schemas")
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query_with_validate_files_fail(
+        self,
+        mock_execute_query: AsyncMock,
+        mock_validate: AsyncMock,
+    ):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [({"key": "value1"},)]
+
+        mock_execute_query.return_value = expected_data
+        mock_validate.return_value = False
+
+        result, validate_ok = await self.db.execute_json_query(test_query, ["test_schema.json"])
+
+        self.assertEqual(result, expected_data[0][0])
+        self.assertFalse(validate_ok)
 
 
 if __name__ == "__main__":
