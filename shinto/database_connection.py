@@ -204,6 +204,7 @@ class DatabaseConnection(BaseDatabaseConnection):
             with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
                     # TODO: look at copy instead of executemany
+                    # https://shintolabs.atlassian.net/browse/DOT-422
                     cur.executemany(query, records, returning=False)
                     affected_rows = cur.rowcount
                     conn.commit()
@@ -285,6 +286,7 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
             async with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
                     # TODO: look at copy instead of executemany
+                    # https://shintolabs.atlassian.net/browse/DOT-422
                     await cur.executemany(query, records, returning=False)
                     affected_rows = cur.rowcount
                     await conn.commit()
