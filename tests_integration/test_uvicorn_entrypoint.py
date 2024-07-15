@@ -1,4 +1,4 @@
-"""Tests for uvicorn entrypoint module."""
+"""Integration tests for uvicorn entrypoint module."""
 
 import ast
 import http.client

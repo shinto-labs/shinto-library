@@ -9,6 +9,7 @@ from .config import load_config_file
 from .logging import setup_logging
 
 try:
+    # Make sure the uvicorn extras module is available.
     import uvicorn
     from uvicorn._types import ASGIApplication
     from uvicorn.config import LOGGING_CONFIG
