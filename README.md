@@ -14,7 +14,7 @@ Library for shared modules in Shinto repositories
 ```
 python -m venv dev-env
 source dev-env/bin/activate
-``` 
+```
 
 #### Aditional Windows prerequisites:
 
@@ -24,7 +24,7 @@ source dev-env/bin/activate
 
 Full list of commands in: [Makefile](./Makefile)
 
-Make sure to install the dependencies with `make install`
+Make sure to install the dependencies first using `make install`
 
 ### Release / Deployment
 
