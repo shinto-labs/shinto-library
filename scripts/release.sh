@@ -2,8 +2,6 @@
 
 set -e
 
-cd ../
-
 VERSION_NUMBER=$(grep 'version=' setup.py | sed "s/.*version=['\"]\\([^'\"]*\\)['\"],/\\1/")
 
 if [ -z "$VERSION_NUMBER" ]; then

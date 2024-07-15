@@ -1,7 +1,7 @@
 PIPENV_RUN=pipenv run
 
 install:
-	pip install pipenv && pipenv install --dev
+	./scripts/install.sh
 
 test:
 	$(PIPENV_RUN) nose2 -v -s tests

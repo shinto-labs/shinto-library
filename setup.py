@@ -14,11 +14,13 @@ setup(
     maintainer_email="info@shintolabs.nl",
     url="http://www.shintolabs.nl",
     packages=["shinto"],
-    install_requires=["pyyaml==6.0.1", "jsonschema==4.23.0", "prometheus_client"],
-    extras_require={
-        "database": ["psycopg[pool]==3.2.1"],
-        "uvicorn": ["uvicorn==0.30.1"],
-        "all": ["psycopg[pool]==3.2.1", "uvicorn==0.30.1"],
-    },
+    install_requires=[
+        "pyyaml==6.0.1",
+        "jsonschema==4.23.0",
+        "prometheus_client==0.20.0",
+        "psycopg[pool]==3.2.1",
+        "uvicorn==0.30.1",
+    ],
+    extras_require={},
     python_requires=">=3.12",
 )

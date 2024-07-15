@@ -6,17 +6,11 @@ import os
 import sys
 from abc import ABC, abstractmethod
 
-from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
-
-try:
-    # Make sure the database extras module is available.
-    import psycopg
-    from psycopg_pool import AsyncConnectionPool, ConnectionPool
-except ImportError as e:
-    msg = "Database module requires shinto['database'] or shinto['all'] extras."
-    raise ImportError(msg) from e
+import psycopg
+from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from .config import load_config_file
+from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
 
 
 class BaseDatabaseConnection(ABC):
