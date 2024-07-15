@@ -20,11 +20,37 @@ class TestLogging(unittest.TestCase):
     """Test the logging module."""
 
     temp_dir = None
+    startup_logging = None
 
     @classmethod
     def setUpClass(cls):
         """Set up the test class."""
         cls.temp_dir = tempfile.mkdtemp()
+
+        cls.startup_logging = {
+            **logging.Logger.manager.loggerDict,
+            "root": logging.root,
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        """Tear down the test class."""
+        # Reset the logging configuration
+        for logger_name in logging.Logger.manager.loggerDict.copy():
+            if logger_name not in cls.startup_logging:
+                logger = logging.getLogger(logger_name)
+                for handler in logger.handlers:
+                    handler.close()
+                logger.handlers.clear()
+
+                if logger_name == logging.root.name:
+                    # Reset the root logger
+                    logging.Logger.manager.loggerDict.pop(logger_name)
+                    logging.root = logging.RootLogger(cls.startup_logging["root"].level)
+                    logging.Logger.root = cls.startup_logging["root"]
+                    logging.Logger.manager.root = logging.root
+                else:
+                    logger.manager.loggerDict.pop(logger_name)
 
     def test_uvicorn_logging_config(self):
         """Test UVICORN_LOGGING_CONFIG dictionary."""
