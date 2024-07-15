@@ -20,6 +20,7 @@ setup(
         "prometheus_client==0.20.0",
         "psycopg[pool]==3.2.1",
         "uvicorn==0.30.1",
+        "anyio==4.4.0",
     ],
     extras_require={},
     python_requires=">=3.12",
