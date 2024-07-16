@@ -109,22 +109,16 @@ class BaseDatabaseConnection(ABC):
         - maxconn: default 3
 
         """
-        optional_params = ["port", "minconn", "maxconn"]
-        required_params = ["database", "user", "password", "host"]
+        params = ["port", "minconn", "maxconn", "database", "user", "password", "host"]
 
         config = load_config_file(
             file_path=config_filename,
-            required_params=required_params,
             start_element=start_element,
         )
 
-        params = {
-            k: v
-            for k, v in config.items()
-            if k in set(optional_params + required_params)
-        }
+        config = {k: v for k, v in config.items() if k in params}
 
-        return cls(**params)
+        return cls(**config)
 
     @classmethod
     def from_environment_variables(  # noqa: ANN206
@@ -149,7 +143,7 @@ class BaseDatabaseConnection(ABC):
         user = user or os.environ.get("PGUSER")
         password = password or os.environ.get("PGPASSWORD")
         host = host or os.environ.get("PGHOST")
-        port = port or os.environ.get("PGPORT")
+        port = port or os.environ.get("PGPORT") or 6432
 
         return cls(
             database=database,
