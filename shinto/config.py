@@ -25,7 +25,6 @@ def load_config_file(
 ) -> dict[str, Any]:
     """Load config from file."""
     start_element = start_element or []
-    required_params = required_params or []
 
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Config file not found: {file_path}")
