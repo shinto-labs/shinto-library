@@ -2,11 +2,27 @@
 
 set -e
 
+red='\033[0;31m'
+yellow='\033[1;93m'
+green='\033[0;32m'
+reset='\033[0m'
+
+exit_with_error() {
+    local message=$1
+    echo -e "${red}${message}${reset}"
+    exit 1
+}
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "development" ]; then
+    exit_with_error "You must be on the development branch to deploy a new version."
+fi
+
+echo -e "${yellow}Warning${reset}: Make sure you pushed the latest changes to the development branch."
+
 VERSION_NUMBER=$(grep 'version=' setup.py | sed "s/.*version=['\"]\\([^'\"]*\\)['\"],/\\1/")
 
 if [ -z "$VERSION_NUMBER" ]; then
-    echo "Version number could not be extracted from setup.py"
-    exit 1
+    exit_with_error "Version number could not be extracted from setup.py"
 fi
 
 echo "Fetching latest tags from GitHub."
@@ -18,35 +34,30 @@ LAST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null)
 set -e
 
 if [ -z "$LAST_TAG" ]; then
-    echo "No tags found on the remote repo."
+    echo -e "${yellow}No tags found on the remote repo.${reset}"
 else
     echo "Last deployed version: $LAST_TAG"
 fi
 
-echo "What tag do you want to deploy with?"
-read TAG
-echo
+echo -n "What tag do you want to deploy with? "
+read -r TAG
 
 if [ -z "$TAG" ]; then
-    echo "No version number provided. Exiting."
-    exit 1
+    exit_with_error "Tag cannot be empty."
 fi
 
-read -p "!! Make sure you pushed the latest changes to the development branch.
-Are you sure you want merge development into main and create tag: $TAG? (y/n) " -r
-echo
+echo -n "Are you sure you want merge development into main and create tag: $TAG? (y/n) "
+read -r REPLY
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Exiting without merging and tagging."
-    exit 1
+    exit_with_error "Exiting."
 fi
 
 if [ "$VERSION_NUMBER" != "$TAG" ]; then
-    read -p "Version number in setup.py does not match the tag.
-Do you want to update the version in setup.py to $TAG and push to development? (y/n) " -r
-    echo
+    echo -e "${green}Version number in setup.py does not match the tag.${reset}"
+    echo -n "Do you want to update the version in setup.py to $TAG and push to development? (y/n) "
+    read -r REPLY
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Exiting without merging and tagging."
-        exit 1
+        exit_with_error "Exiting."
     fi
 
     echo "Updating version in setup.py to $TAG and pushing to development."

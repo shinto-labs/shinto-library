@@ -2,17 +2,16 @@
 
 set -e
 
+yellow='\033[1;93m'
+green='\033[0;32m'
+reset='\033[0m'
+
 if [[ "$VIRTUAL_ENV" == "" ]]; then
     pip install pipenv
 fi
 
 pipenv install --dev
 
-current_folder_name=$(basename "$(pwd)")
-
-yellow='\033[1;93m'
-green='\033[0;32m'
-reset='\033[0m'
 venv_path=$(pipenv --venv)
 
 echo -e "
