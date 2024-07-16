@@ -138,6 +138,12 @@ class BaseDatabaseConnection(ABC):
         `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
 
         If arguments are provided, they take precedence over environment variables.
+
+        Default values:
+        - port: 6432
+        - minconn: 1
+        - maxconn: 3
+
         """
         database = database or os.environ.get("PGDATABASE")
         user = user or os.environ.get("PGUSER")
