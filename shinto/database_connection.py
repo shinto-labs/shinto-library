@@ -110,15 +110,10 @@ class BaseDatabaseConnection(ABC):
 
         """
         optional_params = ["port", "minconn", "maxconn"]
-        required_params = {
-            "database": None,
-            "user": None,
-            "password": None,
-            "host": None,
-        }
+        required_params = ["database", "user", "password", "host"]
 
         config = load_config_file(
-            config_filename,
+            file_path=config_filename,
             required_params=required_params,
             start_element=start_element,
         )
@@ -126,7 +121,7 @@ class BaseDatabaseConnection(ABC):
         params = {
             k: v
             for k, v in config.items()
-            if v is not None and k in [*optional_params, *required_params.keys()]
+            if k in set(optional_params + required_params)
         }
 
         return cls(**params)
