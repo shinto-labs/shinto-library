@@ -13,5 +13,4 @@ find . -name "htmlcov" | xargs rm -rf
 # clean up pipenv packages
 pipenv clean
 
-echo "
-Cleaned up the project!"
+echo "Cleaned up the project!"
