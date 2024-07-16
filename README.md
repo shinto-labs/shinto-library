@@ -4,10 +4,14 @@ Library for shared modules in Shinto repositories
 
 ## Prerequisites
 
-- make
-- python
-- git
-- a python virtual environment (optional)
+#### Commandline tools
+
+- **python**
+- **make**
+- **psql**
+- **git**
+
+For windows users make sure the tools are added to your system's environment variables `PATH`.
 
 #### Setup Virtual Environment
 
@@ -16,26 +20,28 @@ python -m venv dev-env
 source dev-env/bin/activate
 ```
 
-#### Aditional Windows prerequisites:
+## Development Actions
 
-- Git Bash (make sure installation path is added to env variables e.g. C:\Program Files\Git\bin)
+Refer to the [Makefile](./Makefile) for a full list of commands.
 
-## Actions
+### Install
 
-Full list of commands in: [Makefile](./Makefile)
-
-Make sure to install the dependencies first using `make install`
+Install dependencies with: `make install`
 
 ### Release / Deployment
 
-Run `make release`
+Create a release by running: `make release`
 
 This merges development into main and creates a release with the provided tag.
 
 ### Testing
 
-#### Run unit tests: `make test`
+Execute unit tests: `make test`
 
-#### Run unit tests with coverage: `make test_coverage`
+For coverage: `make test_coverage`
 
-#### Check ruff format: `make ruff`
+Format check: `make ruff`
+
+### Clean up the development environment
+
+Clean caches and environments with: `make clean`

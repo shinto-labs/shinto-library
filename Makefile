@@ -3,6 +3,12 @@ PIPENV_RUN=pipenv run
 install:
 	./scripts/install.sh
 
+release:
+	./scripts/release.sh
+
+clean:
+	./scripts/clean.sh
+
 test:
 	$(PIPENV_RUN) nose2 -v -s tests
 
@@ -17,6 +23,3 @@ ruff:
 
 ruff_format:
 	$(PIPENV_RUN) ruff format -v .
-
-release:
-	./scripts/release.sh
