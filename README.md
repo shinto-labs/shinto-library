@@ -1,17 +1,42 @@
 # Shinto Library
 
-Library for shared modules in Shinto repositories
+Library of shared Python modules for use in Shinto projects.
 
 ## Prerequisites
-
-#### Commandline tools
 
 - **python**
 - **make**
 - **psql**
 - **git**
 
-For windows users make sure the tools are added to your system's environment variables `PATH`.
+<details>
+<summary>For Windows users</summary>
+
+Make sure the commandline tools are added to your system's environment variables `PATH`.
+
+Required paths (might be different depending on your installation/location):
+
+```markdown
+# Python
+
+%USERPROFILE%\AppData\Local\Programs\Python\Python312
+%USERPROFILE%\AppData\Local\Programs\Python\Python312\Scripts
+
+# Make
+
+C:\Program Files (x86)\GnuWin32\bin
+
+# psql
+
+C:\Program Files\PostgreSQL\16\bin
+
+# Git
+
+C:\Program Files\Git\bin
+C:\Program Files\Git\cmd
+```
+
+</details>
 
 #### Setup Virtual Environment
 
