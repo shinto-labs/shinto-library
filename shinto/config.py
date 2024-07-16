@@ -59,7 +59,7 @@ def load_config_file(
     file_path: str,
     defaults: dict[str, Any] | None = None,
     start_element: list[str] | None = None,
-    required_params: dict[str, Any] | None = None,
+    required_params: list[str] | dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Load config from file."""
     start_element = start_element or []
