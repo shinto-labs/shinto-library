@@ -6,8 +6,13 @@ import os
 import sys
 from abc import ABC, abstractmethod
 
-import psycopg
-from psycopg_pool import AsyncConnectionPool, ConnectionPool
+try:
+    import psycopg
+    from psycopg_pool import AsyncConnectionPool, ConnectionPool
+except ImportError as e:
+    msg = "psycopg[pool] is required for this module. Aditionally make sure to install postgresql."
+    raise ImportError(msg) from e
+
 
 from .config import load_config_file
 from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
