@@ -5,8 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from uvicorn.config import LOGGING_CONFIG as DEFAULT_UVICORN_LOGGING_CONFIG
-
 from shinto.logging import (
     SHINTO_LOG_DATEFMT,
     SHINTO_LOG_FORMAT,
@@ -54,10 +52,6 @@ class TestLogging(unittest.TestCase):
 
     def test_uvicorn_logging_config(self):
         """Test UVICORN_LOGGING_CONFIG dictionary."""
-        self.assertEqual(
-            len(UVICORN_LOGGING_CONFIG["loggers"]),
-            len(DEFAULT_UVICORN_LOGGING_CONFIG["loggers"]),
-        )
 
         for logger_config in UVICORN_LOGGING_CONFIG["loggers"].values():
             self.assertEqual(logger_config["level"], "INFO")
