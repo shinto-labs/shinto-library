@@ -4,7 +4,7 @@ import configparser
 import copy
 import io
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -26,18 +26,19 @@ def load_config_file(
     """Load config from file."""
     start_element = start_element or []
 
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Config file not found: {file_path}")
+    if not Path(file_path).exists():
+        msg = f"Config file not found: {file_path}"
+        raise FileNotFoundError(msg)
 
-    _, file_extension = os.path.splitext(file_path)
+    _, file_extension = Path(file_path).suffix
     file_extension = file_extension.lower()
 
     config = defaults or {}
     if file_extension in [".yaml", ".yml"]:
-        with open(file_path, encoding="utf-8") as yaml_file:
+        with Path(file_path).open(encoding="utf-8") as yaml_file:
             config.update(yaml.safe_load(yaml_file))
     elif file_extension in [".json", ".js"]:
-        with open(file_path, encoding="utf-8") as yaml_file:
+        with Path(file_path).open(encoding="utf-8") as yaml_file:
             config.update(json.load(yaml_file))
     elif file_extension == ".ini":
         config_data = configparser.ConfigParser()
@@ -89,6 +90,7 @@ def output_config(configdata: dict, output_config_type: str = CONFIG_YAML) -> st
         config.write(output_stream)
         output = output_stream.getvalue()
     else:
-        raise ConfigError(f"Unsupported config output type: {output_config_type}")
+        msg = f"Unsupported config output type: {output_config_type}"
+        raise ConfigError(msg)
 
     return output

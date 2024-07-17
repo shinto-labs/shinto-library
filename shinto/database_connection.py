@@ -52,7 +52,8 @@ class BaseDatabaseConnection(ABC):
         """
         missing_params = [k for k, v in locals().items() if v is None]
         if len(missing_params) > 0:
-            raise TypeError(f"Missing required parameters: {missing_params}")
+            msg = f"Missing required parameters: {missing_params}"
+            raise TypeError(msg)
 
         conninfo = f"dbname={database} user={user} password={password} host={host} port={port}"
         self._setup_connection_pool(minconn, maxconn, conninfo)
@@ -92,7 +93,11 @@ class BaseDatabaseConnection(ABC):
 
     def _parse_query_result_to_json(self, query_result: list[tuple]) -> dict | None:
         """Parse a query result to a json object."""
-        if (query_result is None or not isinstance(query_result, list) or not isinstance(query_result[0], tuple)):
+        if (
+            query_result is None
+            or not isinstance(query_result, list)
+            or not isinstance(query_result[0], tuple)
+        ):
             logging.error("Query did not return a valid response.")
             return None
 
@@ -101,7 +106,9 @@ class BaseDatabaseConnection(ABC):
             return None
 
         if len(query_result) > 1 and len(query_result[0]) > 1:
-            logging.warning("Query result contains multiple objects, only the first object will be returned.")
+            logging.warning(
+                "Query result contains multiple objects, only the first object will be returned."
+            )
 
         if isinstance(query_result[0][0], dict):
             return query_result[0][0]
@@ -109,11 +116,13 @@ class BaseDatabaseConnection(ABC):
         try:
             query_result = json.loads(query_result[0][0])
         except json.JSONDecodeError:
-            logging.exception("Error decoding query result: %s", e)
+            logging.exception("Error decoding query result.")
             return None
 
         if not isinstance(query_result, dict):
-            logging.error("Query result is invalid. Expected a dictionary, got: %s", type(query_result))
+            logging.error(
+                "Query result is invalid. Expected a dictionary, got: %s", type(query_result)
+            )
             return None
 
         return query_result
