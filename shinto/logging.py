@@ -6,13 +6,12 @@ import time
 from importlib.util import find_spec
 
 SHINTO_LOG_FORMAT = (
-    "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
-    'name="%(name)s" level="%(levelname)s" msg="%(message)s"'
+    "TIME=%(asctime)s.%(msecs)03d+00:00 PID=%(process)06d "
+    'NAME="%(name)s" LEVEL="%(levelname)s" MSG="%(message)s"'
 )
 SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
 
-# modified from:
-# from uvicorn.config import LOGGING_CONFIG
+# modified from: from uvicorn.config import LOGGING_CONFIG
 UVICORN_LOGGING_CONFIG = {
     "loggers": {
         "uvicorn": {"level": "INFO", "propagate": True},
@@ -20,6 +19,7 @@ UVICORN_LOGGING_CONFIG = {
         "uvicorn.access": {"level": "INFO", "propagate": True},
     },
 }
+
 
 class ShintoFormatter(logging.Formatter):
     """Formatter for Shinto log messages."""
