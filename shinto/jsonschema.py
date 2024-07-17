@@ -32,7 +32,14 @@ async def _async_validate_json_against_schemas_task(data: dict, schema_filepath:
     """Validate JSON data against a schema."""
     async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
         schema = json.loads(await file.read())
-        jsonschema.validate(data, schema)
+        try:
+            jsonschema.validate(data, schema)
+        except jsonschema.SchemaError:
+            logging.exception("JSON schema error in %s", schema_filepath)
+            raise
+        except jsonschema.ValidationError:
+            logging.exception("JSON validation error in %s", schema_filepath)
+            raise
 
 
 async def async_validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bool:
@@ -51,16 +58,8 @@ async def async_validate_json_against_schemas(data: dict, schema_filenames: list
         task.cancel()
 
     for task in done:
-        schema_filepath = tasks[task]
-        try:
-            exception = task.exception()
-            if exception:
-                raise exception
-        except jsonschema.SchemaError:
-            logging.exception("JSON schema error in %s", schema_filepath)
-            return False
-        except jsonschema.ValidationError:
-            logging.exception("JSON validation error in %s", schema_filepath)
+        exception = task.exception()
+        if exception:
             return False
 
     return True
