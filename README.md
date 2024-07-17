@@ -8,6 +8,7 @@ Library of shared Python modules for use in Shinto projects.
 - **make**
 - **psql**
 - **git**
+- **pipenv**
 
 <details>
 <summary>For Windows users</summary>
@@ -37,13 +38,6 @@ C:\Program Files\Git\cmd
 ```
 
 </details>
-
-#### Setup Virtual Environment
-
-```
-python -m venv dev-env
-source dev-env/bin/activate
-```
 
 ## Development Actions
 
