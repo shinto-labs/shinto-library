@@ -9,7 +9,7 @@ import anyio
 import jsonschema
 
 
-def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
+def validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
@@ -28,14 +28,14 @@ def validate_json_against_schemas(data: object, schema_filenames: list[str]) -> 
     return True
 
 
-async def _async_validate_json_against_schemas_task(data: object, schema_filepath: Path) -> None:
+async def _async_validate_json_against_schemas_task(data: dict, schema_filepath: Path) -> None:
     """Validate JSON data against a schema."""
     async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
         schema = json.loads(await file.read())
         jsonschema.validate(data, schema)
 
 
-async def async_validate_json_against_schemas(data: object, schema_filenames: list[str]) -> bool:
+async def async_validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bool:
     """Validate JSON data against JSON schemas."""
     tasks: dict[asyncio.Future, str] = {}
 
