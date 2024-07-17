@@ -90,7 +90,7 @@ class BaseDatabaseConnection(ABC):
     ) -> tuple[object, bool]:
         """Execute a query and validate the result against json schemas if provided."""
 
-    def parse_query_result_to_json(self, query_result: list[tuple]) -> dict | None:
+    def _parse_query_result_to_json(self, query_result: list[tuple]) -> dict | None:
         """Parse a query result to a json object."""
         if (query_result is None or not isinstance(query_result, list) or not isinstance(query_result[0], tuple)):
             logging.error("Query did not return a valid response.")
@@ -255,7 +255,7 @@ class DatabaseConnection(BaseDatabaseConnection):
         schema_filenames = schema_filenames or []
 
         data = self.execute_query(query)
-        json_object = self.parse_query_result_to_json(data)
+        json_object = self._parse_query_result_to_json(data)
         if json_object is None:
             return (None, False)
 
@@ -330,7 +330,7 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
         schema_filenames = schema_filenames or []
 
         data = await self.execute_query(query)
-        json_object = self.parse_query_result_to_json(data)
+        json_object = self._parse_query_result_to_json(data)
         if json_object is None:
             return (None, False)
 
