@@ -95,17 +95,17 @@ class BaseDatabaseConnection(ABC):
         if (query_result is None or not isinstance(query_result, list) or not isinstance(query_result[0], tuple)):
             logging.error("Query did not return a valid response.")
             return None
-        
+
         if len(query_result) == 0 or len(query_result[0]) == 0:
             logging.error("Query result is empty.")
             return None
-        
+
         if len(query_result) > 1 and len(query_result[0]) > 1:
             logging.warning("Query result contains multiple objects, only the first object will be returned.")
-        
+
         if isinstance(query_result[0][0], dict):
             return query_result[0][0]
-        
+
         try:
             query_result = json.loads(query_result[0][0])
         except json.JSONDecodeError:
