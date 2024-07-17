@@ -1,9 +1,9 @@
 """Test cases for the logging module."""
 
 import logging
-import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from uvicorn.config import LOGGING_CONFIG as DEFAULT_UVICORN_LOGGING_CONFIG
 
@@ -84,11 +84,11 @@ class TestLogging(unittest.TestCase):
         log_msg = record.getMessage()
 
         pattern = (
-            r"time=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+00:00 "
-            r"pid=\d{6} "
-            rf'name="{log_name}" '
-            rf'level="{log_levelname}" '
-            rf'msg="{log_msg}"'
+            r"TIME=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+00:00 "
+            r"PID=\d{6} "
+            rf'NAME="{log_name}" '
+            rf'LEVEL="{log_levelname}" '
+            rf'MSG="{log_msg}"'
         )
         self.assertRegex(log_contents, pattern)
 
@@ -101,9 +101,9 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(len(logger.handlers), 1)
 
     def test_log_to_file(self):
-        log_filename = os.path.join(self.temp_dir, "myapp.log")
-        if os.path.isfile(log_filename):
-            os.remove(log_filename)
+        log_filename = Path(self.temp_dir) / "myapp.log"
+        if Path(log_filename).is_file():
+            Path(log_filename).unlink()
         log_message = "Test log message"
         setup_logging(
             application_name="myapp",
@@ -117,22 +117,26 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(logger.level, logging.DEBUG)
         self.assertTrue(isinstance(logger.handlers[0], logging.FileHandler))
         self.assertEqual(len(logger.handlers), 1)
-        self.assertTrue(os.path.isfile(log_filename))
+        self.assertTrue(Path(log_filename).is_file())
 
-        with open(log_filename) as log_file:
+        with Path(log_filename).open() as log_file:
             self.assertEqual(log_file.read(), "")
 
         logging.info(log_message)
-        with open(log_filename) as log_file:
+        with Path(log_filename).open() as log_file:
             self.assertIn(log_message, log_file.read())
 
+        def test_raise_value_error():
+            msg = "Test exception"
+            raise ValueError(msg)
+
         try:
-            raise ValueError("Test exception")
+            test_raise_value_error()
         except ValueError:
             logging.exception("Test exception")
 
-        with open(log_filename) as log_file:
-            self.assertIn('raise ValueError("Test exception")', log_file.read())
+        with Path(log_filename).open() as log_file:
+            self.assertIn("raise ValueError(msg)", log_file.read())
 
 
 if __name__ == "__main__":
