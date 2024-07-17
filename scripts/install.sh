@@ -6,11 +6,15 @@ yellow='\033[1;93m'
 green='\033[0;32m'
 reset='\033[0m'
 
-if [[ "$VIRTUAL_ENV" == "" ]]; then
-    pip install pipenv
-fi
+# if [[ "$VIRTUAL_ENV" == "" ]]; then
+#     pip install pipenv
+# fi
 
 pipenv install --dev
+
+if [[ "$VIRTUAL_ENV" == "" ]]; then
+    pipenv shell
+fi
 
 venv_path=$(pipenv --venv)
 

@@ -22,5 +22,5 @@ setup(
         "anyio==4.4.0",
     ],
     extras_require={},
-    python_requires=">=3.12",
+    python_requires=">=3.11",
 )
