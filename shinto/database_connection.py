@@ -1,6 +1,7 @@
 """Database connection module to handle the database connection and queries."""
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -88,6 +89,34 @@ class BaseDatabaseConnection(ABC):
         schema_filenames: list[str] | None = None,
     ) -> tuple[object, bool]:
         """Execute a query and validate the result against json schemas if provided."""
+
+    def parse_query_result_to_json(self, query_result: list[tuple]) -> dict | None:
+        """Parse a query result to a json object."""
+        if (query_result is None or not isinstance(query_result, list) or not isinstance(query_result[0], tuple)):
+            logging.error("Query did not return a valid response.")
+            return None
+        
+        if len(query_result) == 0 or len(query_result[0]) == 0:
+            logging.error("Query result is empty.")
+            return None
+        
+        if len(query_result) > 1 and len(query_result[0]) > 1:
+            logging.warning("Query result contains multiple objects, only the first object will be returned.")
+        
+        if isinstance(query_result[0][0], dict):
+            return query_result[0][0]
+        
+        try:
+            query_result = json.loads(query_result[0][0])
+        except json.JSONDecodeError:
+            logging.exception("Error decoding query result: %s", e)
+            return None
+
+        if not isinstance(query_result, dict):
+            logging.error("Query result is invalid. Expected a dictionary, got: %s", type(query_result))
+            return None
+
+        return query_result
 
     @classmethod
     def from_config_file(cls, config_filename: str, start_element: list[str] | None = None):  # noqa: ANN206
@@ -222,20 +251,12 @@ class DatabaseConnection(BaseDatabaseConnection):
         self,
         query: str,
         schema_filenames: list[str] | None = None,
-    ) -> tuple[object, bool]:
+    ) -> tuple[dict | None, bool]:
         schema_filenames = schema_filenames or []
 
         data = self.execute_query(query)
-        if (
-            data is not None
-            and isinstance(data, list)
-            and len(data) == 1
-            and isinstance(data[0], tuple)
-            and len(data[0]) == 1
-        ):
-            json_object = data[0][0]
-        else:
-            logging.error("Query did not return a single object")
+        json_object = self.parse_query_result_to_json(data)
+        if json_object is None:
             return (None, False)
 
         if len(schema_filenames) > 0:
@@ -304,21 +325,13 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
         self,
         query: str,
         schema_filenames: list[str] | None = None,
-    ) -> tuple[object, bool]:
+    ) -> tuple[dict | None, bool]:
         json_object = None
         schema_filenames = schema_filenames or []
 
         data = await self.execute_query(query)
-        if (
-            data is not None
-            and isinstance(data, list)
-            and len(data) == 1
-            and isinstance(data[0], tuple)
-            and len(data[0]) == 1
-        ):
-            json_object = data[0][0]
-        else:
-            logging.error("Query did not return a single object")
+        json_object = self.parse_query_result_to_json(data)
+        if json_object is None:
             return (None, False)
 
         if len(schema_filenames) > 0:
