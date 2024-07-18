@@ -3,7 +3,8 @@ name: Ruff format check
 on:
   push:
     branches:
-      - "**"
+      - main
+      - development
     tags:
       - "*"
   pull_request:
@@ -28,16 +29,17 @@ jobs:
       - name: Check code format
         id: ruff
         run: |
-          ruff_output=$(ruff check . || true)
+          set +e
+          ruff_output=$(ruff check . 2>&1)
+          exit_code=$?
+          set -e
           echo "$ruff_output"
 
-          errors=$(echo "$ruff_output" | grep "Found .* errors" | grep -oP "\d+")
+          errors=$(echo "$ruff_output" | grep "Found \d+ errors" | grep -oP "\d+" || echo 0)
 
-          if [[ -n $errors && $errors -gt 0 ]]; then
-            echo "errors=$errors" >> $GITHUB_OUTPUT
-          else
-            echo "errors=0" >> $GITHUB_OUTPUT
-          fi
+          echo "errors=$errors" >> $GITHUB_OUTPUT
+
+          exit "$exit_code"
 
       - name: Send results to Loki
         if: always()
@@ -47,7 +49,6 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
           REPOSITORY: ${{ github.repository }}
           WORKFLOW: ${{ github.workflow }}
-          JOB: ${{ github.job }}
           STATUS: ${{ job.status }}
           RUN_ID: ${{ github.run_id }}
           RUN_NUMBER: ${{ github.run_number }}

@@ -5,9 +5,11 @@ on:
     branches:
       - main
       - development
+    tags:
+      - "*"
   pull_request:
     branches:
-      - main
+      - "**"
 
 jobs:
   test:
@@ -33,28 +35,23 @@ jobs:
       - name: Run tests
         id: test
         run: |
-          test_output=$(nose2 -s tests -C --coverage=shinto --coverage-report=term || true)
-          echo "$test_output"
+          set +e
+          test_output=$(nose2 -s tests -C --coverage=shinto --coverage-report=term 2>&1)
           exit_code=$?
-          echo "Exit code: $exit_code"
+          set -e
+          echo "$test_output"
 
-          errors=$(echo "$test_output" | grep -oP 'FAILED \(errors=\K\d+')
-          if [ -z "$errors" ]; then
-            if [[ $exit_code -eq 0 ]]; then
-              errors=0
-            else
-              errors=-1
-            fi
-          fi
-          echo "errors=$errors" >> $GITHUB_OUTPUT
+          coverage=$(echo "$test_output" | grep -oP "TOTAL +\d+ +\d+ +\K\d+" || echo 0)
+          failures=$(echo "$test_output" | grep -oP 'FAILED.*failures=\K\d+' || echo 0)
+          errors=$(echo "$test_output" | grep -oP "FAILED.*errors=\K\d+" || echo 0)
+          ran_tests=$(echo "$test_output" | grep -oP "Ran \d+ tests in" | grep -oP "\d+" || echo 0)
+          total_errors=$((errors + failures))
 
-          coverage=$(echo "$test_output" | grep -oP 'TOTAL\s+.*\s+\K\d+(?=%)')
-          if [ -z "$coverage" ]; then
-            coverage=-1
-          fi
           echo "coverage=$coverage" >> $GITHUB_OUTPUT
+          echo "errors=$total_errors" >> $GITHUB_OUTPUT
+          echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
 
-          exit $exit_code
+          exit "$exitcode"
 
       - name: Send results to Loki
         if: always()
@@ -64,7 +61,6 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
           REPOSITORY: ${{ github.repository }}
           WORKFLOW: ${{ github.workflow }}
-          JOB: ${{ github.job }}
           STATUS: ${{ job.status }}
           RUN_ID: ${{ github.run_id }}
           RUN_NUMBER: ${{ github.run_number }}
@@ -72,6 +68,6 @@ jobs:
           URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
           REF: ${{ github.ref }}
           START_TIME: ${{ steps.start_time.outputs.start_time }}
-          VALUES: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }}"
+          VALUES: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }} test_ran_tests=${{ steps.test.outputs.ran_tests }}"
         run: |
           ./scripts/send_to_loki.sh
