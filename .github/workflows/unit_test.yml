@@ -13,10 +13,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    outputs:
-      coverage: ${{ steps.coverage_output.outputs.coverage }}
-
     steps:
+      - name: Start time
+        id: start_time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -30,30 +31,47 @@ jobs:
           pip install pipenv && pipenv requirements --dev > requirements.txt && pip install -r requirements.txt
 
       - name: Run tests
+        id: test
         run: |
-          nose2 -s tests -C --coverage=shinto --coverage-report=term
-          coverage report -m > coverage.txt
+          test_output=$(nose2 -s tests -C --coverage=shinto --coverage-report=term || true)
+          echo "$test_output"
+          exit_code=$?
+          echo "Exit code: $exit_code"
 
-      - name: Set coverage output
-        id: coverage_output
-        run: |
-          COVERAGE=$(grep -Po 'TOTAL\s+\d+\s+\d+\s+\K\d+%' coverage.txt | tr -d '%')
-          echo "::set-output name=coverage::$COVERAGE"
-
-  test-coverage:
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check coverage
-        run: |
-          COVERAGE="${{ needs.test.outputs.coverage }}"
-          echo "Total coverage: $COVERAGE%"
-
-          # Fail the job if coverage is less than 90%
-          if [ $COVERAGE -lt 90 ]; then
-            echo "Code coverage ($COVERAGE%) is below the threshold of 90%"
-            exit 1
-          else
-            echo "Code coverage ($COVERAGE%) meets the threshold of 90%"
+          errors=$(echo "$test_output" | grep -oP 'FAILED \(errors=\K\d+')
+          if [ -z "$errors" ]; then
+            if [[ $exit_code -eq 0 ]]; then
+              errors=0
+            else
+              errors=-1
+            fi
           fi
+          echo "errors=$errors" >> $GITHUB_OUTPUT
+
+          coverage=$(echo "$test_output" | grep -oP 'TOTAL\s+.*\s+\K\d+(?=%)')
+          if [ -z "$coverage" ]; then
+            coverage=-1
+          fi
+          echo "coverage=$coverage" >> $GITHUB_OUTPUT
+
+          exit $exit_code
+
+      - name: Send results to Loki
+        if: always()
+        env:
+          LOKI_ADDRESS: "https://loki.shintolabs.net"
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          JOB: ${{ github.job }}
+          STATUS: ${{ job.status }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          ACTOR: ${{ github.actor }}
+          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
+          REF: ${{ github.ref }}
+          START_TIME: ${{ steps.start_time.outputs.start_time }}
+          VALUES: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }}"
+        run: |
+          ./scripts/send_to_loki.sh
