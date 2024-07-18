@@ -55,6 +55,6 @@ jobs:
           URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
           REF: ${{ github.ref }}
           START_TIME: ${{ steps.start_time.outputs.start_time }}
-          VALUES: 'ruff_errors="${{ steps.ruff.outputs.errors }}"'
+          VALUES: "ruff_errors=${{ steps.ruff.outputs.errors }}"
         run: |
           ./scripts/send_to_loki.sh

@@ -23,12 +23,12 @@ log_msg="workflow=\"$WORKFLOW\" \
 repository_owner=\"$REPOSITORY_OWNER\" \
 repository_name=\"$REPOSITORY_NAME\" \
 status=\"$STATUS\" \
-run_id=\"$RUN_ID\" \
-run_number=\"$RUN_NUMBER\" \
+run_id=$RUN_ID \
+run_number=$RUN_NUMBER \
 actor=\"$ACTOR\" \
 url=\"$URL\" \
 ref=\"$REF\" \
-duration=\"$duration\""
+duration=$duration"
 
 if [ ! -z "$VALUES" ]; then
     log_msg="$log_msg $VALUES"
