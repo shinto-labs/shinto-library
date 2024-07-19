@@ -45,7 +45,7 @@ jobs:
           set -e
           echo "$ruff_output"
 
-          errors=$(echo "$ruff_output" | grep "Found \d+ errors" | grep -oP "\d+" || echo 0)
+          errors=$(echo "$ruff_output" | grep "Found [0-9]\+ errors" | grep -oE "[0-9]+" || echo 0)
 
           echo "errors=$errors" >> $GITHUB_OUTPUT
 
