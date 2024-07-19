@@ -1,11 +1,11 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0fdc87ec7bca1d29ce9844a2408741a5f2c5f348ef1d6be103e45c06eb284d66"
+            "sha256": "c7c5a66207d206d4154d1b0ea42b1f98674126c5ef5e83058307c80d37e66c29"
         },
         "pipfile-spec": 6,
         "requires": {
-            "python_version": "3"
+            "python_version": "3.11"
         },
         "sources": [
             {
@@ -22,6 +22,7 @@
                 "sha256:bd63e505105011b25c3c11f753f7e3b8465ea739efddaccef8f0efac2137bac1"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.8'",
             "version": "==70.2.0"
         }
     },
@@ -131,7 +132,7 @@
                 "sha256:36770f519df5becd3cbfe0bee4abbfbf9b9f6b4eb4e03361d282b7efcfc4f0df",
                 "sha256:564450c0c4f1602dfe171902ceb4726cc56658af7a620ae1826f1ffc86b09a86"
             ],
-            "index": "pypi",
+            "markers": "python_version >= '3.8'",
             "version": "==0.15.1"
         },
         "prometheus-client": {
@@ -352,6 +353,7 @@
                 "sha256:f0368d765eec8247b8550251c49ebb20554cc4e812f383ff9f5bf0d5d94190b0"
             ],
             "index": "pypi",
+            "markers": "python_version >= '3.7'",
             "version": "==0.5.1"
         },
         "shinto": {
@@ -376,6 +378,14 @@
             ],
             "markers": "python_version >= '3.8'",
             "version": "==4.12.2"
+        },
+        "tzdata": {
+            "hashes": [
+                "sha256:2674120f8d891909751c38abcdfd386ac0a5a1127954fbc332af6b5ceae07efd",
+                "sha256:9068bc196136463f5245e51efda838afa15aaeca9903f49050dfa2679db4d252"
+            ],
+            "markers": "sys_platform == 'win32'",
+            "version": "==2024.1"
         }
     }
 }
