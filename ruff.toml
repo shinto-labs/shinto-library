@@ -1,7 +1,7 @@
 line-length = 100
 target-version = "py312"
 
-[lint] # TODO: look at ruff rules (added select all for more complete code formatting, but also needs more ignores...)
+[lint]
 select = ["ALL"]
 ignore = [
     #### Modules
