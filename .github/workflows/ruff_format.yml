@@ -7,9 +7,19 @@ on:
       - development
     tags:
       - "*"
+    paths:
+      - "*.py"
+      - ".github/workflows/ruff_format.yml"
+      - "scripts/send_to_loki.sh"
+      - "ruff.toml"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "*.py"
+      - ".github/workflows/ruff_format.yml"
+      - "scripts/send_to_loki.sh"
+      - "ruff.toml"
 
 jobs:
   ruff-format-check:
