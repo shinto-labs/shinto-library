@@ -7,9 +7,21 @@ on:
       - development
     tags:
       - "*"
+    paths:
+      - "*.py"
+      - ".github/workflows/unit_test.yml"
+      - "scripts/send_to_loki.sh"
+      - "Pipfile"
+      - "Pipfile.lock"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "*.py"
+      - ".github/workflows/unit_test.yml"
+      - "scripts/send_to_loki.sh"
+      - "Pipfile"
+      - "Pipfile.lock"
 
 jobs:
   test:
