@@ -6,8 +6,14 @@ install:
 release:
 	./scripts/release.sh
 
+merge_into_main:
+	./scripts/merge_into_main.sh
+
 clean:
 	./scripts/clean.sh
+
+hard_clean:
+	./scripts/clean.sh --hard
 
 test:
 	$(PIPENV_RUN) nose2 -v -s tests

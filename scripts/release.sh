@@ -47,8 +47,11 @@ fi
 echo -n "What tag do you want to deploy with? "
 read -r tag
 
+regex="^v[0-9]+\.[0-9]+\.[0-9]+$"
 if [ -z "$tag" ]; then
     exit_with_error "Tag cannot be empty."
+elif [[ ! "$tag" =~ $regex ]]; then
+    exit_with_error "Invalid tag. Tag must be in the format vX.Y.Z."
 fi
 
 ## Confirmation prompt the user
@@ -59,18 +62,19 @@ if [[ ! $reply =~ ^[Yy]$ ]]; then
 fi
 
 ## Check if the version number in setup.py matches the tag, if not update it
-if [ "$version_number" != "$tag" ]; then
+release=$(echo $tag | sed 's/v//')
+if [ "$version_number" != "$release" ]; then
     echo -e "${yellow}Info${reset}: Version number in setup.py does not match the tag."
-    echo -n "Do you want to update the version in setup.py to $tag and push to development? (y/n) "
+    echo -n "Do you want to update the version in setup.py to $release and push to development? (y/n) "
     read -r reply
     if [[ ! $reply =~ ^[Yy]$ ]]; then
         exit_with_error "Exiting."
     fi
 
-    echo "Updating version in setup.py to $tag and pushing to development."
-    sed -i "s/version=['\"]\([^'\"]*\)['\"],/version=\"$tag\",/" setup.py
+    echo "Updating version in setup.py to $release and pushing to development."
+    sed -i "s/version=['\"]\([^'\"]*\)['\"],/version=\"$release\",/" setup.py
     git add setup.py
-    git commit -m "Update version to $tag"
+    git commit -m "Update version to $release"
     git push origin development
 fi
 
