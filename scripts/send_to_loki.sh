@@ -23,7 +23,6 @@ log_msg="workflow=\"$WORKFLOW\" \
 repository_owner=\"$REPOSITORY_OWNER\" \
 repository_name=\"$REPOSITORY_NAME\" \
 status=\"$STATUS\" \
-run_id=$RUN_ID \
 run_number=$RUN_NUMBER \
 actor=\"$ACTOR\" \
 url=\"$URL\" \
@@ -43,6 +42,7 @@ log_entry=$(
                 {
                     "stream": {
                         "job": "github-actions",
+                        "level": "info",
                     },
                     "values": [
                         [$nanosecond_time, $message]

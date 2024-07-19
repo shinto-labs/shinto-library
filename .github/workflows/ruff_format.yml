@@ -50,7 +50,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           WORKFLOW: ${{ github.workflow }}
           STATUS: ${{ job.status }}
-          RUN_ID: ${{ github.run_id }}
           RUN_NUMBER: ${{ github.run_number }}
           ACTOR: ${{ github.actor }}
           URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
