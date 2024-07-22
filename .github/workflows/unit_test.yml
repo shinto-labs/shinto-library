@@ -65,10 +65,10 @@ jobs:
 
           if [ $coverage -lt 80 ]; then
             echo "Coverage is less than 80%"
-            exitcode=1
-          else
-            exitcode=$exit_code
+            exit 1
           fi
+
+          exitcode=$exit_code
 
       - name: Send results to Loki
         if: always()
