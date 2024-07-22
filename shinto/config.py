@@ -4,14 +4,19 @@ import configparser
 import copy
 import io
 import json
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-CONFIG_YAML = "YAML"
-CONFIG_JSON = "JSON"
-CONFIG_INI = "INI"
+
+class ConfigType(Enum):
+    """Config file types."""
+
+    YAML = "YAML"
+    JSON = "JSON"
+    INI = "INI"
 
 
 class ConfigError(Exception):
@@ -74,23 +79,20 @@ def replace_passwords(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list
     return data
 
 
-def output_config(configdata: dict, output_config_type: str = CONFIG_YAML) -> str:
+def output_config(configdata: dict, output_config_type: ConfigType = ConfigType.YAML) -> str:
     """Dump config dict to a output_config_type (yaml, json, ini)."""
     config_data = replace_passwords(copy.deepcopy(configdata))
 
-    if output_config_type == CONFIG_YAML:
+    if output_config_type == ConfigType.YAML:
         output = yaml.dump(config_data)
-    elif output_config_type == CONFIG_JSON:
+    elif output_config_type == ConfigType.JSON:
         output = json.dumps(config_data)
-    elif output_config_type == CONFIG_INI:
+    elif output_config_type == ConfigType.INI:
         config = configparser.ConfigParser()
         for section, options in config_data.items():
             config[section] = options
         output_stream = io.StringIO()
         config.write(output_stream)
         output = output_stream.getvalue()
-    else:
-        msg = f"Unsupported config output type: {output_config_type}"
-        raise ConfigError(msg)
 
     return output
