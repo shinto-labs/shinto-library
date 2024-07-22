@@ -73,6 +73,14 @@ class BaseTestDatabaseConnection(ABC):
         """Test the execution of a JSON query."""
 
     @abstractmethod
+    def test_execute_json_query_invalid_response(self):
+        """Test the execution of a JSON query with an empty result."""
+
+    @abstractmethod
+    def test_execute_json_query_empty_result(self):
+        """Test the execution of a JSON query with an empty result."""
+
+    @abstractmethod
     def test_execute_json_query_multiple_returns_first(self):
         """Test the execution of a JSON query with multiple returned values."""
 
@@ -256,6 +264,30 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
         self.assertEqual(result, expected_data[0][0])
         self.assertTrue(validate_ok)
+
+    @patch("shinto.database_connection.DatabaseConnection.execute_query")
+    def test_execute_json_query_empty_result(self, mock_execute_query: MagicMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [()]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = self.db.execute_json_query(test_query)
+
+        self.assertIsNone(result)
+        self.assertFalse(validate_ok)
+
+    @patch("shinto.database_connection.DatabaseConnection.execute_query")
+    def test_execute_json_query_invalid_response(self, mock_execute_query: MagicMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [("test")]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = self.db.execute_json_query(test_query)
+
+        self.assertIsNone(result)
+        self.assertFalse(validate_ok)
 
     @patch("shinto.database_connection.DatabaseConnection.execute_query")
     def test_execute_json_query_multiple_returns_first(self, mock_execute_query: MagicMock):
@@ -495,6 +527,30 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, expected_data[0][0])
         self.assertTrue(validate_ok)
+
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query_empty_result(self, mock_execute_query: AsyncMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [()]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = await self.db.execute_json_query(test_query)
+
+        self.assertIsNone(result)
+        self.assertFalse(validate_ok)
+
+    @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
+    async def test_execute_json_query_invalid_result(self, mock_execute_query: AsyncMock):
+        test_query = "SELECT * FROM test_table"
+        expected_data = [("test")]
+
+        mock_execute_query.return_value = expected_data
+
+        result, validate_ok = await self.db.execute_json_query(test_query)
+
+        self.assertIsNone(result)
+        self.assertFalse(validate_ok)
 
     @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
     async def test_execute_json_query_multiple_returns_first(self, mock_execute_query: AsyncMock):
