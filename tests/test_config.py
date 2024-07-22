@@ -65,7 +65,7 @@ class TestConfig(unittest.TestCase):
                 "password": "secret",
             },
         }
-        yaml_output = config.output_config(yaml_config, config.CONFIG_YAML)
+        yaml_output = config.output_config(yaml_config, config.ConfigType.YAML)
         self.assertIsInstance(yaml_output, str)
 
         # Test outputting config as JSON
@@ -77,7 +77,7 @@ class TestConfig(unittest.TestCase):
                 "password": "secret",
             },
         }
-        json_output = config.output_config(json_config, config.CONFIG_JSON)
+        json_output = config.output_config(json_config, config.ConfigType.JSON)
         self.assertIsInstance(json_output, str)
 
         # Test outputting config as INI
@@ -89,7 +89,7 @@ class TestConfig(unittest.TestCase):
                 "password": "secret",
             },
         }
-        ini_output = config.output_config(ini_config, config.CONFIG_INI)
+        ini_output = config.output_config(ini_config, config.ConfigType.INI)
         self.assertIsInstance(ini_output, str)
 
 
