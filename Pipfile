@@ -4,13 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-# Shinto is a library/package so packages should be installed in setup.py
-setuptools = "==70.2.0"
+# Shinto is a library/package so aditional packages should be installed in setup.py
+setuptools = ">=70.2.0"
+shinto = {path= ".", editable=true} # editable=true is the same as python setup.py develop
 
 [dev-packages]
-shinto = {path= ".", extras = ["all"], editable=true} # editable=true is the same as python setup.py develop
-ruff = "==0.5.1"
-nose2 = {extras = ["coverage_plugin"], version = "==0.15.1"}
+ruff = ">=0.5.4"
+nose2 = {extras = ["coverage_plugin"], version = ">=0.15.1"}
 
 [requires]
 python_version = "3"
