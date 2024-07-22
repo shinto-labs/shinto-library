@@ -68,7 +68,7 @@ jobs:
             exit 1
           fi
 
-          exitcode=$exit_code
+          exit $exit_code
 
       - name: Send results to Loki
         if: always()
