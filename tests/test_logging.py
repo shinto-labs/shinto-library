@@ -52,7 +52,6 @@ class TestLogging(unittest.TestCase):
 
     def test_uvicorn_logging_config(self):
         """Test UVICORN_LOGGING_CONFIG dictionary."""
-
         for logger_config in UVICORN_LOGGING_CONFIG["loggers"].values():
             self.assertEqual(logger_config["level"], "INFO")
 
@@ -95,6 +94,7 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(len(logger.handlers), 1)
 
     def test_log_to_file(self):
+        """Test setup_logging function with log_to_file=True."""
         log_filename = Path(self.temp_dir) / "myapp.log"
         if Path(log_filename).is_file():
             Path(log_filename).unlink()
