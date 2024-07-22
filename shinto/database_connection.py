@@ -1,7 +1,6 @@
 """Database connection module to handle the database connection and queries."""
 
 import asyncio
-import json
 import logging
 import os
 import sys
@@ -10,7 +9,7 @@ from abc import ABC, abstractmethod
 try:
     import psycopg
     from psycopg_pool import AsyncConnectionPool, ConnectionPool
-except ImportError as e:
+except ImportError as e:  # pragma: no cover
     msg = "psycopg[pool] is required for this module. Aditionally make sure to install postgresql."
     raise ImportError(msg) from e
 
@@ -88,44 +87,25 @@ class BaseDatabaseConnection(ABC):
         self,
         query: str,
         schema_filenames: list[str] | None = None,
-    ) -> tuple[object, bool]:
+    ) -> tuple[dict | list | None, bool]:
         """Execute a query and validate the result against json schemas if provided."""
 
-    def _parse_query_result_to_json(self, query_result: list[tuple]) -> dict | None:
-        """Parse a query result to a json object."""
-        if (
-            query_result is None
-            or not isinstance(query_result, list)
-            or not isinstance(query_result[0], tuple)
-        ):
-            logging.error("Query did not return a valid response.")
-            return None
-
+    def _get_first_json_query_result(self, query_result: list[tuple]) -> dict | list | None:
+        """Get the first json object from the query result."""
         if len(query_result) == 0 or len(query_result[0]) == 0:
             logging.error("Query result is empty.")
             return None
 
-        if len(query_result) > 1 and len(query_result[0]) > 1:
+        if not isinstance(query_result[0][0], dict) and not isinstance(query_result[0][0], list):
+            logging.error("Query result is not a valid json object.")
+            return None
+
+        if len(query_result) > 1 or len(query_result[0]) > 1:
             logging.warning(
                 "Query result contains multiple objects, only the first object will be returned."
             )
 
-        if isinstance(query_result[0][0], dict):
-            return query_result[0][0]
-
-        try:
-            query_result = json.loads(query_result[0][0])
-        except json.JSONDecodeError:
-            logging.exception("Error decoding query result.")
-            return None
-
-        if not isinstance(query_result, dict):
-            logging.error(
-                "Query result is invalid. Expected a dictionary, got: %s", type(query_result)
-            )
-            return None
-
-        return query_result
+        return query_result[0][0]
 
     @classmethod
     def from_config_file(cls, config_filename: str, start_element: list[str] | None = None):  # noqa: ANN206
@@ -260,11 +240,11 @@ class DatabaseConnection(BaseDatabaseConnection):
         self,
         query: str,
         schema_filenames: list[str] | None = None,
-    ) -> tuple[dict | None, bool]:
+    ) -> tuple[dict | list | None, bool]:
         schema_filenames = schema_filenames or []
 
         data = self.execute_query(query)
-        json_object = self._parse_query_result_to_json(data)
+        json_object = self._get_first_json_query_result(data)
         if json_object is None:
             return (None, False)
 
@@ -283,7 +263,9 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
 
     def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
         if sys.platform.startswith("win"):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy()
+            )  # pragma: no cover
 
         self._pool = AsyncConnectionPool(
             conninfo=conninfo,
@@ -334,12 +316,12 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
         self,
         query: str,
         schema_filenames: list[str] | None = None,
-    ) -> tuple[dict | None, bool]:
+    ) -> tuple[dict | list | None, bool]:
         json_object = None
         schema_filenames = schema_filenames or []
 
         data = await self.execute_query(query)
-        json_object = self._parse_query_result_to_json(data)
+        json_object = self._get_first_json_query_result(data)
         if json_object is None:
             return (None, False)
 
