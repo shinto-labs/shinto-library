@@ -21,7 +21,6 @@ ignore = [
 [lint.per-file-ignores]
 "tests/*" = [
     "S106", # hardcoded passwords
-    "D", # Docstrings
 ]
 
 [lint.pylint]

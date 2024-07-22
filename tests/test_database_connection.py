@@ -102,14 +102,17 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
     @classmethod
     @patch("shinto.database_connection.ConnectionPool")
     def setUpClass(cls, mock_pool: MagicMock):
+        """Set up the test class."""
         cls.mock_pool = MagicMock()
         mock_pool.return_value = cls.mock_pool
         cls.db = DatabaseConnection(**test_config)
 
     def test_database_creation(self):
+        """Test the creation of a database connection."""
         self.assertIsInstance(self.db, DatabaseConnection)
 
     def test_database_creation_invalid_params(self):
+        """Test the creation of a database connection with invalid params."""
         with self.assertRaises(TypeError):
             DatabaseConnection()
 
@@ -118,6 +121,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
     @patch("shinto.database_connection.load_config_file")
     def test_database_creation_from_config(self, mock_load_config: MagicMock):
+        """Test the creation of a database connection from a config file."""
         mock_load_config.return_value = test_config
         db = DatabaseConnection.from_config_file("test_config.yaml")
         self.assertIsInstance(db, DatabaseConnection)
@@ -133,10 +137,12 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         },
     )
     def test_database_creation_from_env_vars(self):
+        """Test the creation of a database connection from environment variables."""
         db = DatabaseConnection.from_environment_variables()
         self.assertIsInstance(db, DatabaseConnection)
 
     def test_open(self):
+        """Test open method and state of the datbase connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=False)
         self.mock_pool.open = AsyncMock()
 
@@ -146,6 +152,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertTrue(self.db.is_open)
 
     def test_close(self):
+        """Test close method and state of the database connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=True)
         self.mock_pool.close = AsyncMock()
 
@@ -155,6 +162,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertFalse(self.db.is_open)
 
     def test_execute_query(self):
+        """Test the execution of a query."""
         test_query = "SELECT * FROM test_table"
         expected_data = [("row1",), ("row2",)]
 
@@ -172,6 +180,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertEqual(result, expected_data)
 
     def test_execute_query_error(self):
+        """Test the execution of a query with an error."""
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
@@ -188,6 +197,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertIsNone(result)
 
     def test_execute_query_connection_error(self):
+        """Test the execution of a query with a connection error."""
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
@@ -204,6 +214,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertIsNone(result)
 
     def test_write_records(self):
+        """Test the writing of records to the database."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -222,6 +233,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertEqual(result, 2)
 
     def test_write_records_error(self):
+        """Test the writing of records to the database with an error."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -239,6 +251,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         self.assertEqual(result, -1)
 
     def test_write_records_connection_error(self):
+        """Test the writing of records to the database with a connection error."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -255,6 +268,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
     @patch("shinto.database_connection.DatabaseConnection.execute_query")
     def test_execute_json_query(self, mock_execute_query: MagicMock):
+        """Test the execution of a JSON query."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
@@ -267,6 +281,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
     @patch("shinto.database_connection.DatabaseConnection.execute_query")
     def test_execute_json_query_empty_result(self, mock_execute_query: MagicMock):
+        """Test the execution of a JSON query with an empty result."""
         test_query = "SELECT * FROM test_table"
         expected_data = [()]
 
@@ -279,6 +294,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
     @patch("shinto.database_connection.DatabaseConnection.execute_query")
     def test_execute_json_query_invalid_response(self, mock_execute_query: MagicMock):
+        """Test the execution of a JSON query with an empty result."""
         test_query = "SELECT * FROM test_table"
         expected_data = [("test")]
 
@@ -291,6 +307,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
 
     @patch("shinto.database_connection.DatabaseConnection.execute_query")
     def test_execute_json_query_multiple_returns_first(self, mock_execute_query: MagicMock):
+        """Test the execution of a JSON query with multiple returned values."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},), ({"key": "value2"},)]
 
@@ -308,6 +325,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         mock_execute_query: MagicMock,
         mock_validate: MagicMock,
     ):
+        """Test the execution of a JSON query with validation."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
@@ -326,6 +344,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
         mock_execute_query: MagicMock,
         mock_validate: MagicMock,
     ):
+        """Test the execution of a JSON query with validation failure."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
@@ -347,18 +366,22 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
     @classmethod
     @patch("shinto.database_connection.AsyncConnectionPool")
     def setUpClass(cls, mock_async_pool: MagicMock):
+        """Set up the test class."""
         cls.mock_pool = MagicMock()
         mock_async_pool.return_value = cls.mock_pool
         cls.db = AsyncDatabaseConnection(**test_config)
 
     def tearDown(self):
+        """Tear down the test."""
         self.mock_pool.reset_mock()
         self.mock_pool.connection.return_value.__aenter__.side_effect = None
 
     def test_database_creation(self):
+        """Test the creation of a database connection."""
         self.assertIsInstance(self.db, AsyncDatabaseConnection)
 
     def test_database_creation_invalid_params(self):
+        """Test the creation of a database connection with invalid params."""
         with self.assertRaises(TypeError):
             AsyncDatabaseConnection()
 
@@ -367,6 +390,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.database_connection.load_config_file")
     def test_database_creation_from_config(self, mock_load_config: MagicMock):
+        """Test the creation of a database connection from a config file."""
         mock_load_config.return_value = test_config
         db = AsyncDatabaseConnection.from_config_file("test_config.yaml")
         self.assertIsInstance(db, AsyncDatabaseConnection)
@@ -382,10 +406,12 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         },
     )
     def test_database_creation_from_env_vars(self):
+        """Test the creation of a database connection from environment variables."""
         db = AsyncDatabaseConnection.from_environment_variables()
         self.assertIsInstance(db, AsyncDatabaseConnection)
 
     async def test_open(self):
+        """Test open method and state of the datbase connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=False)
         self.mock_pool.open = AsyncMock()
 
@@ -395,6 +421,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.db.is_open)
 
     async def test_close(self):
+        """Test close method and state of the database connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=True)
         self.mock_pool.close = AsyncMock()
 
@@ -404,6 +431,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.db.is_open)
 
     async def test_execute_query(self):
+        """Test the execution of a query."""
         test_query = "SELECT * FROM test_table"
         expected_data = [("row1",), ("row2",)]
 
@@ -423,6 +451,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, expected_data)
 
     async def test_execute_query_error(self):
+        """Test the execution of a query with an error."""
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
@@ -440,6 +469,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_execute_query_connection_error(self):
+        """Test the execution of a query with a connection error."""
         test_query = "SELECT * FROM test_table"
 
         mock_conn = MagicMock()
@@ -459,6 +489,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_write_records(self):
+        """Test the writing of records to the database."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -480,6 +511,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, 2)
 
     async def test_write_records_error(self):
+        """Test the writing of records to the database with an error."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -499,6 +531,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, -1)
 
     async def test_write_records_connection_error(self):
+        """Test the writing of records to the database with a connection error."""
         test_query = "INSERT INTO test_table VALUES (%s, %s)"
         test_data = [("row1", "value1"), ("row2", "value2")]
 
@@ -518,6 +551,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
     async def test_execute_json_query(self, mock_execute_query: AsyncMock):
+        """Test the execution of a JSON query."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
@@ -530,6 +564,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
     async def test_execute_json_query_empty_result(self, mock_execute_query: AsyncMock):
+        """Test the execution of a JSON query with an empty result."""
         test_query = "SELECT * FROM test_table"
         expected_data = [()]
 
@@ -542,6 +577,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
     async def test_execute_json_query_invalid_result(self, mock_execute_query: AsyncMock):
+        """Test the execution of a JSON query with an empty result."""
         test_query = "SELECT * FROM test_table"
         expected_data = [("test")]
 
@@ -554,6 +590,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.database_connection.AsyncDatabaseConnection.execute_query")
     async def test_execute_json_query_multiple_returns_first(self, mock_execute_query: AsyncMock):
+        """Test the execution of a JSON query with multiple returned values."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},), ({"key": "value2"},)]
 
@@ -571,6 +608,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         mock_execute_query: AsyncMock,
         mock_validate: AsyncMock,
     ):
+        """Test the execution of a JSON query with validation."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
@@ -589,6 +627,7 @@ class TestAsyncDatabaseConnection(unittest.IsolatedAsyncioTestCase):
         mock_execute_query: AsyncMock,
         mock_validate: AsyncMock,
     ):
+        """Test the execution of a JSON query with validation failure."""
         test_query = "SELECT * FROM test_table"
         expected_data = [({"key": "value1"},)]
 
