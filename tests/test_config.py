@@ -55,6 +55,12 @@ class TestConfig(unittest.TestCase):
         replaced_data = config.replace_passwords(data)
         self.assertNotIn("secret123", str(replaced_data))
 
+    def test_replace_passwords_list(self):
+        """Test replacing passwords in a dictionary."""
+        data = {"username": "john_doe", "passwords": [{"password": "secret123"}]}
+        replaced_data = config.replace_passwords(data)
+        self.assertNotIn("secret123", str(replaced_data))
+
     def test_output_config(self):
         """Test outputting config as YAML."""
         yaml_config = {
