@@ -8,7 +8,7 @@ on:
     tags:
       - "*"
     paths:
-      - "*.py"
+      - "**/*.py"
       - ".github/workflows/unit_test.yml"
       - "scripts/send_to_loki.sh"
       - "Pipfile"

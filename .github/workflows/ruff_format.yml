@@ -8,7 +8,7 @@ on:
     tags:
       - "*"
     paths:
-      - "*.py"
+      - "**/*.py"
       - ".github/workflows/ruff_format.yml"
       - "scripts/send_to_loki.sh"
       - "ruff.toml"
