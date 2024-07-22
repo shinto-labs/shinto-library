@@ -25,17 +25,17 @@ class TestLogging(unittest.TestCase):
         """Set up the test class."""
         cls.temp_dir = tempfile.mkdtemp()
 
+        # Store the initial logging configuration
         cls.startup_logging = {
             **logging.Logger.manager.loggerDict,
             "root": logging.root,
         }
 
-    @classmethod
-    def tearDownClass(cls):
-        """Tear down the test class."""
+    def tearDown(self) -> None:
+        """Tear down the test method."""
         # Reset the logging configuration
         for logger_name in logging.Logger.manager.loggerDict.copy():
-            if logger_name not in cls.startup_logging:
+            if logger_name not in self.startup_logging:
                 logger = logging.getLogger(logger_name)
                 for handler in logger.handlers:
                     handler.close()
@@ -44,8 +44,8 @@ class TestLogging(unittest.TestCase):
                 if logger_name == logging.root.name:
                     # Reset the root logger
                     logging.Logger.manager.loggerDict.pop(logger_name)
-                    logging.root = logging.RootLogger(cls.startup_logging["root"].level)
-                    logging.Logger.root = cls.startup_logging["root"]
+                    logging.root = logging.RootLogger(self.startup_logging["root"].level)
+                    logging.Logger.root = self.startup_logging["root"]
                     logging.Logger.manager.root = logging.root
                 else:
                     logger.manager.loggerDict.pop(logger_name)
@@ -101,14 +101,14 @@ class TestLogging(unittest.TestCase):
         log_message = "Test log message"
         setup_logging(
             application_name="myapp",
-            loglevel=logging.DEBUG,
+            loglevel=logging.INFO,
             log_to_stdout=False,
             log_to_file=True,
             log_filename=log_filename,
         )
 
         logger = logging.getLogger("myapp")
-        self.assertEqual(logger.level, logging.DEBUG)
+        self.assertEqual(logger.level, logging.INFO)
         self.assertTrue(isinstance(logger.handlers[0], logging.FileHandler))
         self.assertEqual(len(logger.handlers), 1)
         self.assertTrue(Path(log_filename).is_file())
