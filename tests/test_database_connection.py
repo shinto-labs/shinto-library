@@ -144,7 +144,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
     def test_open(self):
         """Test open method and state of the datbase connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=False)
-        self.mock_pool.open = AsyncMock()
+        self.mock_pool.open = MagicMock()
 
         self.db.open()
 
@@ -154,7 +154,7 @@ class TestDatabaseConnection(BaseTestDatabaseConnection, unittest.TestCase):
     def test_close(self):
         """Test close method and state of the database connection."""
         type(self.mock_pool).closed = PropertyMock(return_value=True)
-        self.mock_pool.close = AsyncMock()
+        self.mock_pool.close = MagicMock()
 
         self.db.close()
 
