@@ -63,7 +63,12 @@ jobs:
           echo "errors=$total_errors" >> $GITHUB_OUTPUT
           echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
 
-          exit "$exitcode"
+          if [ $coverage -lt 80 ]; then
+            echo "Coverage is less than 80%"
+            exitcode=1
+          else
+            exitcode=$exit_code
+          fi
 
       - name: Send results to Loki
         if: always()
