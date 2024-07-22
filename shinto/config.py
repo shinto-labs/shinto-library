@@ -35,8 +35,7 @@ def load_config_file(
         msg = f"Config file not found: {file_path}"
         raise FileNotFoundError(msg)
 
-    _, file_extension = Path(file_path).suffix
-    file_extension = file_extension.lower()
+    file_extension = Path(file_path).suffix.lower()
 
     config = defaults or {}
     if file_extension in [".yaml", ".yml"]:
