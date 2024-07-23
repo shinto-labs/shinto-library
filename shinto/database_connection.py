@@ -137,6 +137,7 @@ class BaseDatabaseConnection(ABC):
         config = load_config_file(
             file_path=config_filename,
             start_element=start_element,
+            keep_none_values=False,
         )
 
         config = {k: v for k, v in config.items() if k in params}
