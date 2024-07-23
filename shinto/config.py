@@ -42,6 +42,24 @@ def remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | lis
     raise ConfigError(msg)
 
 
+def _read_config_file(file_path: str) -> dict[str, Any]:
+    """Read config file and return as dict."""
+    file_extension = Path(file_path).suffix.lower()
+    if file_extension in [".yaml", ".yml"]:
+        with Path(file_path).open(encoding="utf-8") as yaml_file:
+            return yaml.safe_load(yaml_file)
+    elif file_extension in [".json", ".js"]:
+        with Path(file_path).open(encoding="utf-8") as yaml_file:
+            return json.load(yaml_file)
+    elif file_extension == ".ini":
+        config_data = configparser.ConfigParser()
+        config_data.read(file_path)
+        return {section: dict(config_data.items(section)) for section in config_data.sections()}
+    else:
+        msg = f"Unsupported config file extension: {file_extension}"
+        raise ConfigError(msg)
+
+
 def load_config_file(
     file_path: str,
     defaults: dict[str, Any] | None = None,
@@ -50,29 +68,13 @@ def load_config_file(
 ) -> dict[str, Any]:
     """Load config from file."""
     start_element = start_element or []
+    config = defaults or {}
 
     if not isinstance(file_path, str) or not Path(file_path).exists():
-        msg = f"Config file not found: {file_path}"
+        msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    file_extension = Path(file_path).suffix.lower()
-
-    config = defaults or {}
-    if file_extension in [".yaml", ".yml"]:
-        with Path(file_path).open(encoding="utf-8") as yaml_file:
-            config.update(yaml.safe_load(yaml_file))
-    elif file_extension in [".json", ".js"]:
-        with Path(file_path).open(encoding="utf-8") as yaml_file:
-            config.update(json.load(yaml_file))
-    elif file_extension == ".ini":
-        config_data = configparser.ConfigParser()
-        config_data.read(file_path)
-        config.update(
-            {section: dict(config_data.items(section)) for section in config_data.sections()},
-        )
-    else:
-        msg = f"Unsupported config file extension: {file_extension}"
-        raise ConfigError(msg)
+    config = config.update(_read_config_file(file_path))
 
     if len(start_element) > 0:
         for item in start_element:
