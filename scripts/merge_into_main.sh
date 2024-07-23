@@ -83,7 +83,7 @@ else
     fi
 
     ## Confirm with the user to proceed with the version number in setup.py
-    echo -n "Do you want to proceed with the version number \"version_number\" in setup.py? (y/n) "
+    echo -n "Do you want to proceed with the version number \"$version_number\" in setup.py? (y/n) "
     read -r response
     if [[ "$response" != "y" ]]; then
         exit_with_error "Exiting..."
