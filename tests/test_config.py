@@ -89,6 +89,13 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": "value", "test3": {"test5": "value"}})
 
+    def test_remove_none_values(self):
+        """Test removing None values from a dictionary."""
+        data = {"test": "value", "test2": None, "test3": {"test4": None, "test5": "value"}}
+        cleaned_data = config.remove_none_values(data)
+        self.assertIsInstance(cleaned_data, dict)
+        self.assertDictEqual(cleaned_data, {"test": "value", "test3": {"test5": "value"}})
+
     def test_replace_passwords(self):
         """Test replacing passwords in a dictionary."""
         data = {"username": "john_doe", "password": "secret123"}
