@@ -70,11 +70,11 @@ def load_config_file(
     start_element = start_element or []
     config = defaults or {}
 
-    if not isinstance(file_path, str) or not Path(file_path).exists():
+    if not file_path or not Path(file_path).exists():
         msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    config = config.update(_read_config_file(file_path))
+    config.update(_read_config_file(file_path))
 
     if len(start_element) > 0:
         for item in start_element:

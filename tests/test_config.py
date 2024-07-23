@@ -81,11 +81,11 @@ class TestConfig(unittest.TestCase):
 
     def test_load_config_file_yaml_remove_none_values(self):
         """Test loading a YAML config file."""
-        yaml_file_path = Path(self.temp_dir) / "config.yaml"
-        with Path(yaml_file_path).open("w") as yaml_file:
-            yaml_file.write("test: value\ntest2: \ntest3:\n  test4: \n  test5: value")
-        self.assertTrue(Path(yaml_file_path).is_file())
-        yaml_config = config.load_config_file(yaml_file_path, keep_none_values=False)
+        none_yaml_file_path = Path(self.temp_dir) / "none_config.yaml"
+        with Path(none_yaml_file_path).open("w") as none_yaml_file:
+            none_yaml_file.write("test: value\ntest2: \ntest3:\n  test4: \n  test5: value")
+        self.assertTrue(Path(none_yaml_file_path).is_file())
+        yaml_config = config.load_config_file(none_yaml_file_path, keep_none_values=False)
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": "value", "test3": {"test5": "value"}})
 
