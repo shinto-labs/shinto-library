@@ -2,9 +2,9 @@
 
 import asyncio
 import json
-from pathlib import Path
 import unittest
 from itertools import cycle
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 from shinto.jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
