@@ -14,6 +14,10 @@ def validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bo
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
+        if not schema_filepath.exists():
+            logging.error("Schema file not found: %s", schema_filepath)
+            return False
+
         with Path(schema_filepath).open(encoding="UTF-8") as file:
             schema = json.load(file)
             try:
@@ -48,6 +52,10 @@ async def async_validate_json_against_schemas(data: dict, schema_filenames: list
 
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
+
+        if not schema_filepath.exists():
+            logging.error("Schema file not found: %s", schema_filepath)
+            return False
 
         task = asyncio.create_task(_async_validate_json_against_schemas_task(data, schema_filepath))
         tasks[task] = schema_filepath
