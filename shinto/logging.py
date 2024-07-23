@@ -2,12 +2,11 @@
 
 import logging
 import sys
-import time
 from importlib.util import find_spec
 
 SHINTO_LOG_FORMAT = (
-    "TIME=%(asctime)s.%(msecs)03d+00:00 PID=%(process)06d "
-    'NAME="%(name)s" LEVEL="%(levelname)s" MSG="%(message)s"'
+    "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
+    'name="%(application_name)s" logger_name="%(name)s" level="%(levelname)s" msg="%(message)s"'
 )
 SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
 
@@ -26,15 +25,6 @@ UVICORN_LOGGING_CONFIG = {
 }
 
 
-class ShintoFormatter(logging.Formatter):
-    """Formatter for Shinto log messages."""
-
-    def __init__(self, fmt: str, datefmt: str) -> None:
-        """Initialize the formatter."""
-        super().__init__(fmt, datefmt)
-        self.converter = time.gmtime
-
-
 def setup_logging(
     application_name: str | None = None,
     loglevel: str | int = logging.WARNING,
@@ -47,28 +37,30 @@ def setup_logging(
     if not application_name:
         application_name = sys.argv[0]
 
-    # Create a logger
-    logger = logging.getLogger(application_name)
-    logger.setLevel(loglevel)
+    # Get the root logger
+    root_logger = logging.root
+
+    # Set the log level
+    root_logger.setLevel(loglevel)
 
     # Formatter for log messages
     formatter = logging.Formatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
+    for handler in root_logger.handlers:
+        root_logger.removeHandler(handler)
 
     # Setup stdout logging if requested
     if log_to_stdout:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
-        logger.addHandler(stdout_handler)
+        root_logger.addHandler(stdout_handler)
 
     # Setup file logging if requested
     if log_to_file and log_filename:
         file_handler = logging.FileHandler(log_filename)
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
 
     # Setup journald logging if requested
     if log_to_journald:
@@ -79,8 +71,19 @@ def setup_logging(
 
             journald_handler = JournalHandler()
             journald_handler.setFormatter(formatter)
-            logger.addHandler(journald_handler)
+            root_logger.addHandler(journald_handler)
         except ImportError:
-            logger.exception("Failed to import systemd.journal. Journal logging not available.")
+            root_logger.exception(
+                "Failed to import systemd.journal. Journal logging not available."
+            )
 
-    logging.root = logger
+    # Custom log record factory that includes the application name
+    old_factory = logging.getLogRecordFactory()
+
+    def record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
+        """Log record factory with application name."""
+        record = old_factory(*args, **kwargs)
+        record.application_name = application_name
+        return record
+
+    logging.setLogRecordFactory(record_factory)

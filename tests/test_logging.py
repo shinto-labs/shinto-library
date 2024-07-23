@@ -6,10 +6,7 @@ import unittest
 from pathlib import Path
 
 from shinto.logging import (
-    SHINTO_LOG_DATEFMT,
-    SHINTO_LOG_FORMAT,
     UVICORN_LOGGING_CONFIG,
-    ShintoFormatter,
     setup_logging,
 )
 
@@ -58,33 +55,6 @@ class TestLogging(unittest.TestCase):
         for logger_config in UVICORN_LOGGING_CONFIG["loggers"].values():
             self.assertTrue(logger_config["propagate"])
 
-    def test_shinto_formatter(self):
-        """Test ShintoFormatter class."""
-        formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
-        record = logging.LogRecord(
-            name="test",
-            level=logging.INFO,
-            pathname="test.py",
-            lineno=10,
-            msg="Test log message",
-            args=None,
-            exc_info=None,
-        )
-        log_contents = formatter.format(record)
-
-        log_levelname = record.levelname
-        log_name = record.name
-        log_msg = record.getMessage()
-
-        pattern = (
-            r"TIME=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+00:00 "
-            r"PID=\d{6} "
-            rf'NAME="{log_name}" '
-            rf'LEVEL="{log_levelname}" '
-            rf'MSG="{log_msg}"'
-        )
-        self.assertRegex(log_contents, pattern)
-
     def test_setup_logging(self):
         """Test setup_logging function with default parameters."""
         setup_logging()
@@ -107,7 +77,7 @@ class TestLogging(unittest.TestCase):
             log_filename=log_filename,
         )
 
-        logger = logging.getLogger("myapp")
+        logger = logging.root
         self.assertEqual(logger.level, logging.INFO)
         self.assertTrue(isinstance(logger.handlers[0], logging.FileHandler))
         self.assertEqual(len(logger.handlers), 1)
@@ -117,8 +87,18 @@ class TestLogging(unittest.TestCase):
             self.assertEqual(log_file.read(), "")
 
         logging.info(log_message)
+        pattern = (
+            r"time=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+00:00 "
+            r"pid=\d{6} "
+            r'name="myapp" '
+            r'logger_name="root" '
+            r'level="INFO" '
+            rf'msg="{log_message}"'
+        )
         with Path(log_filename).open() as log_file:
-            self.assertIn(log_message, log_file.read())
+            file_content = log_file.read()
+            self.assertIn(log_message, file_content)
+            self.assertRegex(file_content, pattern)
 
         def test_raise_value_error():
             msg = "Test exception"
