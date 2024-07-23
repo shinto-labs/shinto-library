@@ -23,17 +23,17 @@ class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
 
 
-def _remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
-    """Remove none values from dict object even when they are nested."""
+def remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
+    """Remove all None values from a dict or list."""
     if isinstance(data, dict):
         return {
-            k: (v if not isinstance(v, list | dict) else _remove_none_values(v))
+            k: (v if not isinstance(v, list | dict) else remove_none_values(v))
             for k, v in data.items()
             if v is not None
         }
     if isinstance(data, list):
         return [
-            (v if not isinstance(v, list | dict) else _remove_none_values(v))
+            (v if not isinstance(v, list | dict) else remove_none_values(v))
             for v in data
             if v is not None
         ]
@@ -83,7 +83,7 @@ def load_config_file(
                 raise KeyError(msg) from e
 
     if not keep_none_values:
-        config = _remove_none_values(config)
+        config = remove_none_values(config)
 
     return config
 
