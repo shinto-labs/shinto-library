@@ -51,7 +51,7 @@ def load_config_file(
     """Load config from file."""
     start_element = start_element or []
 
-    if not Path(file_path).exists():
+    if not isinstance(file_path, str) or not Path(file_path).exists():
         msg = f"Config file not found: {file_path}"
         raise FileNotFoundError(msg)
 
