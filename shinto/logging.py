@@ -11,12 +11,17 @@ SHINTO_LOG_FORMAT = (
 )
 SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
 
-# modified from: from uvicorn.config import LOGGING_CONFIG
+# Custom logging config based on uvicorn's default logging config
+# from uvicorn.config import LOGGING_CONFIG  # noqa: ERA001
 UVICORN_LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {},
+    "handlers": {},
     "loggers": {
-        "uvicorn": {"level": "INFO", "propagate": True},
-        "uvicorn.error": {"level": "INFO", "propagate": True},
-        "uvicorn.access": {"level": "INFO", "propagate": True},
+        "uvicorn": {"level": "INFO", "handlers": [], "propagate": True},
+        "uvicorn.error": {"level": "INFO", "handlers": [], "propagate": True},
+        "uvicorn.access": {"level": "INFO", "handlers": [], "propagate": True},
     },
 }
 
