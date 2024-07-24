@@ -28,9 +28,9 @@ def push_metric(
             textcollector will read prom files.
 
     """
-    metric_filename =  f"{application_name}_{metric}.prom"
+    metric_file_path = Path(prometheus_collecter_path) / f"{application_name}_{metric}.prom"
 
-    with Path(prometheus_collecter_path).open(metric_filename, "w") as metric_file:
+    with Path(metric_file_path).open("w") as metric_file:
         metric_file.write(f"{application_name}_{metric} = {value}\n")
 
 
@@ -62,15 +62,15 @@ class PersistantMetrics:
     def _load_metrics(self):
         """Load metrics from file."""
         # First check if path exists
-        Path(Path( self._metric_file).parent ).mkdirs(parents=True)
+        Path( self._metric_file).parent.mkdir(parents=True, exist_ok=True)
         # Write to file
         if Path(self._metric_file).exists():
-            with Path().open(self._metric_file) as metric_file:
+            with Path(self._metric_file).open("r") as metric_file:
                 self._metrics = json.load(metric_file) or {}
 
     def _save_metrics(self):
         """Save metrics to file."""
-        with Path().open(self._metric_file, "w") as metric_file:
+        with Path(self._metric_file).open("w") as metric_file:
             json.dump(self._metrics, metric_file)
 
     def push_metric(
@@ -88,7 +88,6 @@ class PersistantMetrics:
 
         """
         self._metrics[f"{application_name}_{metric}"] = value
-        push_metric(application_name, metric, value)
         self._save_metrics()
 
     def inc_metric(
@@ -112,7 +111,6 @@ class PersistantMetrics:
             self._metrics[f"{application_name}_{metric}"] = 1
 
         self._save_metrics()
-        push_metric(application_name, metric, self._metrics[f"{application_name}_{metric}"])
         return self._metrics[f"{application_name}_{metric}"]
 
 
@@ -120,7 +118,7 @@ _persistant_metrics = None
 
 
 def init_persistant_metrics(
-        metric_file: str =DEFAULT_PERSISTANT_METRIC_JSONFILE
+        metric_file: str = DEFAULT_PERSISTANT_METRIC_JSONFILE
     ) -> PersistantMetrics:
     """Initialize the persistant metrics."""
     global _persistant_metrics # pylint: disable=global-statement # noqa: PLW0603

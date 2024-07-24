@@ -18,6 +18,7 @@ setup(
         "pyyaml==6.0.1",
         "jsonschema==4.23.0",
         "prometheus_client==0.20.0",
+        "psycopg_binary==3.2.1",
         "psycopg[pool]==3.2.1",
         "anyio==4.4.0",
     ],
