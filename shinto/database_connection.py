@@ -1,207 +1,334 @@
 """Database connection module to handle the database connection and queries."""
 
 import asyncio
-import json
 import logging
 import os
-from typing import List, Tuple
+import sys
+from abc import ABC, abstractmethod
 
-import jsonschema
-import psycopg
-import psycopg_pool
+try:
+    import psycopg
+    from psycopg_pool import AsyncConnectionPool, ConnectionPool
+except ImportError as e:  # pragma: no cover
+    msg = "psycopg[pool] is required for this module. Aditionally make sure to install postgresql."
+    raise ImportError(msg) from e
+
 
 from .config import load_config_file
+from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
 
 
-class DatabaseConnection:
-    """DatabaseConnection class to handle the database connection and queries."""
+class BaseDatabaseConnection(ABC):
+    """BaseDatabaseConnection class to handle the database connection and queries."""
 
-    _pool: psycopg_pool.AsyncConnectionPool = None
+    _pool: ConnectionPool | AsyncConnectionPool = None
 
     def __init__(
         self,
-        minconn: int = None,
-        maxconn: int = None,
-        database: str = None,
-        user: str = None,
-        password: str = None,
-        host: str = None,
-        port: int = None,
-        use_env: bool = False,
+        database: str,
+        user: str,
+        password: str,
+        host: str,
+        port: int = 6432,
+        minconn: int = 1,
+        maxconn: int = 3,
     ):
-        """Initialize the database class.
+        """
+        Initialize the database connection class.
 
         Args:
-            minconn: (defaults to 1) Minimum number of connections in the pool.
-            maxconn: (defaults to 3) Maximum number of connections in the pool.
-            database: Database name.
-            user: Database user.
-            password: Database password.
-            host: Database host.
-            port: (defaults to 6432) Database port.
-            use_env: Use environment variables for connection parameters.
+            database (str): Database name.
+            user (str): Database user.
+            password (str): Database password.
+            host (str): Database host.
+            port (int): Database port.
+            minconn (int): Minimum number of connections in the connnection pool.
+            maxconn (int): Maximum number of connections in the connnection pool.
 
-        Env variables can be provided as: `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
-        If arguments are provided, they take precedence over environment variables.
+        Raises:
+            ValueError: If any of the required parameters are missing.
 
         """
-        if use_env:
-            database = database or os.environ.get("PGDATABASE")
-            user = user or os.environ.get("PGUSER")
-            password = password or os.environ.get("PGPASSWORD")
-            host = host or os.environ.get("PGHOST")
-            port = port or os.environ.get("PGPORT")
-
-        port = port or 6432
-        minconn = minconn or 1
-        maxconn = maxconn or 3
+        missing_params = [k for k, v in locals().items() if v is None]
+        if len(missing_params) > 0:
+            msg = f"Missing required parameters: {missing_params}"
+            raise TypeError(msg)
 
         conninfo = f"dbname={database} user={user} password={password} host={host} port={port}"
+        self._setup_connection_pool(minconn, maxconn, conninfo)
 
-        self._pool = psycopg_pool.AsyncConnectionPool(
-            conninfo=conninfo, min_size=minconn, max_size=maxconn, open=False
+    @abstractmethod
+    def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
+        """Set up the database connection pool and open the pool."""
+
+    @abstractmethod
+    def open(self):
+        """Open the database connection pool."""
+
+    @abstractmethod
+    def close(self):
+        """Close the database connection pool."""
+
+    @property
+    def is_open(self) -> bool:
+        """Check if the database connection pool is open."""
+        return not self._pool.closed
+
+    @abstractmethod
+    def execute_query(self, query: str) -> list[tuple]:
+        """Execute a query on the database."""
+
+    @abstractmethod
+    def write_records(self, query: str, records: list[tuple]) -> int:
+        """Write data records to the database."""
+
+    @abstractmethod
+    def execute_json_query(
+        self,
+        query: str,
+        schema_filenames: list[str] | None = None,
+    ) -> tuple[dict | list | None, bool]:
+        """Execute a query and validate the result against json schemas if provided."""
+
+    def _get_first_json_query_result(self, query_result: list[tuple]) -> dict | list | None:
+        """Get the first json object from the query result."""
+        if len(query_result) == 0 or len(query_result[0]) == 0:
+            logging.error("Query result is empty.")
+            return None
+
+        if not isinstance(query_result[0][0], dict) and not isinstance(query_result[0][0], list):
+            logging.error("Query result is not a valid json object.")
+            return None
+
+        if len(query_result) > 1 or len(query_result[0]) > 1:
+            logging.warning(
+                "Query result contains multiple objects, only the first object will be returned."
+            )
+
+        return query_result[0][0]
+
+    @classmethod
+    def from_config_file(cls, config_filename: str, start_element: list[str] | None = None):  # noqa: ANN206
+        """
+        Create a database connection from a configuration file.
+
+        Args:
+            config_filename (str): Path to the configuration file.
+            start_element (list):
+                Path to the database connection parameters in the configuration file.
+                Should be used when the parameters are nested in the configuration file.
+
+        Required parameters in the configuration file:
+        ---------------------------------------------
+        - database
+        - user
+        - password
+        - host
+
+        Optional paramers in the configuration file:
+        -------------------------------------------
+        - port: default 6432
+        - minconn: default 1
+        - maxconn: default 3
+
+        """
+        params = ["port", "minconn", "maxconn", "database", "user", "password", "host"]
+
+        config = load_config_file(
+            file_path=config_filename,
+            start_element=start_element,
+            keep_none_values=False,
         )
 
-    async def connect(self):
-        """Open the database connection pool."""
-        await self._pool.open()
+        config = {k: v for k, v in config.items() if k in params}
 
-    async def disconnect(self):
-        """Close the database connection pool."""
-        await self._pool.close()
+        return cls(**config)
 
-    async def execute_query(self, query: str) -> List[Tuple]:
-        """Execute a query on the database."""
-        data = None
+    @classmethod
+    def from_environment_variables(  # noqa: ANN206
+        cls,
+        database: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
+        port: int | None = None,
+        minconn: int = 1,
+        maxconn: int = 3,
+    ):
+        """
+        Create a database connection from environment variables.
 
+        Env variables should be provided as:
+        `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
+
+        If arguments are provided, they take precedence over environment variables.
+
+        Default values:
+        - port: 6432
+        - minconn: 1
+        - maxconn: 3
+
+        """
+        database = database or os.environ.get("PGDATABASE")
+        user = user or os.environ.get("PGUSER")
+        password = password or os.environ.get("PGPASSWORD")
+        host = host or os.environ.get("PGHOST")
+        port = port or os.environ.get("PGPORT") or 6432
+
+        return cls(
+            database=database,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            minconn=minconn,
+            maxconn=maxconn,
+        )
+
+
+class DatabaseConnection(BaseDatabaseConnection):
+    """DatabaseConnection class to handle the database connection and queries."""
+
+    _pool: ConnectionPool = None
+
+    def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
+        self._pool = ConnectionPool(
+            conninfo=conninfo,
+            min_size=minconn,
+            max_size=maxconn,
+            open=False,
+        )
+
+    def open(self):  # noqa: D102, inherit doc string
+        self._pool.open()
+
+    def close(self):  # noqa: D102, inherit doc string
+        self._pool.close()
+
+    def execute_query(self, query: str) -> list[tuple] | None:  # noqa: D102, inherit doc string
         try:
-            async with self._pool.connection() as conn:
-                async with conn.cursor() as cur:
-                    try:
-                        await cur.execute(query)
-                        data = await cur.fetchall()
-                    except psycopg.Error as e:
-                        logging.error("Error executing query: %s", str(e))
-        except psycopg.OperationalError as e:
-            logging.error("Error setting up database connection: %s", str(e))
+            with self._pool.connection() as conn, conn.cursor() as cur:
+                try:
+                    cur.execute(query)
+                    return cur.fetchall()
+                except psycopg.Error:
+                    logging.exception("Error executing query.")
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
 
-        return data
+        return None
 
-    async def write_records(self, query: str, records: List[Tuple]) -> bool:
-        """Write data records to the database."""
+    def write_records(self, query: str, records: list[tuple]) -> int:  # noqa: D102, inherit doc string
         try:
-            async with self._pool.connection() as conn:
-                async with conn.cursor() as cur:
-                    try:
-                        await cur.execute(query, records)
-                        await conn.commit()
-                        return True
-                    except psycopg.Error as e:
-                        logging.error(
-                            "Performing rollback, " + "Error writing records to database: %s",
-                            str(e),
-                        )
-                        await conn.rollback()
-                        return False
-        except psycopg.Error as e:
-            logging.error("Error setting up database connection: %s", str(e))
-            return False
+            with self._pool.connection() as conn, conn.cursor() as cur:
+                try:
+                    # TODO: look at copy instead of executemany
+                    # https://shintolabs.atlassian.net/browse/DOT-422
+                    cur.executemany(query, records, returning=False)
+                    affected_rows = cur.rowcount
+                    conn.commit()
+                except psycopg.Error:
+                    logging.exception("Error writing records to database, performing rollback.")
+                    conn.rollback()
+                    affected_rows = -1
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
+            affected_rows = -2
 
-    async def execute_json_query(
-        self, query: str, schema_filenames: List[str] = None
-    ) -> Tuple[object, bool]:
-        """Execute a query and validate the result against json schemas if provided."""
-        json_object = None
+        return affected_rows
+
+    def execute_json_query(  # noqa: D102, inherit doc string
+        self,
+        query: str,
+        schema_filenames: list[str] | None = None,
+    ) -> tuple[dict | list | None, bool]:
         schema_filenames = schema_filenames or []
 
-        data = await self.execute_query(query)
-        if (
-            data is not None
-            and isinstance(data, list)
-            and len(data) == 1
-            and isinstance(data[0], Tuple)
-            and len(data[0]) == 1
-        ):
-            json_object = data[0][0]
-        else:
-            logging.error("Query did not return a single object")
+        data = self.execute_query(query)
+        json_object = self._get_first_json_query_result(data)
+        if json_object is None:
             return (None, False)
 
         if len(schema_filenames) > 0:
-            validate_ok = await self.validate_json_against_schemas(json_object, schema_filenames)
+            validate_ok = validate_json_against_schemas(json_object, schema_filenames)
         else:
             validate_ok = True
 
         return (json_object, validate_ok)
 
-    async def validate_json_against_schemas(self, data: object, schema_filenames: List[str]):
-        """Validate a json object against schemas."""
-        validate_ok = True
-        tasks = []
 
-        loop = asyncio.get_event_loop()
+class AsyncDatabaseConnection(BaseDatabaseConnection):
+    """AsyncDatabaseConnection class to handle the database connection and queries."""
 
-        for schema_filename in schema_filenames:
-            schema_filename = os.path.abspath(schema_filename)
+    _pool: AsyncConnectionPool = None
 
-            with open(schema_filename, encoding="UTF-8") as file:
-                schema = json.load(file)
-                task = loop.run_in_executor(None, jsonschema.validate, data, schema)
-                tasks.append(task)
+    def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
+        if sys.platform.startswith("win"):
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy()
+            )  # pragma: no cover
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        self._pool = AsyncConnectionPool(
+            conninfo=conninfo,
+            min_size=minconn,
+            max_size=maxconn,
+            open=False,
+        )
 
-        for result, schema_filename in zip(results, schema_filenames):
-            if isinstance(result, Exception):
-                if isinstance(result, jsonschema.SchemaError):
-                    logging.error("JSON schema error in %s: %s", schema_filename, str(result))
-                elif isinstance(result, jsonschema.ValidationError):
-                    logging.error("JSON validation error in %s: %s", schema_filename, str(result))
-                validate_ok = False
+    async def open(self):  # noqa: D102, inherit doc string
+        await self._pool.open()
 
-        return validate_ok
+    async def close(self):  # noqa: D102, inherit doc string
+        await self._pool.close()
 
+    async def execute_query(self, query: str) -> list[tuple]:  # noqa: D102, inherit doc string
+        try:
+            async with self._pool.connection() as conn, conn.cursor() as cur:
+                try:
+                    await cur.execute(query)
+                    return await cur.fetchall()
+                except psycopg.Error:
+                    logging.exception("Error executing query.")
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
 
-def database_connection_from_config(
-    config_filename: str, start_element: List[str] = None
-) -> DatabaseConnection:
-    """Create a database connection from a configuration file.
+        return None
 
-    Args:
-        config_filename: Path to the configuration file.
-        start_element: Path to the database connection parameters in the configuration file.
-        Should be used if the connection parameters are not at the root level of the config file.
+    async def write_records(self, query: str, records: list[tuple]) -> int:  # noqa: D102, inherit doc string
+        try:
+            async with self._pool.connection() as conn, conn.cursor() as cur:
+                try:
+                    # TODO: look at copy instead of executemany
+                    # https://shintolabs.atlassian.net/browse/DOT-422
+                    await cur.executemany(query, records, returning=False)
+                    affected_rows = cur.rowcount
+                    await conn.commit()
+                except psycopg.Error:
+                    logging.exception("Error writing records to database, performing rollback.")
+                    await conn.rollback()
+                    affected_rows = -1
+        except psycopg.OperationalError:
+            logging.exception("Error setting up database connection.")
+            affected_rows = -2
 
-    """
-    start_element = start_element or []
-    config_filename = os.path.abspath(config_filename)
-    config = dict(load_config_file(config_filename))
+        return affected_rows
 
-    # Get parameters from start_element in config file
-    if len(start_element) > 0:
-        for item in start_element:
-            try:
-                config = config[item]
-            except KeyError as e:
-                raise KeyError(f"Invalid item path in config file: {start_element}.") from e
+    async def execute_json_query(  # noqa: D102, inherit doc string
+        self,
+        query: str,
+        schema_filenames: list[str] | None = None,
+    ) -> tuple[dict | list | None, bool]:
+        json_object = None
+        schema_filenames = schema_filenames or []
 
-    # Check for required parameters
-    required_params = {
-        "minconn",
-        "maxconn",
-        "database",
-        "user",
-        "password",
-        "host",
-        "port",
-    }
+        data = await self.execute_query(query)
+        json_object = self._get_first_json_query_result(data)
+        if json_object is None:
+            return (None, False)
 
-    config_keys = set(config.keys())
-    missing_params = required_params - config_keys
-    if missing_params:
-        raise KeyError(f"Missing connection parameters in config file: {', '.join(missing_params)}")
-    invalid_params = config_keys - required_params
-    if invalid_params:
-        raise KeyError(f"Invalid connection parameters in config file: {', '.join(invalid_params)}")
+        if len(schema_filenames) > 0:
+            validate_ok = await async_validate_json_against_schemas(json_object, schema_filenames)
+        else:
+            validate_ok = True
 
-    return DatabaseConnection(**config)
+        return (json_object, validate_ok)

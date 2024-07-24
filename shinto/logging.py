@@ -2,159 +2,88 @@
 
 import logging
 import sys
-from typing import Union
+from importlib.util import find_spec
 
 SHINTO_LOG_FORMAT = (
-    "%(asctime)s.%(msecs)03d - [%(process)06d] %(name)s - %(levelname)s - %(message)s"
+    "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
+    'name="%(application_name)s" logger_name="%(name)s" level="%(levelname)s" msg="%(message)s"'
 )
-SHINTO_LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
+SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
+
+# Custom logging config based on uvicorn's default logging config
+# from uvicorn.config import LOGGING_CONFIG  # noqa: ERA001
+UVICORN_LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {},
+    "handlers": {},
+    "loggers": {
+        "uvicorn": {"level": "INFO", "handlers": [], "propagate": True},
+        "uvicorn.error": {"level": "INFO", "handlers": [], "propagate": True},
+        "uvicorn.access": {"level": "INFO", "handlers": [], "propagate": True},
+    },
+}
 
 
 def setup_logging(
-        application_name: str = None,
-        loglevel: Union[str, int] = logging.WARNING,
-        log_to_stdout: bool = True,
-        log_to_file: bool = True,
-        log_to_journald: bool = False,
-        log_filename: str = None):
-
+    application_name: str | None = None,
+    loglevel: str | int = logging.WARNING,
+    log_to_stdout: bool = True,
+    log_to_file: bool = True,
+    log_to_journald: bool = False,
+    log_filename: str | None = None,
+):
     """Set up logging, format etc."""
     if not application_name:
         application_name = sys.argv[0]
 
-    # Create a logger
-    logger = logging.getLogger(application_name)
-    logger.setLevel(loglevel)
+    # Get the root logger
+    root_logger = logging.root
+
+    # Set the log level
+    root_logger.setLevel(loglevel)
 
     # Formatter for log messages
     formatter = logging.Formatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
+    for handler in root_logger.handlers:
+        root_logger.removeHandler(handler)
 
     # Setup stdout logging if requested
     if log_to_stdout:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
-        logger.addHandler(stdout_handler)
+        root_logger.addHandler(stdout_handler)
 
     # Setup file logging if requested
     if log_to_file and log_filename:
         file_handler = logging.FileHandler(log_filename)
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
 
     # Setup journald logging if requested
     if log_to_journald:
         try:
-            from systemd.journal import JournalHandler
+            if find_spec("JournalHandler") is None:
+                # systemd is not available on all platforms (including Windows)
+                from systemd.journal import JournalHandler  # type: ignore[reportMissingImports]
+
             journald_handler = JournalHandler()
             journald_handler.setFormatter(formatter)
-            logger.addHandler(journald_handler)
+            root_logger.addHandler(journald_handler)
         except ImportError:
-            logger.error("Failed to import systemd.journal. Journal logging not available.")
-
-    logging.root = logger
-
-
-def generate_uvicorn_log_config(
-    loglevel: Union[str, int] = logging.WARNING,
-    log_to_stdout: bool = True,
-    log_to_file: bool = True,
-    log_to_journald: bool = False,
-    log_filename: str = None,
-) -> dict:
-    """Generate logging configuration for uvicorn.
-
-    Args:
-        loglevel: Log level for the logger.
-        Can be specified as a string (e.g., "info", "warning")
-        or as an integer (e.g. logging.INFO, logging.WARNING).
-        See Uvicorn LOG_LEVELS for more details.
-        log_to_stdout: Should logs be written to stdout.
-        log_to_file: Should logs be written to a file.
-        log_filename: If provided, and log_to_file is True, logs will be written to this file.
-
-    Returns:
-        Logging configuration for Uvicorn.
-
-    """
-    formatters = {
-        "default": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": SHINTO_LOG_FORMAT,
-            "datefmt": SHINTO_LOG_DATEFMT,
-        },
-    }
-    handlers = {}
-    loggers = {
-        "uvicorn": {"handlers": [], "level": loglevel, "propagate": False},
-        "uvicorn.error": {"handlers": [], "level": loglevel, "propagate": False},
-        "uvicorn.access": {"handlers": [], "level": loglevel, "propagate": False},
-    }
-
-    if log_to_stdout:
-        handlers.update(
-            {
-                "default": {
-                    "formatter": "default",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stderr",
-                }
-            }
-        )
-        loggers["uvicorn"]["handlers"].append("default")
-        loggers["uvicorn.error"]["handlers"].append("default")
-        handlers.update(
-            {
-                "access": {
-                    "formatter": "default",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                }
-            }
-        )
-        loggers["uvicorn.access"]["handlers"].append("access")
-    
-    if log_to_file and log_filename:
-        handlers.update(
-            {
-                "file": {
-                    "formatter": "default",
-                    "class": "logging.FileHandler",
-                    "filename": log_filename,
-                }
-            }
-        )
-        for logger_value in loggers.values():
-            logger_value["handlers"].append("file")
-
-    if log_to_journald:
-        try:
-            from systemd.journal import JournalHandler
-            handlers.update(
-                {
-                    "journald": {
-                        "formatter": "default",
-                        "class": "systemd.journal.JournalHandler",
-                    }
-                }
+            root_logger.exception(
+                "Failed to import systemd.journal. Journal logging not available."
             )
-            for logger_value in loggers.values():
-                logger_value["handlers"].append("journald")
-        except ImportError:
-            loggers["uvicorn"]["level"] = "ERROR"
-            loggers["uvicorn.error"]["level"] = "ERROR"
-            loggers["uvicorn.access"]["level"] = "ERROR"
-            loggers["uvicorn"]["handlers"] = []
-            loggers["uvicorn.error"]["handlers"] = []
-            loggers["uvicorn.access"]["handlers"] = []
 
-    return {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": formatters,
-        "handlers": handlers,
-        "loggers": loggers,
-    }
+    # Custom log record factory that includes the application name
+    old_factory = logging.getLogRecordFactory()
+
+    def record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
+        """Log record factory with application name."""
+        record = old_factory(*args, **kwargs)
+        record.application_name = application_name
+        return record
+
+    logging.setLogRecordFactory(record_factory)

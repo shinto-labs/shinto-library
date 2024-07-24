@@ -1,29 +1,69 @@
-name: Ruff format check code.
+name: Ruff format check
 
 on:
   push:
     branches:
-      - "**"
+      - main
+      - development
+    tags:
+      - "*"
+    paths:
+      - "**/*.py"
+      - ".github/workflows/ruff_format.yml"
+      - "scripts/send_to_loki.sh"
+      - "ruff.toml"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "*.py"
+      - ".github/workflows/ruff_format.yml"
+      - "scripts/send_to_loki.sh"
+      - "ruff.toml"
 
 jobs:
   ruff-format-check:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Start time
+        id: start_time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Ruff
         run: pip install ruff
 
       - name: Check code format
+        id: ruff
         run: |
-          ruff check .
+          set +e
+          ruff_output=$(ruff check . 2>&1)
+          exit_code=$?
+          set -e
+          echo "$ruff_output"
 
-          if [[ $(ruff check .) != "All checks passed!" ]]; then
-            echo "One or more files are not formatted correctly."
-            exit 1
-          fi
+          errors=$(echo "$ruff_output" | grep "Found [0-9]\+ errors" | grep -oE "[0-9]+" || echo 0)
+
+          echo "errors=$errors" >> $GITHUB_OUTPUT
+
+          exit "$exit_code"
+
+      - name: Send results to Loki
+        if: always()
+        env:
+          LOKI_ADDRESS: "https://loki.shintolabs.net"
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          STATUS: ${{ job.status }}
+          RUN_NUMBER: ${{ github.run_number }}
+          ACTOR: ${{ github.actor }}
+          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
+          REF: ${{ github.ref }}
+          START_TIME: ${{ steps.start_time.outputs.start_time }}
+          VALUES: "ruff_errors=${{ steps.ruff.outputs.errors }}"
+        run: ./scripts/send_to_loki.sh
