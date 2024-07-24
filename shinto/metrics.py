@@ -2,18 +2,21 @@
 
 import json
 import os
+from pathlib import Path
 
 DEFAULT_PROMETHEUS_COLLECTER_PATH = os.getenv(
-    "PROMETHEUS_COLLECTER_PATH", "/var/lib/node_exporter/textfile_collector"
+    "PROMETHEUS_COLLECTER_PATH", Path("/var/lib") / "node_exporter" / "textfile_collector"
 )
 DEFAULT_PERSISTANT_METRIC_JSONFILE = os.getenv(
-    "PERSISTANT_METRIC_JSONFILE", "/var/lib/shinto/metrics.json"
+    "PERSISTANT_METRIC_JSONFILE", Path("/var/lib") / "shinto" / "metrics.json"
 )
 
 
 def push_metric(
-    application_name, metric, value, prometheus_collecter_path=DEFAULT_PROMETHEUS_COLLECTER_PATH
-):
+    application_name: str,
+    metric: str,
+    value: int,
+    prometheus_collecter_path: str=DEFAULT_PROMETHEUS_COLLECTER_PATH):
     """
     Push a metric to the Prometheus Pushgateway.
 
@@ -25,13 +28,15 @@ def push_metric(
             textcollector will read prom files.
 
     """
-    metric_file_path = os.path.join(prometheus_collecter_path, f"{application_name}_{metric}.prom")
+    metric_filename =  f"{application_name}_{metric}.prom"
 
-    with open(metric_file_path, "w") as metric_file:
+    with Path(prometheus_collecter_path).open(metric_filename, "w") as metric_file:
         metric_file.write(f"{application_name}_{metric} = {value}\n")
 
 
-def inc_persistant_counter(application_name, metric) -> int:
+def inc_persistant_counter(
+        application_name: str,
+        metric: str) -> int:
     """
     Push a persistant counter to the Prometheus Pushgateway.
 
@@ -46,10 +51,9 @@ def inc_persistant_counter(application_name, metric) -> int:
 class PersistantMetrics:
     """Persistant metrics class."""
 
-    _metrics: dict = {}
-    _metrics_file: str = ""
-
-    def __init__(self, metric_file=DEFAULT_PERSISTANT_METRIC_JSONFILE):
+    def __init__(
+            self,
+            metric_file:str=DEFAULT_PERSISTANT_METRIC_JSONFILE):
         """Initialize the PersistantMetrics class."""
         self._metric_file = metric_file
         self._metrics = {}
@@ -58,18 +62,22 @@ class PersistantMetrics:
     def _load_metrics(self):
         """Load metrics from file."""
         # First check if path exists
-        os.makedirs(os.path.dirname(self._metric_file), exist_ok=True)
+        Path(Path( self._metric_file).parent ).mkdirs(parents=True)
         # Write to file
-        if os.path.exists(self._metric_file):
-            with open(self._metric_file) as metric_file:
+        if Path(self._metric_file).exists():
+            with Path().open(self._metric_file) as metric_file:
                 self._metrics = json.load(metric_file) or {}
 
     def _save_metrics(self):
         """Save metrics to file."""
-        with open(self._metric_file, "w") as metric_file:
+        with Path().open(self._metric_file, "w") as metric_file:
             json.dump(self._metrics, metric_file)
 
-    def push_metric(self, application_name, metric, value=0):
+    def push_metric(
+            self,
+            application_name: str,
+            metric: str,
+            value: int = 0 ):
         """
         Push a metric to the Prometheus Pushgateway.
 
@@ -83,7 +91,10 @@ class PersistantMetrics:
         push_metric(application_name, metric, value)
         self._save_metrics()
 
-    def inc_metric(self, application_name, metric) -> int:
+    def inc_metric(
+            self,
+            application_name: str,
+            metric: str) -> int:
         """
         Increment a metric.
 
@@ -108,15 +119,17 @@ class PersistantMetrics:
 _persistant_metrics = None
 
 
-def init_persistant_metrics(metric_file=DEFAULT_PERSISTANT_METRIC_JSONFILE) -> PersistantMetrics:
+def init_persistant_metrics(
+        metric_file: str =DEFAULT_PERSISTANT_METRIC_JSONFILE
+    ) -> PersistantMetrics:
     """Initialize the persistant metrics."""
-    global _persistant_metrics
+    global _persistant_metrics # pylint: disable=global-statement # noqa: PLW0603
     _persistant_metrics = PersistantMetrics(metric_file)
     return _persistant_metrics
 
 
 def _get_persistant_metrics() -> PersistantMetrics:
-    global _persistant_metrics
+    global _persistant_metrics # pylint: disable=global-statement # noqa: PLW0603
     if _persistant_metrics is None:
         _persistant_metrics = init_persistant_metrics()
     return _persistant_metrics
