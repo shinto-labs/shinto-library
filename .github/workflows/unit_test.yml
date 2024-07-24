@@ -1,0 +1,88 @@
+name: Unit test
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    tags:
+      - "*"
+    paths:
+      - "**/*.py"
+      - ".github/workflows/unit_test.yml"
+      - "scripts/send_to_loki.sh"
+      - "Pipfile"
+      - "Pipfile.lock"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "*.py"
+      - ".github/workflows/unit_test.yml"
+      - "scripts/send_to_loki.sh"
+      - "Pipfile"
+      - "Pipfile.lock"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start time
+        id: start_time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv && pipenv requirements --dev > requirements.txt && pip install -r requirements.txt
+
+      - name: Run tests
+        id: test
+        run: |
+          set +e
+          test_output=$(nose2 -s tests -C --coverage=shinto --coverage-report=term 2>&1)
+          exit_code=$?
+          set -e
+          echo "$test_output"
+
+          coverage=$(echo "$test_output" | grep -oP "TOTAL +\d+ +\d+ +\K\d+" || echo 0)
+          failures=$(echo "$test_output" | grep -oP 'FAILED.*failures=\K\d+' || echo 0)
+          errors=$(echo "$test_output" | grep -oP "FAILED.*errors=\K\d+" || echo 0)
+          ran_tests=$(echo "$test_output" | grep -oP "Ran \d+ tests in" | grep -oP "\d+" || echo 0)
+          total_errors=$((errors + failures))
+
+          echo "coverage=$coverage" >> $GITHUB_OUTPUT
+          echo "errors=$total_errors" >> $GITHUB_OUTPUT
+          echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
+
+          if [ $coverage -lt 80 ]; then
+            echo "Coverage is less than 80%"
+            exit 1
+          fi
+
+          exit $exit_code
+
+      - name: Send results to Loki
+        if: always()
+        env:
+          LOKI_ADDRESS: "https://loki.shintolabs.net"
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          STATUS: ${{ job.status }}
+          RUN_NUMBER: ${{ github.run_number }}
+          ACTOR: ${{ github.actor }}
+          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
+          REF: ${{ github.ref }}
+          START_TIME: ${{ steps.start_time.outputs.start_time }}
+          VALUES: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }} test_ran_tests=${{ steps.test.outputs.ran_tests }}"
+        run: ./scripts/send_to_loki.sh
