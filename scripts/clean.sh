@@ -16,17 +16,16 @@ find . -name "htmlcov" | xargs rm -rf
 # find ruff cache files and remove them
 find . -name ".ruff_cache" | xargs rm -rf
 
-# clean up pipenv packages
-pipenv clean
+# find egg files and remove them
+find . -name "*.egg-info" | xargs rm -rf
 
-# if --hard flag is passed, reset environment
-if [[ " $* " == *" --hard "* ]]; then
-    # remove virtual environment
-    venv_path=$(pipenv --venv)
-    rm -rf $venv_path
+# clean up pdm lock
+pdm lock --refresh
 
-    # find egg-info files and remove them
-    find . -name "*.egg-info" | xargs rm -rf
-fi
+# find venv files and remove them
+find . -name ".venv" | xargs rm -rf
+find . -name ".pdm-python" | xargs rm -rf
 
-echo "Cleaned up the project!"
+echo "
+🎉 Cleaned up the project!
+"
