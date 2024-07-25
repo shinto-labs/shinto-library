@@ -8,7 +8,6 @@ Library of shared Python modules for use in Shinto projects.
 - **make**
 - **psql**
 - **git**
-- **pdm**
 
 <details>
 <summary>For Windows users</summary>
@@ -70,3 +69,5 @@ Format check: `make ruff`
 ### Clean up the development environment
 
 Clean caches and environments with: `make clean`
+
+Also cleans the [pdm.lock](./pdm.lock) file.

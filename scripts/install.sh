@@ -2,8 +2,15 @@
 
 set -e
 
+yellow='\033[0;33m'
 green='\033[0;32m'
 reset='\033[0m'
+
+# Install pdm if not already installed
+if ! command -v pdm &>/dev/null; then
+    echo -e "${yellow}pdm is not installed. Installing...${reset}"
+    python -m pip install pdm
+fi
 
 # Install dependencies
 pdm install
