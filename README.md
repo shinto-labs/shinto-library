@@ -6,7 +6,6 @@ Library of shared Python modules for use in Shinto projects.
 
 - **python**
 - **make**
-- **psql**
 - **git**
 
 <details>
@@ -25,10 +24,6 @@ Required paths (might be different depending on your installation/location):
 # Make
 
 C:\Program Files (x86)\GnuWin32\bin
-
-# psql
-
-C:\Program Files\PostgreSQL\16\bin
 
 # Git
 
