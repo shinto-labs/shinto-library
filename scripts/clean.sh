@@ -13,6 +13,9 @@ find . -name ".coverage" | xargs rm -rf
 find . -name "*,cover" | xargs rm -rf
 find . -name "htmlcov" | xargs rm -rf
 
+# find ruff cache files and remove them
+find . -name ".ruff_cache" | xargs rm -rf
+
 # clean up pipenv packages
 pipenv clean
 
