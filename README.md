@@ -65,4 +65,4 @@ Format check: `make ruff`
 
 Clean caches and environments with: `make clean`
 
-Also cleans the [pdm.lock](./pdm.lock) file.
+This cleans caches and environments, additionally synchronises the [pdm.lock](./pdm.lock) file with the packages in [pyproject.toml](./pyproject.toml).
