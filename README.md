@@ -8,7 +8,7 @@ Library of shared Python modules for use in Shinto projects.
 - **make**
 - **psql**
 - **git**
-- **pipenv**
+- **pdm**
 
 <details>
 <summary>For Windows users</summary>
