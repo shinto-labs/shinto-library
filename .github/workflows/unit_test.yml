@@ -35,22 +35,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v3
         with:
           python-version: 3.x
 
       - name: Install dependencies
         run: |
-          pip install pdm
-          pdm export -o requirements.txt
-          pip install -r requirements.txt
+          pdm sync -d
 
       - name: Run tests
         id: test
         run: |
           set +e
-          test_output=$(nose2 -s tests -C --coverage=shinto --coverage-report=term 2>&1)
+          test_output=$(pdm run -v nose2 -s tests -C --coverage=shinto --coverage-report=term 2>&1)
           exit_code=$?
           set -e
           echo "$test_output"
