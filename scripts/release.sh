@@ -63,30 +63,11 @@ for tag in "${tags[@]}"; do
     fi
 done
 
-## Prompt user with version number
+## Check if the version number in pyproject.toml matches any tag, if not, ask the user to proceed
 if [ "$matching_tag" ]; then
     echo -e "${green}Info${reset}: Version number \"$version_number\" in pyproject.toml matches existing tag: $matching_tag."
     echo
-
     echo "In order to proceed with the release, we need to update the version number in pyproject.toml."
-    echo -n "What version do you want to deploy with? "
-    read -r new_version
-    regex="^[0-9]+\.[0-9]+\.[0-9]+$"
-    if [[ -z "$new_version" ]]; then
-        exit_with_error "Version cannot be empty."
-    elif [[ "$tags" == *"$new_version"* ]]; then
-        exit_with_error "Version matches existing tag: $tag."
-    elif [[ ! "$new_version" =~ $regex ]]; then
-        exit_with_error "Invalid version number. Version number must be in the format X.Y.Z."
-    fi
-
-    echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
-    sed -i "s/version = ['\"]\([^'\"]*\)['\"],/version = \"$new_version\",/" pyproject.toml
-    git add pyproject.toml
-    git commit -m "Update version in pyproject.toml to $new_version"
-    git push origin $current_branch
-
-    version_number=$new_version
 else
     if [ -z "$last_tag" ]; then
         echo "No tags found on the remote repo, creating first release."
@@ -95,17 +76,45 @@ else
     fi
 
     ## Confirm with the user to proceed with the version number in pyproject.toml
-    echo -n "Do you want to proceed with the version number \"$version_number\" in pyproject.toml? (y/n) "
+    echo -n "Do you want to create release \"v$version_number\"? (y/n) "
     read -r response
-    if [[ "$response" != "y" ]]; then
-        exit_with_error "Exiting..."
-    fi
 fi
+
+## If the user does not want to proceed with the version number in pyproject.toml, ask for a new version number
+if [ "$matching_tag" ] || [ "$response" != "y" ]; then
+    echo -n "What version do you want to deploy with? "
+    read -r new_version
+    regex="^v?[0-9]+\.[0-9]+\.[0-9]+$"
+    if [[ -z "$new_version" ]]; then
+        exit_with_error "Version cannot be empty."
+    elif [[ "$tags" == *"$new_version"* ]]; then
+        exit_with_error "Version matches existing tag: $matching_tag."
+    elif [[ ! "$new_version" =~ $regex ]]; then
+        exit_with_error "Invalid version number. Version number must be in the format 1.2.3 or v1.2.3."
+    fi
+    new_version=${new_version#v}
+
+    echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
+    sed -i "s/version = ['\"]\([^'\"]*\)['\"],/version = \"$new_version\",/" pyproject.toml
+    git add pyproject.toml
+    git commit -m "Update version in pyproject.toml to $new_version"
+    git push origin $current_branch
+
+    version_number=$new_version
+fi
+tag="v$version_number"
 
 ## Change branch to main
 echo "Changing branch to main..."
 git checkout main && git pull
 
-## Merge development into main and push changes
-echo "Merging development into main and tagging the version."
-git merge development --commit --no-ff -m "Merge into main version: $version_number" && git push main
+## Merge development into main
+echo "Merging development into main."
+git merge development --commit --no-ff -m "Merge into main version: $tag"
+
+## Create tag and push to main
+echo "Creating tag $tag and pushing to main."
+git tag $tag && git push origin main $tag
+
+echo "
+🎉 Created release $tag!"
