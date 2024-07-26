@@ -50,7 +50,7 @@ list_length=${#tags[@]}
 last_tag=${tags[-1]}
 
 if [ "$list_length" -eq 0 ]; then
-    echo -e "${yellow}No tags found on the remote repo.${reset}"
+    echo -e "${yellow}No tags found on the remote repo, creating first release.${reset}"
 else
     echo "Last released tag: $last_tag."
 fi
@@ -69,10 +69,8 @@ if [ "$matching_tag" ]; then
     echo
     echo "In order to proceed with the release, we need to update the version number in pyproject.toml."
 else
-    if [ -z "$last_tag" ]; then
-        echo "No tags found on the remote repo, creating first release."
-    else
-        echo -e "${red}Warning${reset}: Version number in pyproject.toml does not match any tag."
+    if [ "$last_tag" ]; then
+        echo -e "${red}Warning${reset}: Version number in pyproject.toml does not match any existing tags."
     fi
 
     ## Confirm with the user to proceed with the version number in pyproject.toml
