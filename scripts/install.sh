@@ -15,12 +15,13 @@ fi
 # Install dependencies
 pdm install
 
-# Activate the virtual environment
-source ./.venv/Scripts/activate
-
 # Provide instructions for the user
-echo -e "In Visual Studio Code, set the venv as your Python interpreter:
+echo -e "🎉 Installed the dependencies!
+
+To activate this project's virtualenv, run ${yellow}source .venv/Scripts/activate${reset}
+Alternatively, run a command inside the virtualenv with ${yellow}pdm run <command>${reset}
+
+In Visual Studio Code, set the venv as your Python interpreter:
 1. Open the Command Palette ${green}Ctrl+Shift+P${reset}
 2. Type ${green}Python: Select Interpreter${reset}
-3. Select the venv: ${green}.\\.venv\\Scripts\\python.exe${reset}
-"
+3. Select the venv: ${green}.\\.venv\\Scripts\\python.exe${reset}"
