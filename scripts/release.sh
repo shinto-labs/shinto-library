@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script is used to deploy a new version of the project.
+# It merges the development branch into main and tags the version.
+# It also updates the version number in pyproject.toml if necessary.
+
 set -e
 
 red='\033[0;31m'
@@ -19,73 +23,96 @@ if [ "$current_branch" != "development" ]; then
     exit_with_error "You must be on the development branch to deploy a new version."
 fi
 
-echo -e "${yellow}Warning${reset}: Make sure you pushed the latest changes to the development branch."
+## Check for uncommitted changes or commited but unpushed changes
+if [ -n "$(git status --porcelain)" ] || ! git status | grep -q "Your branch is up to date with"; then
+    exit_with_error "There are uncommitted changes in the repository.
+Please commit or stash the changes before deploying a new version."
+fi
 
-## Get the version number from setup.py
-version_number=$(grep 'version=' setup.py | sed "s/.*version=['\"]\\([^'\"]*\\)['\"],/\\1/")
+## Get the version number from pyproject.toml
+version_number=$(grep 'version =' pyproject.toml | sed -E "s/.*version[[:space:]]*=[[:space:]]*['\"]([^'\"]*)['\"].*/\1/")
 
 if [ -z "$version_number" ]; then
-    exit_with_error "Version number could not be extracted from setup.py"
+    exit_with_error "Version number could not be extracted from pdm show"
 fi
 
-## Get the latest tag from GitHub
-echo "Fetching latest tags from GitHub."
-git tag -l | xargs git tag -d >/dev/null 2>&1
+## Get latest changes from development
+echo "Getting latest development changes..."
+git checkout development && git pull
+
+## Get all tags from the remote repo
+echo "Fetching tags from GitHub."
 git fetch --tag >/dev/null 2>&1
 
-set +e
-last_tag=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null)
-set -e
+tags=($(git tag -l | tr '\n' ' '))
+list_length=${#tags[@]}
+last_tag=${tags[-1]}
 
-if [ -z "$last_tag" ]; then
-    echo -e "${yellow}No tags found on the remote repo.${reset}"
+if [ "$list_length" -eq 0 ]; then
+    echo -e "${yellow}No tags found on the remote repo, creating first release.${reset}"
 else
-    echo "Last deployed version: $last_tag"
+    echo "Last released tag: $last_tag."
 fi
 
-## Get the tag to release from the user
-echo -n "What tag do you want to deploy with? "
-read -r tag
+## Check if the version number matches any tag
+regex="v?$version_number"
+for tag in "${tags[@]}"; do
+    if [[ "$tag" =~ "$regex" ]]; then
+        matching_tag=$tag
+        break
+    fi
+done
 
-regex="^v[0-9]+\.[0-9]+\.[0-9]+$"
-if [ -z "$tag" ]; then
-    exit_with_error "Tag cannot be empty."
-elif [[ ! "$tag" =~ $regex ]]; then
-    exit_with_error "Invalid tag. Tag must be in the format vX.Y.Z."
-fi
-
-## Confirmation prompt the user
-echo -n "Are you sure you want merge development into main and create tag: $tag? (y/n) "
-read -r reply
-if [[ ! $reply =~ ^[Yy]$ ]]; then
-    exit_with_error "Exiting."
-fi
-
-## Check if the version number in setup.py matches the tag, if not update it
-release=$(echo $tag | sed 's/v//')
-if [ "$version_number" != "$release" ]; then
-    echo -e "${yellow}Info${reset}: Version number in setup.py does not match the tag."
-    echo -n "Do you want to update the version in setup.py to $release and push to development? (y/n) "
-    read -r reply
-    if [[ ! $reply =~ ^[Yy]$ ]]; then
-        exit_with_error "Exiting."
+## Check if the version number in pyproject.toml matches any tag, if not, ask the user to proceed
+if [ "$matching_tag" ]; then
+    echo -e "${green}Info${reset}: Version number \"$version_number\" in pyproject.toml matches existing tag: $matching_tag."
+    echo
+    echo "In order to proceed with the release, we need to update the version number in pyproject.toml."
+else
+    if [ "$last_tag" ]; then
+        echo -e "${red}Warning${reset}: Version number in pyproject.toml does not match any existing tags."
     fi
 
-    echo "Updating version in setup.py to $release and pushing to development."
-    sed -i "s/version=['\"]\([^'\"]*\)['\"],/version=\"$release\",/" setup.py
-    git add setup.py
-    git commit -m "Update version to $release"
-    git push origin development
+    ## Confirm with the user to proceed with the version number in pyproject.toml
+    echo -n "Do you want to create release \"v$version_number\"? (y/n) "
+    read -r response
 fi
 
-## Get latest changes from development and change branch to main
-echo "Get latest development changes and change branch to main."
-git checkout development && git pull && git checkout main && git pull
+## If the user does not want to proceed with the version number in pyproject.toml, ask for a new version number
+if [ "$matching_tag" ] || [ "$response" != "y" ]; then
+    echo -n "What version do you want to deploy with? "
+    read -r new_version
+    regex="^v?[0-9]+\.[0-9]+\.[0-9]+$"
+    if [[ -z "$new_version" ]]; then
+        exit_with_error "Version cannot be empty."
+    elif [[ "$tags" == *"$new_version"* ]]; then
+        exit_with_error "Version matches existing tag: $matching_tag."
+    elif [[ ! "$new_version" =~ $regex ]]; then
+        exit_with_error "Invalid version number. Version number must be in the format 1.2.3 or v1.2.3."
+    fi
+    new_version=${new_version#v}
 
-## Merge development into main and tag the version
-echo "Merging development into main and tagging the version."
-git merge development --commit --no-ff -m "Merge into main Version: $tag" && git tag $tag
+    echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
+    sed -i "s/version = ['\"]\([^'\"]*\)['\"],/version = \"$new_version\",/" pyproject.toml
+    git add pyproject.toml
+    git commit -m "Update version in pyproject.toml to $new_version"
+    git push origin $current_branch
 
-## Push changes to main branch and release tag
-echo "Pushing changes to main branch and release tag."
-git push origin main $tag
+    version_number=$new_version
+fi
+tag="v$version_number"
+
+## Change branch to main
+echo "Changing branch to main..."
+git checkout main && git pull
+
+## Merge development into main
+echo "Merging development into main."
+git merge development --commit --no-ff -m "Merge into main version: $tag"
+
+## Create tag and push to main
+echo "Creating tag $tag and pushing to main."
+git tag $tag && git push origin main $tag
+
+echo "
+🎉 Created release $tag!"
