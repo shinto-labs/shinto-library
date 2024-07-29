@@ -55,7 +55,8 @@ else
 fi
 
 ## Check if the version number matches any tag
-regex="v?$version_number"
+escaped_version_number=$(escape_regex "$version_number")
+regex="v?$escaped_version_number"
 for tag in "${tags[@]}"; do
     if [[ "$tag" =~ "$regex" ]]; then
         matching_tag=$tag
