@@ -24,14 +24,13 @@ if [ "$current_branch" != "development" ]; then
 fi
 
 ## Check for uncommitted changes or commited but unpushed changes
-error_msg="There are uncommitted changes in the repository.
+if [ -n "$(git status --porcelain)" ] || ! git status | grep -q "Your branch is up to date with"; then
+    exit_with_error "There are uncommitted changes in the repository.
 Please commit or stash the changes before deploying a new version."
-if [ -n "$(git status --porcelain)" ]; then
-    exit_with_error error_msg
 fi
 
-## Get the version number from pdm show
-version_number=$(pdm show | grep 'Latest version:' | sed 's/Latest version:[[:space:]]*//')
+## Get the version number from pyproject.toml
+version_number=$(grep 'version =' pyproject.toml | sed -E "s/.*version[[:space:]]*=[[:space:]]*['\"]([^'\"]*)['\"].*/\1/")
 
 if [ -z "$version_number" ]; then
     exit_with_error "Version number could not be extracted from pdm show"
@@ -56,8 +55,9 @@ else
 fi
 
 ## Check if the version number matches any tag
+regex="v?$version_number"
 for tag in "${tags[@]}"; do
-    if [[ "$tag" == "v$version_number" ]]; then
+    if [[ "$tag" =~ "$regex" ]]; then
         matching_tag=$tag
         break
     fi
