@@ -6,9 +6,7 @@ Library of shared Python modules for use in Shinto projects.
 
 - **python**
 - **make**
-- **psql**
 - **git**
-- **pipenv**
 
 <details>
 <summary>For Windows users</summary>
@@ -27,10 +25,6 @@ Required paths (might be different depending on your installation/location):
 
 C:\Program Files (x86)\GnuWin32\bin
 
-# psql
-
-C:\Program Files\PostgreSQL\16\bin
-
 # Git
 
 C:\Program Files\Git\bin
@@ -45,13 +39,9 @@ Refer to the [Makefile](./Makefile) for a full list of commands.
 
 ### Install
 
-#### 1. Install dependencies
-
 Run: `make install`
 
-#### 2. In order to run commands manually in the newly created venv
-
-Run either `pipenv shell` to enter the project's virtualenv or use: `pipenv run <command>`
+And follow the instructions in the output.
 
 ### Release / Deployment
 
@@ -70,3 +60,5 @@ Format check: `make ruff`
 ### Clean up the development environment
 
 Clean caches and environments with: `make clean`
+
+This cleans caches and environments, additionally synchronises the [pdm.lock](./pdm.lock) file with the packages in [pyproject.toml](./pyproject.toml).
