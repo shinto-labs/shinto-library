@@ -39,13 +39,9 @@ Refer to the [Makefile](./Makefile) for a full list of commands.
 
 ### Install
 
-#### 1. Install dependencies
-
 Run: `make install`
 
-#### 2. In order to run commands manually in the newly created venv
-
-Run either `pipenv shell` to enter the project's virtualenv or use: `pipenv run <command>`
+And follow the instructions in the output.
 
 ### Release / Deployment
 
