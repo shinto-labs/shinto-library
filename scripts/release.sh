@@ -55,10 +55,8 @@ else
 fi
 
 ## Check if the version number matches any tag
-escaped_version_number=$(echo "$version_number" | sed 's/\./\\./g')
-regex="v?$escaped_version_number"
 for tag in "${tags[@]}"; do
-    if [[ "$tag" =~ "$regex" ]]; then
+    if [[ "$tag" == "v$version_number" ]]; then
         matching_tag=$tag
         break
     fi
