@@ -27,5 +27,4 @@ find . -name ".venv" | xargs rm -rf
 find . -name ".pdm-python" | xargs rm -rf
 
 echo "
-🎉 Cleaned up the project!
-"
+🎉 Cleaned up the project!"
