@@ -1,6 +1,7 @@
 """Logging setup."""
 
 import logging
+import re
 import sys
 from importlib.util import find_spec
 
@@ -26,12 +27,13 @@ UVICORN_LOGGING_CONFIG = {
 
 
 class ShintoFormatter(logging.Formatter):
-    """Custom log formatter that escapes double quotes in log messages."""
+    """Custom formatter to escape unescaped double quotes in log messages."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format the log record by escaping double quotes."""
-        record.msg = record.msg.replace('"', r"\"")
-        return logging.Formatter.format(self, record)
+        """Format the log record, escaping unescaped double quotes."""
+        if isinstance(record.msg, str):
+            record.msg = re.sub(r'(?<!\\)"', r"\"", record.msg)
+        return super().format(record)
 
 
 def setup_logging(
