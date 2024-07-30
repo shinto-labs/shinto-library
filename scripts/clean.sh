@@ -19,9 +19,6 @@ find . -name ".ruff_cache" | xargs rm -rf
 # find egg files and remove them
 find . -name "*.egg-info" | xargs rm -rf
 
-# clean up pdm lock
-pdm lock --refresh
-
 # find venv files and remove them
 find . -name ".venv" | xargs rm -rf
 find . -name ".pdm-python" | xargs rm -rf
