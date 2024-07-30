@@ -88,7 +88,8 @@ def setup_logging(
                 "Failed to import systemd.journal. Journal logging not available."
             )
 
-    # Custom log record factory that includes the application name
+    # To make sure all loggers even loggers that are propagated are using the same format
+    # Use a log record factory to add the application name to log records
     old_factory = logging.getLogRecordFactory()
 
     def record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
