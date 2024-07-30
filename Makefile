@@ -3,6 +3,9 @@ PDM_RUN=pdm run
 install:
 	./scripts/install.sh
 
+update:
+	./scripts/update.sh
+
 clean:
 	./scripts/clean.sh
 

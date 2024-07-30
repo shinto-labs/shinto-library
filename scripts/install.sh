@@ -7,9 +7,8 @@ green='\033[0;32m'
 reset='\033[0m'
 
 # Get os type
-os_type=$(uname -s)
 os_is_windows=false
-if [ "$(expr substr $os_type 1 10)" == "MINGW64_NT" ]; then
+if [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
     os_is_windows=true
 fi
 
@@ -26,9 +25,6 @@ fi
 
 # Install dependencies
 pdm install
-
-# Clean up pdm lock
-pdm lock --refresh
 
 # Provide instructions for the user
 activate_script_location=".venv/bin/activate"
