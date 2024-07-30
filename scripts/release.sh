@@ -42,6 +42,7 @@ git checkout development && git pull
 
 ## Get all tags from the remote repo
 echo "Fetching tags from GitHub."
+git tag -l | xargs git tag -d >/dev/null 2>&1
 git fetch --tag >/dev/null 2>&1
 
 tags=($(git tag -l | tr '\n' ' '))
@@ -92,7 +93,7 @@ if [ "$matching_tag" ] || [ "$response" != "y" ]; then
     new_version=${new_version#v}
 
     echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
-    sed -i "s/version = ['\"]\([^'\"]*\)['\"],/version = \"$new_version\",/" pyproject.toml
+    sed -i "s/version = ['\"]\([^'\"]*\)['\"]/version = \"$new_version\"/" pyproject.toml
     git add pyproject.toml
     git commit -m "Update version in pyproject.toml to $new_version"
     git push origin $current_branch
