@@ -25,6 +25,15 @@ UVICORN_LOGGING_CONFIG = {
 }
 
 
+class ShintoFormatter(logging.Formatter):
+    """Custom log formatter that escapes double quotes in log messages."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record by escaping double quotes."""
+        record.msg = record.msg.replace('"', '\\"')
+        return super().format(record)
+
+
 def setup_logging(
     application_name: str | None = None,
     loglevel: str | int = logging.WARNING,
@@ -44,7 +53,7 @@ def setup_logging(
     root_logger.setLevel(loglevel)
 
     # Formatter for log messages
-    formatter = logging.Formatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
+    formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
     for handler in root_logger.handlers:
