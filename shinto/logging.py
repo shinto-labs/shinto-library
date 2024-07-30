@@ -30,8 +30,8 @@ class ShintoFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format the log record by escaping double quotes."""
-        record.msg = record.msg.replace('"', '\\"')
-        return super().format(record)
+        record.msg = record.msg.replace('"', r"\"")
+        return logging.Formatter.format(self, record)
 
 
 def setup_logging(
