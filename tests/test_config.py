@@ -89,6 +89,16 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": "value", "test3": {"test5": "value"}})
 
+    def test_load_config_file_yaml_with_defaults(self):
+        """Test loading a YAML config file with default values."""
+        yaml_file_path = Path(self.temp_dir) / "config.yaml"
+        with Path(yaml_file_path).open("w") as yaml_file:
+            yaml_file.write("test: \n  key: value")
+        self.assertTrue(Path(yaml_file_path).is_file())
+        yaml_config = config.load_config_file(yaml_file_path, defaults={"test": {"key2": "value2"}})
+        self.assertIsInstance(yaml_config, dict)
+        self.assertDictEqual(yaml_config, {"test": {"key": "value", "key2": "value2"}})
+
     def test_remove_none_values(self):
         """Test removing None values from a dictionary."""
         data = {"test": "value", "test2": None, "test3": {"test4": None, "test5": "value"}}

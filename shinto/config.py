@@ -24,7 +24,7 @@ class ConfigError(Exception):
 
 
 def remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
-    """Remove all None values from a dict or list."""
+    """Recursively remove all None values from a dict or list."""
     if isinstance(data, dict):
         return {
             k: (v if not isinstance(v, list | dict) else remove_none_values(v))
@@ -42,7 +42,17 @@ def remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | lis
     raise ConfigError(msg)
 
 
-def _read_config_file(file_path: str) -> dict[str, Any]:
+def merge_dicts(d1: dict, d2: dict) -> dict:
+    """Recursively merge two dictionaries."""
+    for key, value in d2.items():
+        if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
+            merge_dicts(d1[key], value)
+        else:
+            d1[key] = value
+    return d1
+
+
+def read_config_file(file_path: str) -> dict[str, Any]:
     """Read config file and return as dict."""
     file_extension = Path(file_path).suffix.lower()
     if file_extension in [".yaml", ".yml"]:
@@ -66,15 +76,21 @@ def load_config_file(
     start_element: list[str] | None = None,
     keep_none_values: bool = True,
 ) -> dict[str, Any]:
-    """Load config from file."""
+    """
+    Load config from file.
+
+    If a defaults dict is provided, it will be merged with the provided config file.
+
+    """
     start_element = start_element or []
-    config = defaults or {}
+    defaults = defaults or {}
 
     if not file_path or not Path(file_path).exists():
         msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    config.update(_read_config_file(file_path))
+    file_config = read_config_file(file_path)
+    config = merge_dicts(defaults, file_config)
 
     if len(start_element) > 0:
         for item in start_element:
