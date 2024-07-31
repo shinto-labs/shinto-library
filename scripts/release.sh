@@ -45,9 +45,9 @@ echo "Fetching tags from GitHub."
 git tag -l | xargs git tag -d >/dev/null 2>&1
 git fetch --tag >/dev/null 2>&1
 
-tags=($(git tag -l | tr '\n' ' '))
+tags=($(git tag -l --sort=-creatordate | tr '\n' ' '))
 list_length=${#tags[@]}
-last_tag=${tags[-1]}
+last_tag=${tags[0]}
 
 if [ "$list_length" -eq 0 ]; then
     echo -e "${yellow}No tags found on the remote repo, creating first release.${reset}"
