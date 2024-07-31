@@ -43,6 +43,12 @@ Run: `make install`
 
 And follow the instructions in the output.
 
+### Update
+
+Run: `make update`
+
+Updates packages and synchronises the [pdm.lock](./pdm.lock) file with the packages in [pyproject.toml](./pyproject.toml).
+
 ### Release / Deployment
 
 Create a release by running: `make release`
@@ -61,4 +67,4 @@ Format check: `make ruff`
 
 Clean caches and environments with: `make clean`
 
-This cleans caches and environments, additionally synchronises the [pdm.lock](./pdm.lock) file with the packages in [pyproject.toml](./pyproject.toml).
+This cleans caches and environments.

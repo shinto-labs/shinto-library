@@ -6,16 +6,10 @@ import os
 import sys
 from abc import ABC, abstractmethod
 
-try:
-    import psycopg
-    from psycopg_pool import AsyncConnectionPool, ConnectionPool
-except ImportError as e:  # pragma: no cover
-    msg = "psycopg[pool] is required for this module. Aditionally make sure to install postgresql."
-    raise ImportError(msg) from e
-
+import psycopg
+from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from .config import load_config_file
-from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
 
 
 class BaseDatabaseConnection(ABC):
@@ -23,12 +17,17 @@ class BaseDatabaseConnection(ABC):
 
     _pool: ConnectionPool | AsyncConnectionPool = None
 
+    @property
+    def is_open(self) -> bool:
+        """Check if the database connection pool is open."""
+        return not self._pool.closed
+
     def __init__(
         self,
-        database: str,
-        user: str,
-        password: str,
-        host: str,
+        database: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
         port: int = 6432,
         minconn: int = 1,
         maxconn: int = 3,
@@ -48,7 +47,18 @@ class BaseDatabaseConnection(ABC):
         Raises:
             ValueError: If any of the required parameters are missing.
 
+        Args can also be provided as environment variables:
+        `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
+
+        If arguments are provided they will take precedence over the environment variables.
+
         """
+        database = database or os.getenv("PGDATABASE")
+        user = user or os.getenv("PGUSER")
+        password = password or os.getenv("PGPASSWORD")
+        host = host or os.getenv("PGHOST")
+        port = port or os.getenv("PGPORT")
+
         missing_params = [k for k, v in locals().items() if v is None]
         if len(missing_params) > 0:
             msg = f"Missing required parameters: {missing_params}"
@@ -56,56 +66,6 @@ class BaseDatabaseConnection(ABC):
 
         conninfo = f"dbname={database} user={user} password={password} host={host} port={port}"
         self._setup_connection_pool(minconn, maxconn, conninfo)
-
-    @abstractmethod
-    def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
-        """Set up the database connection pool and open the pool."""
-
-    @abstractmethod
-    def open(self):
-        """Open the database connection pool."""
-
-    @abstractmethod
-    def close(self):
-        """Close the database connection pool."""
-
-    @property
-    def is_open(self) -> bool:
-        """Check if the database connection pool is open."""
-        return not self._pool.closed
-
-    @abstractmethod
-    def execute_query(self, query: str) -> list[tuple]:
-        """Execute a query on the database."""
-
-    @abstractmethod
-    def write_records(self, query: str, records: list[tuple]) -> int:
-        """Write data records to the database."""
-
-    @abstractmethod
-    def execute_json_query(
-        self,
-        query: str,
-        schema_filenames: list[str] | None = None,
-    ) -> tuple[dict | list | None, bool]:
-        """Execute a query and validate the result against json schemas if provided."""
-
-    def _get_first_json_query_result(self, query_result: list[tuple]) -> dict | list | None:
-        """Get the first json object from the query result."""
-        if len(query_result) == 0 or len(query_result[0]) == 0:
-            logging.error("Query result is empty.")
-            return None
-
-        if not isinstance(query_result[0][0], dict) and not isinstance(query_result[0][0], list):
-            logging.error("Query result is not a valid json object.")
-            return None
-
-        if len(query_result) > 1 or len(query_result[0]) > 1:
-            logging.warning(
-                "Query result contains multiple objects, only the first object will be returned."
-            )
-
-        return query_result[0][0]
 
     @classmethod
     def from_config_file(cls, config_filename: str, start_element: list[str] | None = None):  # noqa: ANN206
@@ -144,46 +104,25 @@ class BaseDatabaseConnection(ABC):
 
         return cls(**config)
 
-    @classmethod
-    def from_environment_variables(  # noqa: ANN206
-        cls,
-        database: str | None = None,
-        user: str | None = None,
-        password: str | None = None,
-        host: str | None = None,
-        port: int | None = None,
-        minconn: int = 1,
-        maxconn: int = 3,
-    ):
-        """
-        Create a database connection from environment variables.
+    @abstractmethod
+    def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
+        """Set up the database connection pool and open the pool."""
 
-        Env variables should be provided as:
-        `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
+    @abstractmethod
+    def open(self):
+        """Open the database connection pool."""
 
-        If arguments are provided, they take precedence over environment variables.
+    @abstractmethod
+    def close(self):
+        """Close the database connection pool."""
 
-        Default values:
-        - port: 6432
-        - minconn: 1
-        - maxconn: 3
+    @abstractmethod
+    def execute(self, query: str) -> list[tuple]:
+        """Execute a query on the database."""
 
-        """
-        database = database or os.environ.get("PGDATABASE")
-        user = user or os.environ.get("PGUSER")
-        password = password or os.environ.get("PGPASSWORD")
-        host = host or os.environ.get("PGHOST")
-        port = port or os.environ.get("PGPORT") or 6432
-
-        return cls(
-            database=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            minconn=minconn,
-            maxconn=maxconn,
-        )
+    @abstractmethod
+    def write_records(self, query: str, records: list[tuple]) -> int:
+        """Write data records to the database."""
 
 
 class DatabaseConnection(BaseDatabaseConnection):
@@ -199,13 +138,16 @@ class DatabaseConnection(BaseDatabaseConnection):
             open=False,
         )
 
-    def open(self):  # noqa: D102, inherit doc string
-        self._pool.open()
+    def open(self):
+        """Open the database connection pool."""
+        self._pool.open(wait=True, timeout=30)
 
-    def close(self):  # noqa: D102, inherit doc string
+    def close(self):
+        """Close the database connection pool."""
         self._pool.close()
 
-    def execute_query(self, query: str) -> list[tuple] | None:  # noqa: D102, inherit doc string
+    def execute(self, query: str) -> list[tuple] | None:
+        """Execute a query on the database."""
         try:
             with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
@@ -218,7 +160,8 @@ class DatabaseConnection(BaseDatabaseConnection):
 
         return None
 
-    def write_records(self, query: str, records: list[tuple]) -> int:  # noqa: D102, inherit doc string
+    def write_records(self, query: str, records: list[tuple]) -> int:
+        """Write data records to the database."""
         try:
             with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
@@ -236,25 +179,6 @@ class DatabaseConnection(BaseDatabaseConnection):
             affected_rows = -2
 
         return affected_rows
-
-    def execute_json_query(  # noqa: D102, inherit doc string
-        self,
-        query: str,
-        schema_filenames: list[str] | None = None,
-    ) -> tuple[dict | list | None, bool]:
-        schema_filenames = schema_filenames or []
-
-        data = self.execute_query(query)
-        json_object = self._get_first_json_query_result(data)
-        if json_object is None:
-            return (None, False)
-
-        if len(schema_filenames) > 0:
-            validate_ok = validate_json_against_schemas(json_object, schema_filenames)
-        else:
-            validate_ok = True
-
-        return (json_object, validate_ok)
 
 
 class AsyncDatabaseConnection(BaseDatabaseConnection):
@@ -275,13 +199,16 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
             open=False,
         )
 
-    async def open(self):  # noqa: D102, inherit doc string
-        await self._pool.open()
+    async def open(self):
+        """Open the database connection pool."""
+        await self._pool.open(wait=True, timeout=30)
 
-    async def close(self):  # noqa: D102, inherit doc string
+    async def close(self):
+        """Close the database connection pool."""
         await self._pool.close()
 
-    async def execute_query(self, query: str) -> list[tuple]:  # noqa: D102, inherit doc string
+    async def execute(self, query: str) -> list[tuple]:
+        """Execute a query on the database."""
         try:
             async with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
@@ -294,7 +221,8 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
 
         return None
 
-    async def write_records(self, query: str, records: list[tuple]) -> int:  # noqa: D102, inherit doc string
+    async def write_records(self, query: str, records: list[tuple]) -> int:
+        """Write data records to the database."""
         try:
             async with self._pool.connection() as conn, conn.cursor() as cur:
                 try:
@@ -313,22 +241,24 @@ class AsyncDatabaseConnection(BaseDatabaseConnection):
 
         return affected_rows
 
-    async def execute_json_query(  # noqa: D102, inherit doc string
-        self,
-        query: str,
-        schema_filenames: list[str] | None = None,
-    ) -> tuple[dict | list | None, bool]:
-        json_object = None
-        schema_filenames = schema_filenames or []
 
-        data = await self.execute_query(query)
-        json_object = self._get_first_json_query_result(data)
-        if json_object is None:
-            return (None, False)
+def get_json_object_from_query_result(query_result: list[tuple]) -> dict | list | None:
+    """Get json from the query result."""
+    if len(query_result) == 0 or len(query_result[0]) == 0:
+        logging.error("Query result is empty.")
+        return None
 
-        if len(schema_filenames) > 0:
-            validate_ok = await async_validate_json_against_schemas(json_object, schema_filenames)
-        else:
-            validate_ok = True
+    first_element = query_result[0][0]
 
-        return (json_object, validate_ok)
+    if not isinstance(first_element, dict | list):
+        logging.error(
+            "Query result is not a valid json object. Found type: %s", type(first_element)
+        )
+        return None
+
+    if len(query_result) > 1 or len(query_result[0]) > 1:
+        logging.warning(
+            "Query result contains multiple objects, only the first object will be returned."
+        )
+
+    return first_element
