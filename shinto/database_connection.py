@@ -28,7 +28,7 @@ class BaseDatabaseConnection(ABC):
         user: str | None = None,
         password: str | None = None,
         host: str | None = None,
-        port: int = 6432,
+        port: int | None = None,
         minconn: int = 1,
         maxconn: int = 3,
     ):
@@ -40,7 +40,7 @@ class BaseDatabaseConnection(ABC):
             user (str): Database user.
             password (str): Database password.
             host (str): Database host.
-            port (int): Database port.
+            port (int): Database port. Defaults to 6432.
             minconn (int): Minimum number of connections in the connnection pool.
             maxconn (int): Maximum number of connections in the connnection pool.
 
@@ -57,7 +57,7 @@ class BaseDatabaseConnection(ABC):
         user = user or os.getenv("PGUSER")
         password = password or os.getenv("PGPASSWORD")
         host = host or os.getenv("PGHOST")
-        port = port or os.getenv("PGPORT")
+        port = port or os.getenv("PGPORT") or 6432
 
         missing_params = [k for k, v in locals().items() if v is None]
         if len(missing_params) > 0:
