@@ -3,7 +3,6 @@
 __all__ = [
     "load_config_file",
     "output_config",
-    "remove_none_values",
     "AsyncDatabaseConnection",
     "DatabaseConnection",
     "get_json_object_from_query_result",
@@ -16,7 +15,7 @@ __all__ = [
     "push_metric",
 ]
 
-from .config import load_config_file, output_config, remove_none_values
+from .config import load_config_file, output_config
 from .database_connection import (
     AsyncDatabaseConnection,
     DatabaseConnection,
