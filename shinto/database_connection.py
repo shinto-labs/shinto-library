@@ -68,41 +68,65 @@ class BaseDatabaseConnection(ABC):
         self._setup_connection_pool(minconn, maxconn, conninfo)
 
     @classmethod
-    def from_config_file(cls, config_filename: str, start_element: list[str] | None = None):  # noqa: ANN206
+    def from_config_file(cls, file_path: str, start_element: list[str] | None = None):  # noqa: ANN206
         """
         Create a database connection from a configuration file.
 
         Args:
-            config_filename (str): Path to the configuration file.
+            file_path (str): Path to the configuration file.
             start_element (list):
                 Path to the database connection parameters in the configuration file.
                 Should be used when the parameters are nested in the configuration file.
 
-        Required parameters in the configuration file:
-        ---------------------------------------------
-        - database
-        - user
-        - password
-        - host
+        Database connection parameters are prioritised in the following order:
+        ----------------------------------------------------------------------
+        1. Environment variables
+        2. Configuration file
+        3. Default values
 
-        Optional paramers in the configuration file:
-        -------------------------------------------
-        - port: default 6432
-        - minconn: default 1
-        - maxconn: default 3
+        Parameters can be provided as environment variables:
+        ---------------------------------------------------
+        - `PGDATABASE`
+        - `PGUSER`
+        - `PGPASSWORD`
+        - `PGHOST`
+        - `PGPORT`
+
+        Parameters can be provided in the configuration file:
+        ----------------------------------------------------
+        - `database`
+        - `user`
+        - `password`
+        - `host`
+        - `port`: default 6432
+        - `minconn`: default 1
+        - `maxconn`: default 3
 
         """
-        params = ["port", "minconn", "maxconn", "database", "user", "password", "host"]
+        # Load the database connection parameters from the configuration file
+        config = load_config_file(file_path=file_path, start_element=start_element)
 
-        config = load_config_file(
-            file_path=config_filename,
-            start_element=start_element,
-            keep_none_values=False,
+        # 1. Get the database connection parameters from environment variables
+        # 2. Otherwise use the parameters from the configuration file
+        # 3. Otherwise use the default parameters
+        host = os.getenv("PGHOST", config.get("host"))
+        port = os.getenv("PGPORT", config.get("port", 6432))
+        database = os.getenv("PGDATABASE", config.get("database"))
+        user = os.getenv("PGUSER", config.get("user"))
+        password = os.getenv("PGPASSWORD", config.get("password"))
+        minconn = config.get("minconn", 1)
+        maxconn = config.get("maxconn", 3)
+
+        # Create the database connection
+        return cls(
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            minconn=minconn,
+            maxconn=maxconn,
         )
-
-        config = {k: v for k, v in config.items() if k in params}
-
-        return cls(**config)
 
     @abstractmethod
     def _setup_connection_pool(self, minconn: int, maxconn: int, conninfo: str):
