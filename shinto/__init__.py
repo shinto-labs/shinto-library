@@ -13,9 +13,12 @@ __all__ = [
     "inc_persistant_counter",
     "init_persistant_metrics",
     "push_metric",
+    "QueueError",
+    "QueueHandler",
 ]
 
 from .config import load_config_file, output_config
 from .jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
 from .logging import UVICORN_LOGGING_CONFIG, setup_logging
 from .metrics import inc_persistant_counter, init_persistant_metrics, push_metric
+from .rabbitmq import QueueError, QueueHandler

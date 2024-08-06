@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:7ef3cf4604740622d4baca8ac3c0dd9df095d61854ac89073ebc51eab700615f"
+content_hash = "sha256:81e0f2aeb14a5d47c169d16c7848c7a686fa7e532848e6fd6d697b1efaa5c5c5"
 
 [[metadata.targets]]
 requires_python = ">=3.11"
@@ -141,6 +141,17 @@ dependencies = [
 files = [
     {file = "nose2-0.15.1-py3-none-any.whl", hash = "sha256:564450c0c4f1602dfe171902ceb4726cc56658af7a620ae1826f1ffc86b09a86"},
     {file = "nose2-0.15.1.tar.gz", hash = "sha256:36770f519df5becd3cbfe0bee4abbfbf9b9f6b4eb4e03361d282b7efcfc4f0df"},
+]
+
+[[package]]
+name = "pika"
+version = "1.3.2"
+requires_python = ">=3.7"
+summary = "Pika Python AMQP Client Library"
+groups = ["default"]
+files = [
+    {file = "pika-1.3.2-py3-none-any.whl", hash = "sha256:0779a7c1fafd805672796085560d290213a465e4f6f76a6fb19e378d8041a14f"},
+    {file = "pika-1.3.2.tar.gz", hash = "sha256:b2a327ddddf8570b4965b3576ac77091b850262d34ce8c1d8cb4e4146aa4145f"},
 ]
 
 [[package]]
