@@ -69,16 +69,21 @@ class QueueHandler:
             msg = f"Missing required parameters: {missing_params}"
             raise TypeError(msg)
 
-        self._connection = BlockingConnection(
-            ConnectionParameters(host, port, "/", PlainCredentials(username, password, True))
-        )
+        try:
+            self._connection = BlockingConnection(
+                ConnectionParameters(host, port, "/", PlainCredentials(username, password, True))
+            )
+        except AMQPError as amqp_error:
+            raise QueueError from amqp_error
+
         self._queue_name = queue_name
         self._exchange = exchange
         self._channel = self._connection.channel()
 
     def __del__(self):
         """Close the connection when the object is deleted."""
-        self._connection.close()
+        if hasattr(self, "_connection"):
+            self._connection.close()
 
     @classmethod
     def from_config_file(
