@@ -18,7 +18,7 @@ class BaseConnectionPool(ABC):
         user: str | None = None,
         password: str | None = None,
         host: str | None = None,
-        port: int | None = None,
+        port: int | str | None = None,
         minconn: int = 1,
         maxconn: int = 3,
     ):
@@ -35,10 +35,15 @@ class BaseConnectionPool(ABC):
             maxconn (int): Maximum number of connections in the connnection pool.
 
         Raises:
-            ValueError: If any of the required parameters are missing.
+            TypeError: If any of the required parameters are missing.
 
-        Args can also be provided as environment variables:
-        `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`.
+        Arguments can also be provided as environment variables:
+        -------------------------------------------------------
+        - `PGDATABASE`
+        - `PGUSER`
+        - `PGPASSWORD`
+        - `PGHOST`
+        - `PGPORT`
 
         If arguments are provided they will take precedence over the environment variables.
 
