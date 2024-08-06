@@ -76,6 +76,10 @@ class QueueHandler:
         self._exchange = exchange
         self._channel = self._connection.channel()
 
+    def __del__(self):
+        """Close the connection when the object is deleted."""
+        self._connection.close()
+
     @classmethod
     def from_config_file(
         cls, file_path: str, start_element: list[str] | None = None
@@ -132,11 +136,6 @@ class QueueHandler:
             password=password,
             queue_name=queue,
         )
-
-    @classmethod
-    def __del__(cls):
-        """Close the connection when the object is deleted."""
-        cls._connection.close()
 
     def check_for_queue(self):
         """Check if queue exists and if not: Declare it."""
