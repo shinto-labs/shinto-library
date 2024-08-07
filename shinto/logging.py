@@ -94,7 +94,7 @@ def setup_logging(
         record.application_name = application_name
 
         # Escape double quotes in the log message
-        record.msg = re.sub(r'(?<!\\)"', r"\"", str(record.msg))
+        record.message = re.sub(r'(?<!\\)"', r"\"", str(record.message))
 
         return record
 
