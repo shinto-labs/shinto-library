@@ -26,15 +26,6 @@ UVICORN_LOGGING_CONFIG = {
 }
 
 
-class ShintoFormatter(logging.Formatter):
-    """Custom formatter to escape unescaped double quotes in log messages."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        """Format the log record, escaping unescaped double quotes."""
-        record.msg = re.sub(r'(?<!\\)"', r"\"", str(record.msg))
-        return super().format(record)
-
-
 def setup_logging(
     application_name: str | None = None,
     loglevel: str | int = logging.WARNING,
@@ -54,7 +45,7 @@ def setup_logging(
     root_logger.setLevel(loglevel)
 
     # Formatter for log messages
-    formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
+    formatter = logging.Formatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
     for handler in root_logger.handlers:
@@ -87,14 +78,24 @@ def setup_logging(
                 "Failed to import systemd.journal. Journal logging not available."
             )
 
-    # To make sure all loggers even loggers that are propagated are using the same format
-    # Use a log record factory to add the application name to log records
-    old_factory = logging.getLogRecordFactory()
+    existing_record_factory = logging.getLogRecordFactory()
 
-    def record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
-        """Log record factory with application name."""
-        record = old_factory(*args, **kwargs)
+    def shinto_record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
+        """
+        Format log records after they are created.
+
+        To make sure all loggers even loggers that are propagated are using the same format,
+        we use a log record factory to format log records after they are created.
+        """
+        # Create the log record
+        record = existing_record_factory(*args, **kwargs)
+
+        # Add the application name to the log record
         record.application_name = application_name
+
+        # Escape double quotes in the log message
+        record.msg = re.sub(r'(?<!\\)"', r"\"", str(record.msg))
+
         return record
 
-    logging.setLogRecordFactory(record_factory)
+    logging.setLogRecordFactory(shinto_record_factory)
