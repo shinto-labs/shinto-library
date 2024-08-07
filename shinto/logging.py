@@ -5,14 +5,8 @@ import re
 import sys
 from importlib.util import find_spec
 
-SHINTO_LOG_FORMAT = (
-    "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
-    'name="%(application_name)s" logger_name="%(name)s" level="%(levelname)s" msg="%(message)s"'
-)
-SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
-
-# Custom logging config based on uvicorn's default logging config
-# from uvicorn.config import LOGGING_CONFIG  # noqa: ERA001
+# Custom uvicorn logging config with propagate set to True.
+# Default uvicorn log config: from uvicorn.config import LOGGING_CONFIG
 UVICORN_LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -24,6 +18,45 @@ UVICORN_LOGGING_CONFIG = {
         "uvicorn.access": {"level": "INFO", "handlers": [], "propagate": True},
     },
 }
+
+
+SHINTO_LOG_FORMAT = (
+    "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
+    'name="%(application_name)s" logger_name="%(name)s" level="%(levelname)s" msg="%(message)s"'
+)
+SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
+
+
+class ShintoFormatter(logging.Formatter):
+    """Custom log formatter."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """
+        Format log records, escaping double quotes.
+
+        This method ensures that any double quotes in the log message are properly escaped.
+
+        Args:
+            record (logging.LogRecord): The log record to be formatted.
+
+        Returns:
+            str: The formatted log message with escaped double quotes.
+
+        """
+        # Retrieve the log message from the record
+        message = record.getMessage()
+
+        # Check for double quotes that are not already escaped
+        if re.search(r'(?<!\\)"', message):
+            # Escape all double quotes by another backslash
+            message = message.replace('"', r"\"")
+
+        # Update the log record with the modified message
+        record.msg = message
+        record.args = None
+
+        # Call the superclass format method to perform standard formatting
+        return super().format(record)
 
 
 def setup_logging(
@@ -45,7 +78,7 @@ def setup_logging(
     root_logger.setLevel(loglevel)
 
     # Formatter for log messages
-    formatter = logging.Formatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
+    formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
     for handler in root_logger.handlers:
@@ -82,19 +115,14 @@ def setup_logging(
 
     def shinto_record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
         """
-        Format log records after they are created.
+        Update log records after they are created.
 
-        To make sure all loggers even loggers that are propagated are using the same format,
-        we use a log record factory to format log records after they are created.
+        To make sure all loggers even loggers that are propagated have the desired properties,
+        we use a log record factory to update the log record after it is created.
         """
-        # Create the log record
         record = existing_record_factory(*args, **kwargs)
 
-        # Add the application name to the log record
         record.application_name = application_name
-
-        # Escape double quotes in the log message
-        record.msg = re.sub(r'(?<!\\)"', r"\"", str(record.msg))
 
         return record
 
