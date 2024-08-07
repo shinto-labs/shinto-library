@@ -1,5 +1,6 @@
 """Test cases for the logging module."""
 
+import json
 import logging
 import tempfile
 import unittest
@@ -103,6 +104,15 @@ class TestLogging(unittest.TestCase):
         self.assertIn(log_message, output)
 
     @patch("shinto.logging.sys.stdout", new_callable=StringIO)
+    def test_log_to_stdout_json_dump(self, mock_stdout: MagicMock):
+        """Test setup_logging log message with JSON dump."""
+        setup_logging()
+        log_message = json.dumps('Test log message "with double quotes"')[1:-1]
+        logging.warning(log_message)
+        output = mock_stdout.getvalue().strip()
+        self.assertIn(log_message, output)
+
+    @patch("shinto.logging.sys.stdout", new_callable=StringIO)
     def test_log_to_stdout_non_root_logger(self, mock_stdout: MagicMock):
         """Test setup_logging log message with escaped double quotes."""
         setup_logging()
@@ -153,6 +163,21 @@ class TestLogging(unittest.TestCase):
 
         with log_filename.open() as log_file:
             self.assertIn("raise ValueError(msg)", log_file.read())
+
+    def test_log_to_file_bytes(self):
+        """Test setup_logging log message with bytes."""
+        log_filename = Path(self.temp_dir) / "myapp2.log"
+        setup_logging(
+            application_name="myapp2",
+            loglevel=logging.INFO,
+            log_to_stdout=False,
+            log_to_file=True,
+            log_filename=log_filename,
+        )
+        log_message = json.dumps({"key": "value"}).encode()
+        logging.info("Bytes: %s", log_message)
+        with log_filename.open() as log_file:
+            self.assertIn('msg="Bytes: b\'{\\"key\\": \\"value\\"}\'"', log_file.read())
 
 
 if __name__ == "__main__":
