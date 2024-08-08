@@ -111,6 +111,7 @@ class QueueHandler:
         - `RABBITMQ_USERNAME`
         - `RABBITMQ_PASSWORD`
         - `RABBITMQ_QUEUE`
+        - `RABBITMQ_EXCHANGE`
 
         Parameters can be provided in the configuration file:
         ----------------------------------------------------
@@ -119,6 +120,7 @@ class QueueHandler:
         - `username`
         - `password`
         - `queue`
+        - `exchange`: default ""
 
         """
         # Load the RabbitMQ connection parameters from the configuration file
@@ -132,6 +134,7 @@ class QueueHandler:
         user = os.getenv("RABBITMQ_USERNAME", config.get("username"))
         password = os.getenv("RABBITMQ_PASSWORD", config.get("password"))
         queue = os.getenv("RABBITMQ_QUEUE", config.get("queue"))
+        exchange = os.getenv("RABBITMQ_EXCHANGE", config.get("exchange", ""))
 
         # Create the RabbitMQ connection
         return cls(
@@ -140,6 +143,7 @@ class QueueHandler:
             username=user,
             password=password,
             queue_name=queue,
+            exchange=exchange,
         )
 
     def check_for_queue(self):
