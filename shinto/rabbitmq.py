@@ -54,6 +54,7 @@ class QueueHandler:
         - `RABBITMQ_USERNAME`
         - `RABBITMQ_PASSWORD`
         - `RABBITMQ_QUEUE`
+        - `RABBITMQ_EXCHANGE`
 
         If arguments are provided they will take precedence over the environment variables.
 
@@ -63,6 +64,7 @@ class QueueHandler:
         username = username or os.getenv("RABBITMQ_USERNAME")
         password = password or os.getenv("RABBITMQ_PASSWORD")
         queue_name = queue_name or os.getenv("RABBITMQ_QUEUE")
+        exchange = exchange or os.getenv("RABBITMQ_EXCHANGE", "")
 
         missing_params = [k for k, v in locals().items() if v is None]
         if len(missing_params) > 0:
