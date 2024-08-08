@@ -2,7 +2,9 @@
 
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import psycopg
 
 from shinto.pg import AsyncConnectionPool, ConnectionPool
 
@@ -84,6 +86,36 @@ class TestConnectionPool(unittest.TestCase):
             maxconn=3,
         )
 
+    @patch("shinto.pg.pool.psycopg_pool.ConnectionPool.connection")
+    def test_connection_context_manager(self, mock_super_connection: MagicMock):
+        """Test the connection context manager."""
+        mock_connection = MagicMock()
+        mock_context_manager = MagicMock()
+        mock_context_manager.__enter__.return_value = mock_connection
+        mock_super_connection.return_value = mock_context_manager
+
+        pool = ConnectionPool(**test_config)
+
+        with pool.connection() as conn:
+            self.assertEqual(conn, mock_connection)
+
+        mock_super_connection.assert_called_once()
+        mock_context_manager.__enter__.assert_called_once()
+
+    @patch("shinto.pg.pool.psycopg_pool.ConnectionPool.connection")
+    def test_connection_context_manager_exception(self, mock_super_connection: MagicMock):
+        """Test the connection context manager exception handling."""
+        mock_super_connection.side_effect = psycopg.Error
+
+        pool = ConnectionPool(**test_config)
+
+        with self.assertLogs(level="ERROR") as log, pool.connection() as conn:
+            self.assertIsNone(conn)
+
+        self.assertEqual(len(log.output), 1)
+
+        mock_super_connection.assert_called_once()
+
 
 class TestAsyncConnectionPool(unittest.IsolatedAsyncioTestCase):
     """Test the AsyncConnectionPool class."""
@@ -153,6 +185,34 @@ class TestAsyncConnectionPool(unittest.IsolatedAsyncioTestCase):
             minconn=1,
             maxconn=3,
         )
+
+    @patch("shinto.pg.pool.psycopg_pool.AsyncConnectionPool.connection")
+    async def test_connection_context_manager(self, mock_super_connection: AsyncMock):
+        """Test the connection context manager."""
+        mock_connection = AsyncMock()
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__.return_value = mock_connection
+        mock_super_connection.return_value = mock_context_manager
+
+        pool = AsyncConnectionPool(**test_config)
+
+        async with pool.connection() as conn:
+            self.assertEqual(conn, mock_connection)
+
+        mock_super_connection.assert_called_once()
+        mock_context_manager.__aenter__.assert_called_once()
+
+    @patch("shinto.pg.pool.psycopg_pool.AsyncConnectionPool.connection")
+    async def test_connection_context_manager_exception(self, mock_super_connection: AsyncMock):
+        """Test the connection context manager exception handling."""
+        mock_super_connection.side_effect = psycopg.Error
+
+        pool = AsyncConnectionPool(**test_config)
+
+        async with pool.connection() as conn:
+            self.assertIsNone(conn)
+
+        mock_super_connection.assert_called_once()
 
 
 if __name__ == "__main__":
