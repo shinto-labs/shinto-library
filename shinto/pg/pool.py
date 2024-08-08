@@ -1,8 +1,12 @@
 """Connection pool module, a wrapper around psycopg_pool ConnectionPool and AsyncConnectionPool."""
 
+import logging
 import os
 from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager, contextmanager
 
+import psycopg
 import psycopg_pool
 
 from shinto.config import load_config_file
@@ -152,6 +156,16 @@ class ConnectionPool(BaseConnectionPool, psycopg_pool.ConnectionPool):
             connection_class=Connection,
         )
 
+    @contextmanager
+    def connection(self, timeout: float | None = None) -> Generator[Connection | None, None, None]:
+        """Context manager for connection pool."""
+        try:
+            with super().connection(timeout) as conn:
+                yield conn
+        except psycopg.Error:
+            logging.exception("Failed getting connection from pool.")
+            yield None
+
 
 class AsyncConnectionPool(BaseConnectionPool, psycopg_pool.AsyncConnectionPool):
     """AsyncConnectionPool class."""
@@ -171,3 +185,15 @@ class AsyncConnectionPool(BaseConnectionPool, psycopg_pool.AsyncConnectionPool):
             open=False,
             connection_class=AsyncConnection,
         )
+
+    @asynccontextmanager
+    async def connection(
+        self, timeout: float | None = None
+    ) -> AsyncGenerator[AsyncConnection | None, None, None]:
+        """Async context manager for connection pool."""
+        try:
+            async with super().connection(timeout) as conn:
+                yield conn
+        except psycopg.Error:
+            logging.exception("Failed getting connection from pool.")
+            yield None
