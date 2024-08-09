@@ -7,7 +7,7 @@ from itertools import cycle
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
-from shinto.jsonschema import async_validate_json_against_schemas, validate_json_against_schemas
+from shinto.jsonschema import validate_json_against_schemas, validate_json_against_schemas_async
 
 test_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -98,7 +98,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
         data = {"name": "John Doe"}
         schema_filenames = ["valid_schema.json"]
         full_path = Path(schema_filenames[0]).resolve()
-        result = await async_validate_json_against_schemas(data, schema_filenames)
+        result = await validate_json_against_schemas_async(data, schema_filenames)
         self.assertTrue(result)
         mock_exists.assert_called_once_with()
         mock_open_file.assert_called_once_with(full_path, encoding="UTF-8")
@@ -115,7 +115,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
         data = {"name": "John Doe"}
         schema_filenames = ["invalid_schema.json"]
         full_path = Path(schema_filenames[0]).resolve()
-        result = await async_validate_json_against_schemas(data, schema_filenames)
+        result = await validate_json_against_schemas_async(data, schema_filenames)
         self.assertFalse(result)
         mock_exists.assert_called_once_with()
         mock_open_file.assert_called_once_with(full_path, encoding="UTF-8")
@@ -136,7 +136,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
         data = {"name": "John Doe"}
         schema_filenames = ["invalid_schema.json"] * 2
-        result = await async_validate_json_against_schemas(data, schema_filenames)
+        result = await validate_json_against_schemas_async(data, schema_filenames)
         self.assertFalse(result)
         mock_exists.assert_has_calls([unittest.mock.call()] * 2)
 
@@ -152,7 +152,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
         data = {"name": "John Doe"}
         schema_filenames = ["invalid_schema.json"]
         full_path = Path(schema_filenames[0]).resolve()
-        result = await async_validate_json_against_schemas(data, schema_filenames)
+        result = await validate_json_against_schemas_async(data, schema_filenames)
         self.assertFalse(result)
         mock_exists.assert_called_once_with()
         mock_open_file.assert_called_once_with(full_path, encoding="UTF-8")
@@ -167,7 +167,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
         data = {"name": "John Doe"}
         schema_filenames = ["non_existing_schema.json"]
-        result = await async_validate_json_against_schemas(data, schema_filenames)
+        result = await validate_json_against_schemas_async(data, schema_filenames)
         self.assertFalse(result)
         mock_exists.assert_called_once_with()
         mock_open_file.assert_not_called()
