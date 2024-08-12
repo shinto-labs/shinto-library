@@ -10,7 +10,7 @@ class Connection(psycopg.Connection):
 
     def execute_query(self, query: str) -> list[tuple]:
         """
-        Execute a query on the database.
+        Execute a query or command to the database.
 
         Args:
             query (str): The query to execute.
@@ -41,16 +41,11 @@ class Connection(psycopg.Connection):
             psycopg.Error: If the query execution fails.
 
         """
-        try:
-            with self.cursor() as cur:
-                # TODO: look at copy instead of executemany
-                # https://shintolabs.atlassian.net/browse/DOT-422
-                cur.executemany(query, records, returning=False)
-                self.commit()
-                return cur.rowcount
-        except psycopg.Error:
-            self.rollback()
-            raise
+        with self.cursor() as cur:
+            # TODO: look at copy instead of executemany
+            # https://shintolabs.atlassian.net/browse/DOT-422
+            cur.executemany(query, records, returning=False)
+            return cur.rowcount
 
 
 class AsyncConnection(psycopg.AsyncConnection):
@@ -58,7 +53,7 @@ class AsyncConnection(psycopg.AsyncConnection):
 
     async def execute_query(self, query: str) -> list[tuple]:
         """
-        Execute a query on the database asynchronously.
+        Execute a query or command to the database asynchronously.
 
         Args:
             query (str): The query to execute.
@@ -89,13 +84,8 @@ class AsyncConnection(psycopg.AsyncConnection):
             psycopg.Error: If the query execution fails.
 
         """
-        try:
-            async with self.cursor() as cur:
-                # TODO: look at copy instead of executemany
-                # https://shintolabs.atlassian.net/browse/DOT-422
-                await cur.executemany(query, records, returning=False)
-                await self.commit()
-                return cur.rowcount
-        except psycopg.Error:
-            await self.rollback()
-            raise
+        async with self.cursor() as cur:
+            # TODO: look at copy instead of executemany
+            # https://shintolabs.atlassian.net/browse/DOT-422
+            await cur.executemany(query, records, returning=False)
+            return cur.rowcount
