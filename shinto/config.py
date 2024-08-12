@@ -23,37 +23,48 @@ class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
 
 
-def remove_none_values(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
-    """Recursively remove all None values from a dict or list."""
-    if isinstance(data, dict):
-        return {
-            k: (v if not isinstance(v, list | dict) else remove_none_values(v))
-            for k, v in data.items()
-            if v is not None
-        }
-    if isinstance(data, list):
-        return [
-            (v if not isinstance(v, list | dict) else remove_none_values(v))
-            for v in data
-            if v is not None
-        ]
+def _merge_dicts(d1: dict, d2: dict) -> dict:
+    """
+    Recursively merge two dictionaries.
 
-    msg = f"Unsupported data type: {type(data)}"
-    raise ConfigError(msg)
+    Overwrites values in d2 with values in d1.
 
+    Args:
+        d1 (dict): The first dictionary.
+        d2 (dict): The second dictionary.
 
-def merge_dicts(d1: dict, d2: dict) -> dict:
-    """Recursively merge two dictionaries."""
-    for key, value in d2.items():
-        if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
-            merge_dicts(d1[key], value)
+    Returns:
+        dict: The merged dictionary.
+
+    """
+    for key, value in d1.items():
+        if key in d2:
+            if isinstance(d2[key], dict) and isinstance(value, dict):
+                d2[key] = _merge_dicts(value, d2[key])
+            elif isinstance(d2[key], dict) or isinstance(value, dict):
+                msg = f"Cannot merge {type(value)} with {type(d2[key])} on key: {key}"
+                raise ValueError(msg)
+            else:
+                d2[key] = value
         else:
-            d1[key] = value
-    return d1
+            d2[key] = value
+
+    return d2
 
 
-def read_config_file(file_path: str) -> dict[str, Any]:
-    """Read config file and return as dict."""
+def _read_config_file(file_path: str) -> dict[str, Any]:
+    """
+    Read config file and return as dict.
+
+    Supported file types: YAML, JSON, INI.
+
+    Args:
+        file_path (str): The path to the config file.
+
+    Returns:
+        dict: The config data.
+
+    """
     file_extension = Path(file_path).suffix.lower()
     if file_extension in [".yaml", ".yml"]:
         with Path(file_path).open(encoding="utf-8") as yaml_file:
@@ -73,55 +84,77 @@ def read_config_file(file_path: str) -> dict[str, Any]:
 def load_config_file(
     file_path: str,
     defaults: dict[str, Any] | None = None,
-    start_element: list[str] | None = None,
-    keep_none_values: bool = True,
 ) -> dict[str, Any]:
     """
     Load config from file.
 
-    If a defaults dict is provided, it will be merged with the provided config file.
+    Args:
+        file_path (str): The path to the config file.
+        defaults (dict): If provided, the default values to merge with the config file.
+
+    Returns:
+        dict: The config data.
 
     """
-    start_element = start_element or []
-    defaults = defaults or {}
+    defaults = copy.deepcopy(defaults) or {}
 
     if not file_path or not Path(file_path).exists():
         msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    file_config = read_config_file(file_path)
-    config = merge_dicts(defaults, file_config)
+    config = _read_config_file(file_path)
 
-    if len(start_element) > 0:
-        for item in start_element:
-            try:
-                config = config[item]
-            except KeyError as e:
-                msg = f"Invalid item path in config file: {start_element}."
-                raise KeyError(msg) from e
-
-    if not keep_none_values:
-        config = remove_none_values(config)
-
-    return config
+    return _merge_dicts(config, defaults)
 
 
-def replace_passwords(data: dict[str, Any] | list[Any]) -> dict[str, Any] | list[Any]:
-    """Replace all passwords in dict object before visualizing it."""
+def _mask_sensitive_keys(
+    data: dict[str, Any] | list[Any],
+    sensitive_keys: list[str] | None = None,
+) -> dict[str, Any] | list[Any]:
+    """
+    Replace sensitive keys in a dictionary with ****.
+
+    Args:
+        data (dict | list): The data to mask.
+        sensitive_keys (list):
+            The sensitive keys to mask. Defaults to ["password", "pass", "passwd"].
+
+    Returns:
+        (dict | list): The masked data.
+
+    """
+    if sensitive_keys is None:
+        sensitive_keys = ["password", "pass", "passwd"]
     if isinstance(data, dict):
         for key, value in data.items():
-            if key.lower() in ["password", "pass", "passwd"]:
+            if key.lower() in sensitive_keys:
                 data[key] = "****"
             else:
-                data[key] = replace_passwords(value)
+                data[key] = _mask_sensitive_keys(value)
     elif isinstance(data, list):
-        data = [replace_passwords(item) for item in data]
+        data = [_mask_sensitive_keys(item) for item in data]
     return data
 
 
-def output_config(configdata: dict, output_config_type: ConfigType = ConfigType.YAML) -> str:
-    """Dump config dict to a output_config_type (yaml, json, ini)."""
-    config_data = replace_passwords(copy.deepcopy(configdata))
+def output_config(
+    configdata: dict,
+    output_config_type: ConfigType = ConfigType.YAML,
+    sensitive_keys: list[str] | None = None,
+) -> str:
+    """
+    Dump config dict to a output_config_type (yaml, json, ini).
+
+    Args:
+        configdata (dict): The config data to dump.
+        output_config_type (ConfigType): The output config type.
+        sensitive_keys (list):
+            The sensitive keys to mask. Defaults to ["password", "pass", "passwd"].
+
+    Returns:
+        str: The dumped config data.
+
+    """
+    config_data = _mask_sensitive_keys(copy.deepcopy(configdata), sensitive_keys)
 
     if output_config_type == ConfigType.YAML:
         output = yaml.dump(config_data)
