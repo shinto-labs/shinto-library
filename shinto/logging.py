@@ -1,24 +1,10 @@
 """Logging setup."""
 
 import logging
+import logging.config
 import re
 import sys
 from importlib.util import find_spec
-
-# Custom uvicorn logging config with propagate set to True.
-# Default uvicorn log config: from uvicorn.config import LOGGING_CONFIG
-UVICORN_LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {},
-    "handlers": {},
-    "loggers": {
-        "uvicorn": {"level": "INFO", "handlers": [], "propagate": True},
-        "uvicorn.error": {"level": "INFO", "handlers": [], "propagate": True},
-        "uvicorn.access": {"level": "INFO", "handlers": [], "propagate": True},
-    },
-}
-
 
 SHINTO_LOG_FORMAT = (
     "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
@@ -55,6 +41,9 @@ class ShintoFormatter(logging.Formatter):
         record.msg = message
         record.args = None
 
+        # Lowercase the log level name
+        record.levelname = record.levelname.lower()
+
         # Call the superclass format method to perform standard formatting
         return super().format(record)
 
@@ -66,18 +55,15 @@ def setup_logging(
     log_to_file: bool = True,
     log_to_journald: bool = False,
     log_filename: str | None = None,
+    setup_uvicorn_logging: bool = False,
 ):
     """Set up logging, format etc."""
     if not application_name:
         application_name = sys.argv[0]
 
-    # Get the root logger
     root_logger = logging.root
-
-    # Set the log level
     root_logger.setLevel(loglevel)
 
-    # Formatter for log messages
     formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
@@ -111,6 +97,7 @@ def setup_logging(
                 "Failed to import systemd.journal. Journal logging not available."
             )
 
+    # Update the log record factory to include the application name
     existing_record_factory = logging.getLogRecordFactory()
 
     def shinto_record_factory(*args: tuple, **kwargs: dict) -> logging.LogRecord:
@@ -127,3 +114,21 @@ def setup_logging(
         return record
 
     logging.setLogRecordFactory(shinto_record_factory)
+
+    # Setup uvicorn logging if requested
+    if setup_uvicorn_logging:
+        # Custom uvicorn logging config with propagate set to True.
+        # Default uvicorn log config: from uvicorn.config import LOGGING_CONFIG
+        loglevel = logging.getLevelName(loglevel) if not isinstance(loglevel, str) else loglevel
+        uvicorn_logging_config = {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {},
+            "handlers": {},
+            "loggers": {
+                "uvicorn": {"level": loglevel, "handlers": [], "propagate": True},
+                "uvicorn.error": {"level": loglevel, "handlers": [], "propagate": True},
+                "uvicorn.access": {"level": loglevel, "handlers": [], "propagate": True},
+            },
+        }
+        logging.config.dictConfig(uvicorn_logging_config)

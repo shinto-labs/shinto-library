@@ -38,9 +38,9 @@ class TestConnection(unittest.TestCase):
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
 
-        result = Connection.execute_query(mock_conn, test_query)
+        with self.assertRaises(psycopg.Error):
+            Connection.execute_query(mock_conn, test_query)
 
-        self.assertIsNone(result)
         mock_cursor.execute.assert_called_once_with(test_query)
         mock_cursor.fetchall.assert_not_called()
 
@@ -73,9 +73,9 @@ class TestConnection(unittest.TestCase):
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
 
-        result = Connection.write_records(mock_conn, test_query, test_records)
+        with self.assertRaises(psycopg.Error):
+            Connection.write_records(mock_conn, test_query, test_records)
 
-        self.assertEqual(result, -1)
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
         mock_conn.rollback.assert_called_once()
 
@@ -111,9 +111,9 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
 
-        result = await AsyncConnection.execute_query(mock_conn, test_query)
+        with self.assertRaises(psycopg.Error):
+            await AsyncConnection.execute_query(mock_conn, test_query)
 
-        self.assertIsNone(result)
         mock_cursor.execute.assert_called_once_with(test_query)
         mock_cursor.fetchall.assert_not_called()
 
@@ -149,9 +149,9 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_conn.cursor.return_value.__aexit__.return_value = None
         mock_conn.rollback = AsyncMock()
 
-        result = await AsyncConnection.write_records(mock_conn, test_query, test_records)
+        with self.assertRaises(psycopg.Error):
+            await AsyncConnection.write_records(mock_conn, test_query, test_records)
 
-        self.assertEqual(result, -1)
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
         mock_conn.rollback.assert_called_once()
 

@@ -2,72 +2,76 @@
 
 import asyncio
 import json
-import logging
 from pathlib import Path
 
 import anyio
 import jsonschema
 
 
-def validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bool:
-    """Validate JSON data against JSON schemas."""
+def validate_json_against_schemas(data: dict | list, schema_filenames: list[str]):
+    """
+    Validate JSON data against JSON schemas.
+
+    Args:
+        data (dict | list): The JSON data to validate.
+        schema_filenames (list[str]): A list of schema filenames to validate against.
+
+    Raises:
+        FileNotFoundError: If the schema file is not found.
+        jsonschema.exceptions.SchemaError: If the schema is invalid.
+        jsonschema.exceptions.ValidationError: If the data does not validate against the schema.
+
+    """
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
         if not schema_filepath.exists():
-            logging.error("Schema file not found: %s", schema_filepath)
-            return False
+            msg = f"Schema file not found: {schema_filepath}"
+            raise FileNotFoundError(msg)
 
         with Path(schema_filepath).open(encoding="UTF-8") as file:
             schema = json.load(file)
-            try:
-                jsonschema.validate(data, schema)
-            except jsonschema.SchemaError:
-                logging.exception("JSON schema error in %s", schema_filepath)
-                return False
-            except jsonschema.ValidationError:
-                logging.exception("JSON validation error in %s", schema_filepath)
-                return False
-
-    return True
+            jsonschema.validate(data, schema)
 
 
-async def _async_validate_json_against_schemas_task(data: dict, schema_filepath: Path) -> None:
+async def _validate_json_against_schemas_async_task(data: dict | list, schema_filepath: Path):
     """Validate JSON data against a schema."""
     async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
         schema = json.loads(await file.read())
-        try:
-            jsonschema.validate(data, schema)
-        except jsonschema.SchemaError:
-            logging.exception("JSON schema error in %s", schema_filepath)
-            raise
-        except jsonschema.ValidationError:
-            logging.exception("JSON validation error in %s", schema_filepath)
-            raise
+        jsonschema.validate(data, schema)
 
 
-async def async_validate_json_against_schemas(data: dict, schema_filenames: list[str]) -> bool:
-    """Validate JSON data against JSON schemas."""
-    tasks: dict[asyncio.Future, str] = {}
+async def validate_json_against_schemas_async(data: dict | list, schema_filenames: list[str]):
+    """
+    Validate JSON data against JSON schemas.
+
+    Args:
+        data (dict | list): The JSON data to validate.
+        schema_filenames (list[str]): A list of schema filenames to validate against.
+
+    Raises:
+        FileNotFoundError: If the schema file is not found.
+        jsonschema.exceptions.SchemaError: If the schema is invalid.
+        jsonschema.exceptions.ValidationError: If the data does not validate against the schema.
+
+    """
+    tasks: list[asyncio.Future] = []
 
     for schema_filename in schema_filenames:
         schema_filepath = Path(schema_filename).resolve()
 
         if not schema_filepath.exists():
-            logging.error("Schema file not found: %s", schema_filepath)
-            return False
+            msg = f"Schema file not found: {schema_filepath}"
+            raise FileNotFoundError(msg)
 
-        task = asyncio.create_task(_async_validate_json_against_schemas_task(data, schema_filepath))
-        tasks[task] = schema_filepath
+        task = asyncio.create_task(_validate_json_against_schemas_async_task(data, schema_filepath))
+        tasks.append(task)
 
-    done, pending = await asyncio.wait(tasks.keys(), return_when=asyncio.FIRST_EXCEPTION)
-
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
     for task in pending:
         task.cancel()
 
     for task in done:
         exception = task.exception()
         if exception:
-            return False
-
-    return True
+            raise exception
