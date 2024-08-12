@@ -5,9 +5,17 @@ __all__ = [
     "Connection",
     "AsyncConnectionPool",
     "ConnectionPool",
-    "get_json_object_from_query_result",
+    "EmptyQueryResultError",
+    "InvalidJsonError",
+    "MultipleObjectsReturnedError",
+    "parse_json_from_query_result",
 ]
 
 from .connection import AsyncConnection, Connection
 from .pool import AsyncConnectionPool, ConnectionPool
-from .utils import get_json_object_from_query_result
+from .utils import (
+    EmptyQueryResultError,
+    InvalidJsonError,
+    MultipleObjectsReturnedError,
+    parse_json_from_query_result,
+)

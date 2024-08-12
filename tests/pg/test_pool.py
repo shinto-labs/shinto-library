@@ -31,14 +31,6 @@ class TestConnectionPool(unittest.TestCase):
         with self.assertRaises(TypeError):
             ConnectionPool()
 
-    @patch("shinto.pg.pool.load_config_file")
-    def test_pool_creation_from_config(self, mock_load_config: MagicMock):
-        """Test the creation of a connection pool from a config file."""
-        mock_load_config.return_value = test_config
-        pool = ConnectionPool.from_config_file("test_config.yaml")
-        self.assertIsInstance(pool, ConnectionPool)
-        self.assertTrue(pool.closed)
-
     @patch.dict(
         os.environ,
         {
@@ -55,36 +47,6 @@ class TestConnectionPool(unittest.TestCase):
         pool = ConnectionPool()
         self.assertIsInstance(pool, ConnectionPool)
         self.assertTrue(pool.closed)
-
-    @patch.dict(
-        os.environ,
-        {
-            "PGDATABASE": test_config["database"] + "_2",
-            "PGUSER": test_config["user"] + "_2",
-            "PGPASSWORD": test_config["password"] + "_2",
-            "PGHOST": test_config["host"] + "_2",
-            "PGPORT": str(test_config["port"]),
-        },
-        clear=True,
-    )
-    @patch("shinto.pg.pool.load_config_file")
-    @patch("shinto.pg.pool.ConnectionPool.__init__", return_value=None)
-    def test_pool_creation_from_config_overloaded_with_env_vars(
-        self, mock_init: MagicMock, mock_load_config: MagicMock
-    ):
-        """Test the creation of a connection pool from a config file and environment variables."""
-        mock_load_config.return_value = test_config
-        ConnectionPool.from_config_file("test_config.yaml")
-
-        mock_init.assert_called_once_with(
-            database=os.environ["PGDATABASE"],
-            user=os.environ["PGUSER"],
-            password=os.environ["PGPASSWORD"],
-            host=os.environ["PGHOST"],
-            port=os.environ["PGPORT"],
-            minconn=1,
-            maxconn=3,
-        )
 
     @patch("shinto.pg.pool.psycopg_pool.ConnectionPool.connection")
     def test_connection_context_manager(self, mock_super_connection: MagicMock):
@@ -109,10 +71,8 @@ class TestConnectionPool(unittest.TestCase):
 
         pool = ConnectionPool(**test_config)
 
-        with self.assertLogs(level="ERROR") as log, pool.connection() as conn:
-            self.assertIsNone(conn)
-
-        self.assertEqual(len(log.output), 1)
+        with self.assertRaises(psycopg.Error), pool.connection():
+            pass
 
         mock_super_connection.assert_called_once()
 
@@ -131,14 +91,6 @@ class TestAsyncConnectionPool(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(TypeError):
             AsyncConnectionPool()
 
-    @patch("shinto.pg.pool.load_config_file")
-    def test_pool_creation_from_config(self, mock_load_config: MagicMock):
-        """Test the creation of a connection pool from a config file."""
-        mock_load_config.return_value = test_config
-        pool = AsyncConnectionPool.from_config_file("test_config.yaml")
-        self.assertIsInstance(pool, AsyncConnectionPool)
-        self.assertTrue(pool.closed)
-
     @patch.dict(
         os.environ,
         {
@@ -155,36 +107,6 @@ class TestAsyncConnectionPool(unittest.IsolatedAsyncioTestCase):
         pool = AsyncConnectionPool()
         self.assertIsInstance(pool, AsyncConnectionPool)
         self.assertTrue(pool.closed)
-
-    @patch.dict(
-        os.environ,
-        {
-            "PGDATABASE": test_config["database"] + "_2",
-            "PGUSER": test_config["user"] + "_2",
-            "PGPASSWORD": test_config["password"] + "_2",
-            "PGHOST": test_config["host"] + "_2",
-            "PGPORT": str(test_config["port"]),
-        },
-        clear=True,
-    )
-    @patch("shinto.pg.pool.load_config_file")
-    @patch("shinto.pg.pool.AsyncConnectionPool.__init__", return_value=None)
-    def test_pool_creation_from_config_overloaded_with_env_vars(
-        self, mock_init: MagicMock, mock_load_config: MagicMock
-    ):
-        """Test the creation of a connection pool from a config file and environment variables."""
-        mock_load_config.return_value = test_config
-        AsyncConnectionPool.from_config_file("test_config.yaml")
-
-        mock_init.assert_called_once_with(
-            database=os.environ["PGDATABASE"],
-            user=os.environ["PGUSER"],
-            password=os.environ["PGPASSWORD"],
-            host=os.environ["PGHOST"],
-            port=os.environ["PGPORT"],
-            minconn=1,
-            maxconn=3,
-        )
 
     @patch("shinto.pg.pool.psycopg_pool.AsyncConnectionPool.connection")
     async def test_connection_context_manager(self, mock_super_connection: AsyncMock):
@@ -209,8 +131,9 @@ class TestAsyncConnectionPool(unittest.IsolatedAsyncioTestCase):
 
         pool = AsyncConnectionPool(**test_config)
 
-        async with pool.connection() as conn:
-            self.assertIsNone(conn)
+        with self.assertRaises(psycopg.Error):
+            async with pool.connection():
+                pass
 
         mock_super_connection.assert_called_once()
 
