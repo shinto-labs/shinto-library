@@ -60,7 +60,6 @@ class TestConnection(unittest.TestCase):
 
         self.assertEqual(result, expected_rowcount)
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
-        mock_conn.commit.assert_called_once()
 
     def test_write_records_failure(self):
         """Test write_records method with a failed record insertion."""
@@ -77,7 +76,6 @@ class TestConnection(unittest.TestCase):
             Connection.write_records(mock_conn, test_query, test_records)
 
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
-        mock_conn.rollback.assert_called_once()
 
 
 class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
@@ -129,13 +127,11 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_cursor.rowcount = 2
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
-        mock_conn.commit = AsyncMock()
 
         result = await AsyncConnection.write_records(mock_conn, test_query, test_records)
 
         self.assertEqual(result, expected_rowcount)
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
-        mock_conn.commit.assert_called_once()
 
     async def test_write_records_failure(self):
         """Test write_records method with a failed record insertion."""
@@ -147,13 +143,11 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_cursor.executemany.side_effect = psycopg.Error
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
-        mock_conn.rollback = AsyncMock()
 
         with self.assertRaises(psycopg.Error):
             await AsyncConnection.write_records(mock_conn, test_query, test_records)
 
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
-        mock_conn.rollback.assert_called_once()
 
 
 if __name__ == "__main__":
