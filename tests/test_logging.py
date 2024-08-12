@@ -8,10 +8,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from shinto.logging import (
-    UVICORN_LOGGING_CONFIG,
-    setup_logging,
-)
+from shinto.logging import setup_logging
 
 
 class TestLogging(unittest.TestCase):
@@ -50,14 +47,6 @@ class TestLogging(unittest.TestCase):
                 else:
                     logger.manager.loggerDict.pop(logger_name)
 
-    def test_uvicorn_logging_config(self):
-        """Test UVICORN_LOGGING_CONFIG dictionary."""
-        for logger_config in UVICORN_LOGGING_CONFIG["loggers"].values():
-            self.assertEqual(logger_config["level"], "INFO")
-
-        for logger_config in UVICORN_LOGGING_CONFIG["loggers"].values():
-            self.assertTrue(logger_config["propagate"])
-
     def test_setup_logging(self):
         """Test setup_logging function with default parameters."""
         setup_logging()
@@ -79,7 +68,7 @@ class TestLogging(unittest.TestCase):
             r"pid=\d{6} "
             r'name="myapp" '
             r'logger_name="root" '
-            r'level="WARNING" '
+            r'level="warning" '
             rf'msg="{log_message}"'
         )
         self.assertRegex(output, pattern)
