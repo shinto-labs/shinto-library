@@ -9,8 +9,6 @@ from pika.channel import Channel
 from pika.connection import Connection
 from pika.exceptions import AMQPError
 
-from shinto.config import load_config_file
-
 
 class QueueError(Exception):
     """Exception while queueing the message."""
@@ -86,67 +84,6 @@ class QueueHandler:
         """Close the connection when the object is deleted."""
         if hasattr(self, "_connection"):
             self._connection.close()
-
-    @classmethod
-    def from_config_file(
-        cls, file_path: str, start_element: list[str] | None = None
-    ) -> "QueueHandler":
-        """
-        Initialize the RabbitMQ connection from a configuration file.
-
-        Args:
-            file_path (str): Path to the configuration file.
-            start_element (list):
-                Path to the RabbitMQ connection parameters in the configuration file.
-                Should be used when the parameters are nested in the configuration file.
-
-        RabbitMQ connection parameters are prioritised in the following order:
-        ----------------------------------------------------------------------
-        1. Environment variables
-        2. Configuration file
-        3. Default values
-
-        Parameters can be provided as environment variables:
-        ---------------------------------------------------
-        - `RABBITMQ_HOST`
-        - `RABBITMQ_PORT`
-        - `RABBITMQ_USERNAME`
-        - `RABBITMQ_PASSWORD`
-        - `RABBITMQ_QUEUE`
-        - `RABBITMQ_EXCHANGE`
-
-        Parameters can be provided in the configuration file:
-        ----------------------------------------------------
-        - `host`
-        - `port`: default 5672
-        - `username`
-        - `password`
-        - `queue`
-        - `exchange`: default ""
-
-        """
-        # Load the RabbitMQ connection parameters from the configuration file
-        config = load_config_file(file_path=file_path, start_element=start_element)
-
-        # 1. Get the RabbitMQ connection parameters from environment variables
-        # 2. Otherwise use the parameters from the configuration file
-        # 3. Otherwise use the default parameters
-        host = os.getenv("RABBITMQ_HOST", config.get("host"))
-        port = os.getenv("RABBITMQ_PORT", config.get("port", 5672))
-        user = os.getenv("RABBITMQ_USERNAME", config.get("username"))
-        password = os.getenv("RABBITMQ_PASSWORD", config.get("password"))
-        queue = os.getenv("RABBITMQ_QUEUE", config.get("queue"))
-        exchange = os.getenv("RABBITMQ_EXCHANGE", config.get("exchange", ""))
-
-        # Create the RabbitMQ connection
-        return cls(
-            host=host,
-            port=port,
-            username=user,
-            password=password,
-            queue_name=queue,
-            exchange=exchange,
-        )
 
     def check_for_queue(self):
         """Check if queue exists and if not: Declare it."""
