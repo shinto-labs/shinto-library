@@ -94,7 +94,17 @@ class ConnectionPool(BaseConnectionPool, psycopg_pool.ConnectionPool):
 
     @contextmanager
     def connection(self, timeout: float | None = None) -> Generator[Connection | None, None, None]:
-        """Context manager for connection pool."""
+        """
+        Context manager to obtain a connection from the pool.
+
+        Return the connection immediately if available, otherwise wait up to timeout or self.timeout
+        seconds and throw PoolTimeout if a connection is not available in time.
+
+        Upon context exit, return the connection to the pool. Apply the normal connection context
+        behaviour <with-connection> (commit/rollback the transaction in case of success/error).
+        If the connection is no more in working state, replace it with a new one.
+
+        """
         with super().connection(timeout) as conn:
             yield conn
 
@@ -122,6 +132,16 @@ class AsyncConnectionPool(BaseConnectionPool, psycopg_pool.AsyncConnectionPool):
     async def connection(
         self, timeout: float | None = None
     ) -> AsyncGenerator[AsyncConnection | None, None, None]:
-        """Async context manager for connection pool."""
+        """
+        Async context manager to obtain a connection from the pool.
+
+        Return the connection immediately if available, otherwise wait up to timeout or self.timeout
+        seconds and throw PoolTimeout if a connection is not available in time.
+
+        Upon context exit, return the connection to the pool. Apply the normal connection context
+        behaviour <with-connection> (commit/rollback the transaction in case of success/error).
+        If the connection is no more in working state, replace it with a new one.
+
+        """
         async with super().connection(timeout) as conn:
             yield conn
