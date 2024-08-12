@@ -60,35 +60,6 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             config.load_config_file(non_existent_file_path)
 
-    def test_load_config_file_yaml_nested(self):
-        """Test loading a nested config file."""
-        nested_yaml_file_path = Path(self.temp_dir) / "nested_config.yaml"
-        with Path(nested_yaml_file_path).open("w") as nested_yaml_file:
-            nested_yaml_file.write("test:\n  test: value")
-        self.assertTrue(Path(nested_yaml_file_path).is_file())
-        nested_yaml_config = config.load_config_file(nested_yaml_file_path, start_element=["test"])
-        self.assertIsInstance(nested_yaml_config, dict)
-        self.assertDictEqual(nested_yaml_config, {"test": "value"})
-
-    def test_load_config_file_yaml_nested_invalid(self):
-        """Test loading a nested config file."""
-        nested_yaml_file_path = Path(self.temp_dir) / "nested_config.yaml"
-        with Path(nested_yaml_file_path).open("w") as nested_yaml_file:
-            nested_yaml_file.write("test:\n  test: value")
-        self.assertTrue(Path(nested_yaml_file_path).is_file())
-        with self.assertRaises(KeyError):
-            config.load_config_file(nested_yaml_file_path, start_element=["unknown"])
-
-    def test_load_config_file_yaml_remove_none_values(self):
-        """Test loading a YAML config file."""
-        none_yaml_file_path = Path(self.temp_dir) / "none_config.yaml"
-        with Path(none_yaml_file_path).open("w") as none_yaml_file:
-            none_yaml_file.write("test: value\ntest2: \ntest3:\n  test4: \n  test5: value")
-        self.assertTrue(Path(none_yaml_file_path).is_file())
-        yaml_config = config.load_config_file(none_yaml_file_path, keep_none_values=False)
-        self.assertIsInstance(yaml_config, dict)
-        self.assertDictEqual(yaml_config, {"test": "value", "test3": {"test5": "value"}})
-
     def test_load_config_file_yaml_with_defaults(self):
         """Test loading a YAML config file with default values."""
         yaml_file_path = Path(self.temp_dir) / "config.yaml"
@@ -99,23 +70,16 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": {"key": "value", "key2": "value2"}})
 
-    def test_remove_none_values(self):
-        """Test removing None values from a dictionary."""
-        data = {"test": "value", "test2": None, "test3": {"test4": None, "test5": "value"}}
-        cleaned_data = config.remove_none_values(data)
-        self.assertIsInstance(cleaned_data, dict)
-        self.assertDictEqual(cleaned_data, {"test": "value", "test3": {"test5": "value"}})
-
     def test_replace_passwords(self):
         """Test replacing passwords in a dictionary."""
         data = {"username": "john_doe", "password": "secret123"}
-        replaced_data = config.replace_passwords(data)
+        replaced_data = config._mask_sensitive_keys(data)
         self.assertNotIn("secret123", str(replaced_data))
 
     def test_replace_passwords_list(self):
         """Test replacing passwords in a dictionary."""
         data = {"username": "john_doe", "passwords": [{"password": "secret123"}]}
-        replaced_data = config.replace_passwords(data)
+        replaced_data = config._mask_sensitive_keys(data)
         self.assertNotIn("secret123", str(replaced_data))
 
     def test_output_config(self):
