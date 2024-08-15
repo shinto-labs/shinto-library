@@ -93,13 +93,14 @@ if [ "$matching_tag" ] || [ "$response" != "y" ]; then
     new_version=${new_version#v}
 
     echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
-    sed -i "" "s/version = ['\"]\([^'\"]*\)['\"]/version = \"$new_version\"/" pyproject.toml
+    sed -i "s/version = ['\"]\([^'\"]*\)['\"]/version = \"$new_version\"/" pyproject.toml
     git add pyproject.toml
     git commit -m "Update version in pyproject.toml to $new_version"
     git push origin $current_branch
 
     version_number=$new_version
 fi
+echo "VERSION_NUMBER: $version_number"
 tag="v$version_number"
 
 ## Change branch to main
