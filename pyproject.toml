@@ -7,7 +7,7 @@ authors = [
     {name = "Tommy van Schie", email = "tommy@shintolabs.nl"}
 ]
 dependencies = [
-    "pyyaml>=6.0.1",
+    "pyyaml>=5.3.1",
     "jsonschema>=4.23.0",
     "prometheus-client>=0.20.0",
     "anyio>=4.4.0",
