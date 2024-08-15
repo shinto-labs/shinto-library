@@ -1,6 +1,6 @@
 [project]
 name = "shinto"
-version = "1.0.27"
+version = "1.0.28"
 description = "Shinto Labs default python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
@@ -16,7 +16,6 @@ dependencies = [
 ]
 requires-python = ">=3.8"
 readme = "README.md"
-
 
 [tool.pdm]
 [tool.pdm.dev-dependencies]
