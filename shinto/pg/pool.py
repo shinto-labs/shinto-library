@@ -135,7 +135,8 @@ class AsyncConnectionPool(BaseConnectionPool, psycopg_pool.AsyncConnectionPool):
 
     @asynccontextmanager
     async def connection(
-        self, timeout: float | None = None
+        self,
+        timeout: float | None = None,  # noqa: ASYNC109, RUF100 does not make sense for overloading connection method
     ) -> AsyncGenerator[AsyncConnection, None, None]:
         """
         Async context manager to obtain a connection from the pool.
