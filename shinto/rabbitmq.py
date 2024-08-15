@@ -1,13 +1,19 @@
 """RabbitMQ handler module."""
 
+from __future__ import annotations
+
 import os
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from pika import BasicProperties, BlockingConnection, ConnectionParameters, PlainCredentials
-from pika.amqp_object import Method
-from pika.channel import Channel
-from pika.connection import Connection
 from pika.exceptions import AMQPError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from pika.amqp_object import Method
+    from pika.channel import Channel
+    from pika.connection import Connection
 
 
 class QueueError(Exception):
@@ -29,7 +35,7 @@ class QueueHandler:
         username: str | None = None,
         password: str | None = None,
         queue_name: str | None = None,
-        exchange: str = "",
+        exchange: str | None = None,
     ) -> None:
         """
         Initialize the RabbitMQ connection.

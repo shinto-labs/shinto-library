@@ -1,5 +1,7 @@
 """Utility functions for the shinto.pg package."""
 
+from __future__ import annotations
+
 
 class EmptyQueryResultError(Exception):
     """Error raised when the query result is empty."""
