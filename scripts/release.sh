@@ -80,7 +80,7 @@ fi
 
 ## If the user does not want to proceed with the version number in pyproject.toml, ask for a new version number
 if [ "$matching_tag" ] || [ "$response" != "y" ]; then
-    echo -n "What version do you want to deploy with? "
+    echo -n "What version do you want to deploy with? (eg 1.2.3) "
     read -r new_version
     regex="^v?[0-9]+\.[0-9]+\.[0-9]+$"
     if [[ -z "$new_version" ]]; then
@@ -93,7 +93,7 @@ if [ "$matching_tag" ] || [ "$response" != "y" ]; then
     new_version=${new_version#v}
 
     echo "Updating version in pyproject.toml to $new_version and pushing to $current_branch."
-    sed -i "s/version = ['\"]\([^'\"]*\)['\"]/version = \"$new_version\"/" pyproject.toml
+    sed -i "" "s/version = ['\"]\([^'\"]*\)['\"]/version = \"$new_version\"/" pyproject.toml
     git add pyproject.toml
     git commit -m "Update version in pyproject.toml to $new_version"
     git push origin $current_branch
