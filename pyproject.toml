@@ -1,6 +1,6 @@
 [project]
 name = "shinto"
-version = "1.0.28"
+version = "1.0.29"
 description = "Shinto Labs default python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
