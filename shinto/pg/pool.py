@@ -1,13 +1,18 @@
 """Connection pool module, a wrapper around psycopg_pool ConnectionPool and AsyncConnectionPool."""
 
+from __future__ import annotations
+
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
+from typing import TYPE_CHECKING
 
 import psycopg_pool
 
 from shinto.pg.connection import AsyncConnection, Connection
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
 
 
 class BaseConnectionPool(ABC):

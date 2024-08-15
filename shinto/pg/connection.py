@@ -1,5 +1,7 @@
 """Connection module, a wrapper around psycopg Connection and Async."""
 
+from __future__ import annotations
+
 import psycopg
 
 
