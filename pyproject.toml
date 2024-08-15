@@ -1,13 +1,13 @@
 [project]
 name = "shinto"
-version = "1.0.26"
+version = "1.0.27"
 description = "Shinto Labs default python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
     {name = "Tommy van Schie", email = "tommy@shintolabs.nl"}
 ]
 dependencies = [
-    "pyyaml>=6.0.1",
+    "pyyaml>=5.3.1",
     "jsonschema>=4.23.0",
     "prometheus-client>=0.20.0",
     "anyio>=4.4.0",

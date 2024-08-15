@@ -23,5 +23,8 @@ find . -name "*.egg-info" | xargs rm -rf
 find . -name ".venv" | xargs rm -rf
 find . -name ".pdm-python" | xargs rm -rf
 
+# clean pdm cache
+pdm cache clear
+
 echo "
 🎉 Cleaned up the project!"
