@@ -114,5 +114,8 @@ git merge development --commit --no-ff -m "Merge into main version: $tag"
 echo "Creating tag $tag and pushing to main."
 git tag $tag && git push origin main $tag
 
+## Change branch back to development
+git checkout development
+
 echo "
 🎉 Created release $tag!"
