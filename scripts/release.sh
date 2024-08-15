@@ -100,6 +100,7 @@ if [ "$matching_tag" ] || [ "$response" != "y" ]; then
 
     version_number=$new_version
 fi
+
 echo "VERSION_NUMBER: $version_number"
 tag="v$version_number"
 
