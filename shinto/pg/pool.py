@@ -98,7 +98,7 @@ class ConnectionPool(BaseConnectionPool, psycopg_pool.ConnectionPool):
         )
 
     @contextmanager
-    def connection(self, timeout: float | None = None) -> Generator[Connection | None, None, None]:
+    def connection(self, timeout: float | None = None) -> Generator[Connection, None, None]:
         """
         Context manager to obtain a connection from the pool.
 
@@ -136,7 +136,7 @@ class AsyncConnectionPool(BaseConnectionPool, psycopg_pool.AsyncConnectionPool):
     @asynccontextmanager
     async def connection(
         self, timeout: float | None = None
-    ) -> AsyncGenerator[AsyncConnection | None, None, None]:
+    ) -> AsyncGenerator[AsyncConnection, None, None]:
         """
         Async context manager to obtain a connection from the pool.
 
