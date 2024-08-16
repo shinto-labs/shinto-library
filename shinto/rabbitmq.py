@@ -34,7 +34,7 @@ class QueueHandler:
         port: int | str | None = None,
         username: str | None = None,
         password: str | None = None,
-        queue_name: str | None = None,
+        queue: str | None = None,
         exchange: str | None = None,
     ) -> None:
         """
@@ -45,7 +45,7 @@ class QueueHandler:
             port (int | str | None): RabbitMQ port. Defaults to 5672.
             username (str): RabbitMQ username.
             password (str): RabbitMQ password.
-            queue_name (str): RabbitMQ queue name.
+            queue (str): RabbitMQ queue name.
             exchange (str): RabbitMQ exchange name. Defaults to "".
 
         Raises:
@@ -67,7 +67,7 @@ class QueueHandler:
         port = port or os.getenv("RABBITMQ_PORT", "5672")
         username = username or os.getenv("RABBITMQ_USERNAME")
         password = password or os.getenv("RABBITMQ_PASSWORD")
-        queue_name = queue_name or os.getenv("RABBITMQ_QUEUE")
+        queue = queue or os.getenv("RABBITMQ_QUEUE")
         exchange = exchange or os.getenv("RABBITMQ_EXCHANGE", "")
 
         missing_params = [k for k, v in locals().items() if v is None]
@@ -82,7 +82,7 @@ class QueueHandler:
         except AMQPError as amqp_error:
             raise QueueError from amqp_error
 
-        self._queue_name = queue_name
+        self._queue_name = queue
         self._exchange = exchange
         self._channel = self._connection.channel()
 
