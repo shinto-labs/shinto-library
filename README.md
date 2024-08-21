@@ -2,6 +2,22 @@
 
 Library of shared Python modules for use in Shinto projects.
 
+## Installation and standard usage of library
+
+To install the library run:
+`pdm add git+ssh://git@github.com/shinto-labs/shinto-library.git@<release>`
+
+or with pip:
+`pip install git+ssh://git@github.com/shinto-labs/shinto-library.git@<release>`
+
+To use the library simply use:
+
+```
+import shinto
+# or a specific method
+from shinto import <package>
+```
+
 ## Prerequisites
 
 - **python**
