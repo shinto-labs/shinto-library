@@ -8,7 +8,36 @@ from pathlib import Path
 
 import anyio
 import jsonschema
-from jsonschema import FormatChecker
+from jsonschema import Draft7Validator, FormatChecker
+
+
+def validate_json_against_schemas_complete(
+    data: dict | list, schema_filenames: list[str]
+) -> list[Exception]:
+    """
+    Validate JSON data against JSON schemas and return all errors.
+
+    Args:
+        data (dict | list): The JSON data to validate.
+        schema_filenames (list[str]): A list of schema filenames to validate against.
+
+    Returns:
+        list[Exception]: A list of exceptions raised during validation.
+
+    """
+    errors = []
+    for schema_filename in schema_filenames:
+        schema_filepath = Path(schema_filename).resolve()
+
+        if not schema_filepath.exists():
+            msg = f"Schema file not found: {schema_filepath}"
+            raise FileNotFoundError(msg)
+
+        with Path(schema_filepath).open(encoding="UTF-8") as file:
+            schema = json.load(file)
+            validator = Draft7Validator(schema, format_checker=FormatChecker())
+            errors.append(list(validator.iter_errors(data)))
+    return errors
 
 
 def validate_json_against_schemas(data: dict | list, schema_filenames: list[str]):
