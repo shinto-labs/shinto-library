@@ -8,6 +8,7 @@ from pathlib import Path
 
 import anyio
 import jsonschema
+from jsonschema import FormatChecker
 
 
 def validate_json_against_schemas(data: dict | list, schema_filenames: list[str]):
@@ -33,14 +34,14 @@ def validate_json_against_schemas(data: dict | list, schema_filenames: list[str]
 
         with Path(schema_filepath).open(encoding="UTF-8") as file:
             schema = json.load(file)
-            jsonschema.validate(data, schema)
+            jsonschema.validate(data, schema, format_checker=FormatChecker())
 
 
 async def _validate_json_against_schemas_async_task(data: dict | list, schema_filepath: Path):
     """Validate JSON data against a schema."""
     async with await anyio.open_file(schema_filepath, encoding="UTF-8") as file:
         schema = json.loads(await file.read())
-        jsonschema.validate(data, schema)
+        jsonschema.validate(data, schema, format_checker=FormatChecker())
 
 
 async def validate_json_against_schemas_async(data: dict | list, schema_filenames: list[str]):
