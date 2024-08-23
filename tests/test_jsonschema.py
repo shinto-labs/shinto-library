@@ -9,7 +9,11 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import jsonschema.exceptions
 
-from shinto.jsonschema import validate_json_against_schemas, validate_json_against_schemas_async
+from shinto.jsonschema import (
+    validate_json_against_schemas,
+    validate_json_against_schemas_async,
+    validate_json_against_schemas_complete,
+)
 
 test_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -27,7 +31,9 @@ class TestJsonSchema(unittest.TestCase):
         read_data=json.dumps(test_schema),
     )
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    def test_valid_schema(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+    def test_validate_json_against_schemas_valid(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
         """Test validate_json_against_schemas with valid schema."""
         mock_exists.return_value = True
         data = {"name": "John Doe"}
@@ -39,13 +45,15 @@ class TestJsonSchema(unittest.TestCase):
     @patch(
         "shinto.jsonschema.Path.open",
         new_callable=mock_open,
-        read_data=json.dumps(test_schema).replace("string", "integer"),
+        read_data=json.dumps(test_schema),
     )
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    def test_schema_error(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+    def test_validate_json_against_schemas_validate_error(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
         """Test validate_json_against_schemas with invalid schema."""
         mock_exists.return_value = True
-        data = {"name": "John Doe"}
+        data = {"name": 123}
         schema_filenames = ["invalid_schema.json"]
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             validate_json_against_schemas(data, schema_filenames)
@@ -57,7 +65,9 @@ class TestJsonSchema(unittest.TestCase):
         read_data=json.dumps(test_schema).replace("string", "bad_type"),
     )
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    def test_bad_schema_error(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+    def test_validate_json_against_schemas_schema_error(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
         """Test validate_json_against_schemas with invalid schema."""
         mock_exists.return_value = True
         data = {"name": "John Doe"}
@@ -66,13 +76,8 @@ class TestJsonSchema(unittest.TestCase):
             validate_json_against_schemas(data, schema_filenames)
         mock_open_file.assert_called_once_with(encoding="UTF-8")
 
-    @patch(
-        "shinto.jsonschema.Path.open",
-        new_callable=mock_open,
-        read_data=json.dumps(test_schema).replace("string", "bad_type"),
-    )
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    def test_non_existing_schema_error(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+    def test_validate_json_against_schemas_non_existing_schema(self, mock_exists: MagicMock):
         """Test validate_json_against_schemas with non-existing schema."""
         mock_exists.return_value = False
 
@@ -81,7 +86,76 @@ class TestJsonSchema(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             validate_json_against_schemas(data, schema_filenames)
         mock_exists.assert_called_once_with()
-        mock_open_file.assert_not_called()
+
+    @patch(
+        "shinto.jsonschema.Path.open",
+        new_callable=mock_open,
+        read_data=json.dumps(test_schema),
+    )
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_validate_json_against_schemas_complete_valid(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
+        """Test validate_json_against_schemas_complete."""
+        mock_exists.return_value = True
+        data = {"name": "John Doe"}
+        schema_filenames = ["valid_schema.json"]
+        errors = validate_json_against_schemas_complete(data, schema_filenames)
+        mock_exists.assert_called_once_with()
+        mock_open_file.assert_called_once_with(encoding="UTF-8")
+        self.assertEqual(len(errors), 0)
+        mock_exists.assert_called_once_with()
+
+    @patch(
+        "shinto.jsonschema.Path.open",
+        new_callable=mock_open,
+        read_data=json.dumps(test_schema),
+    )
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_validate_json_against_schemas_complete_validate_error(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
+        """Test validate_json_against_schemas_complete."""
+        mock_exists.return_value = True
+        data = {"name": 123}
+        schema_filenames = ["valid_schema.json"]
+        errors = validate_json_against_schemas_complete(data, schema_filenames)
+        mock_exists.assert_called_once_with()
+        mock_open_file.assert_called_once_with(encoding="UTF-8")
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], jsonschema.exceptions.ValidationError)
+        mock_exists.assert_called_once_with()
+
+    @patch(
+        "shinto.jsonschema.Path.open",
+        new_callable=mock_open,
+        read_data=json.dumps(test_schema).replace("string", "bad_type"),
+    )
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_validate_json_against_schemas_complete_schema_error(
+        self, mock_exists: MagicMock, mock_open_file: MagicMock
+    ):
+        """Test validate_json_against_schemas_complete."""
+        mock_exists.return_value = True
+        data = {"name": "John Doe"}
+        schema_filenames = ["invalid_schema.json"]
+        with self.assertRaises(jsonschema.exceptions.UnknownType):
+            validate_json_against_schemas_complete(data, schema_filenames)
+        mock_open_file.assert_called_once_with(encoding="UTF-8")
+        mock_exists.assert_called_once_with()
+
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_validate_json_against_schemas_complete_non_existing_schema(
+        self, mock_exists: MagicMock
+    ):
+        """Test validate_json_against_schemas_complete with non-existing schema."""
+        mock_exists.return_value = False
+
+        data = {"name": "John Doe"}
+        schema_filenames = ["non_existing_schema.json"]
+        with self.assertRaises(FileNotFoundError):
+            validate_json_against_schemas_complete(data, schema_filenames)
+        mock_exists.assert_called_once_with()
 
 
 class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
@@ -89,7 +163,9 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.jsonschema.anyio.open_file", new_callable=AsyncMock)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    async def test_valid_schema(self, mock_exists: MagicMock, mock_open_file: AsyncMock):
+    async def test_validate_json_against_schemas_async_valid(
+        self, mock_exists: MagicMock, mock_open_file: AsyncMock
+    ):
         """Test validate_json_against_schemas with valid schema."""
         mock_open_file.return_value.__aenter__.return_value.read = AsyncMock(
             return_value=json.dumps(test_schema),
@@ -107,7 +183,9 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.jsonschema.anyio.open_file", new_callable=AsyncMock)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    async def test_schema_error(self, mock_exists: MagicMock, mock_open_file: AsyncMock):
+    async def test_validate_json_against_schemas_async_validate_error(
+        self, mock_exists: MagicMock, mock_open_file: AsyncMock
+    ):
         """Test validate_json_against_schemas with invalid schema."""
         mock_open_file.return_value.__aenter__.return_value.read = AsyncMock(
             return_value=json.dumps(test_schema).replace("string", "integer"),
@@ -124,7 +202,9 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.jsonschema.anyio.open_file", new_callable=AsyncMock)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    async def test_multiple_schemas_error(self, mock_exists: MagicMock, mock_open_file: AsyncMock):
+    async def test_validate_json_against_schemas_async_multiple_schemas_validate_error(
+        self, mock_exists: MagicMock, mock_open_file: AsyncMock
+    ):
         """Test validate_json_against_schemas with invalid schema."""
         mock_exists.return_value = True
         delays = cycle([0, 0.2])
@@ -144,7 +224,9 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.jsonschema.anyio.open_file", new_callable=AsyncMock)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    async def test_bad_schema_error(self, mock_exists: MagicMock, mock_open_file: AsyncMock):
+    async def test_validate_json_against_schemas_async_schema_error(
+        self, mock_exists: MagicMock, mock_open_file: AsyncMock
+    ):
         """Test validate_json_against_schemas with invalid schema."""
         mock_open_file.return_value.__aenter__.return_value.read = AsyncMock(
             return_value=json.dumps(test_schema).replace("string", "bad_type"),
@@ -161,7 +243,7 @@ class TestAsyncJsonSchema(unittest.IsolatedAsyncioTestCase):
 
     @patch("shinto.jsonschema.anyio.open_file", new_callable=AsyncMock)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
-    async def test_non_existing_schema_error(
+    async def test_validate_json_against_schemas_async_non_existing_schema(
         self, mock_exists: MagicMock, mock_open_file: AsyncMock
     ):
         """Test validate_json_against_schemas with non-existing schema."""
