@@ -8,8 +8,6 @@ import psycopg
 class Connection(psycopg.Connection):
     """Wrapper for a connection to the database."""
 
-    conn: psycopg.Connection
-
     def execute_query(self, query: str) -> list[tuple]:
         """
         Execute a query or command to the database.
