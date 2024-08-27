@@ -40,7 +40,7 @@ jobs:
         id: ruff
         run: |
           set +e
-          ruff_output=$(ruff check . 2>&1)
+          ruff_output=$(make ruff 2>&1)
           exit_code=$?
           set -e
           echo "$ruff_output"
