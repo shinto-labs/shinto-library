@@ -14,21 +14,81 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class ConnectionPool(psycopg_pool.ConnectionPool):
-    """ConnectionPool class."""
+    """
+    ConnectionPool class.
+
+    Example:
+        >>> pool = shinto.pg.ConnectionPool(
+        ...     min_size=1,
+        ...     max_size=10,
+        ...     kwargs={
+        ...         "host": "localhost",
+        ...         "port": 6432,
+        ...         "database": "mydb",
+        ...         "user": "myuser",
+        ...         "password": "mypass",
+        ...     },
+        ... )
+        >>> with pool.connection() as conn:
+        ...     conn.execute_query("SELECT * FROM mytable")
+
+    """
 
     @contextmanager
-    def connection(self, timeout: float | None = None) -> Generator[Connection, None, None]:  # noqa: D102, inherit docstring from base method
+    def connection(self, timeout: float | None = None) -> Generator[Connection, None, None]:
+        """
+        Context manager to obtain a connection from the pool.
+
+        Yields a custom Connection object that extends psycopg.Connection.
+
+        Args:
+            timeout (float | None): The maximum time to wait for a connection.
+
+        Yields:
+            Connection: A connection to the database.
+
+        """
         with super().connection(timeout) as conn:
             yield conn
 
 
 class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
-    """AsyncConnectionPool class."""
+    """
+    AsyncConnectionPool class.
+
+    Example:
+        >>> pool = shinto.pg.AsyncConnectionPool(
+        ...     min_size=1,
+        ...     max_size=10,
+        ...     kwargs={
+        ...         "host": "localhost",
+        ...         "port": 6432,
+        ...         "database": "mydb",
+        ...         "user": "myuser",
+        ...         "password": "mypass",
+        ...     },
+        ... )
+        >>> async with pool.connection() as conn:
+        ...     await conn.execute_query("SELECT * FROM mytable")
+
+    """
 
     @asynccontextmanager
-    async def connection(  # noqa: D102, inherit docstring from base method
+    async def connection(
         self,
-        timeout: float | None = None,  # noqa: ASYNC109, RUF100 does not make sense for overloading connection method
+        timeout: float | None = None,
     ) -> AsyncGenerator[AsyncConnection, None, None]:
+        """
+        Context manager to obtain an async connection from the pool.
+
+        Yields a custom AsyncConnection object that extends psycopg.AsyncConnection.
+
+        Args:
+            timeout (float | None): The maximum time to wait for a connection.
+
+        Yields:
+            AsyncConnection: A connection to the database.
+
+        """
         async with super().connection(timeout) as conn:
             yield conn

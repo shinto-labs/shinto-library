@@ -15,7 +15,7 @@ SHINTO_LOG_FORMAT = (
 SHINTO_LOG_DATEFMT = "%Y-%m-%dT%H:%M:%S"
 
 
-class ShintoFormatter(logging.Formatter):
+class _ShintoFormatter(logging.Formatter):
     """Custom log formatter."""
 
     def format(self, record: logging.LogRecord) -> str:
@@ -59,14 +59,28 @@ def setup_logging(
     log_filename: str | None = None,
     setup_uvicorn_logging: bool = False,
 ):
-    """Set up logging, format etc."""
+    """
+    Set up logging for the application.
+
+    If log_to_file is True, log_filename must be provided.
+
+    Args:
+        application_name (str | None): The "name" to display in the logs. Defaults to sys.argv[0].
+        loglevel (str | int): The log level to use. Defaults to logging.WARNING.
+        log_to_stdout (bool): Whether to log to stdout. Defaults to True.
+        log_to_file (bool): Whether to log to a file. Defaults to True.
+        log_to_journald (bool): Whether to log to journald. Defaults to False.
+        log_filename (str | None): The filename to log to. Defaults to None.
+        setup_uvicorn_logging (bool): Whether to setup uvicorn logging. Defaults to False.
+
+    """
     if not application_name:
         application_name = sys.argv[0]
 
     root_logger = logging.root
     root_logger.setLevel(loglevel)
 
-    formatter = ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
+    formatter = _ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
     # Remove any existing handlers to avoid duplication
     for handler in root_logger.handlers:
