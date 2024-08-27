@@ -22,4 +22,6 @@ readme = "README.md"
 dev = [
     "ruff>=0.5.4",
     "nose2[coverage_plugin]>=0.15.1",
+    "sphinx>=7.1.2",
+    "sphinx-rtd-theme>=2.0.0",
 ]
