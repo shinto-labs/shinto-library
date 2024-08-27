@@ -76,7 +76,7 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
     @asynccontextmanager
     async def connection(
         self,
-        timeout: float | None = None,
+        timeout: float | None = None,  # noqa: ASYNC109, RUF100: Use `asyncio.timeout` instead. Not applicable for overriding method.
     ) -> AsyncGenerator[AsyncConnection, None, None]:
         """
         Context manager to obtain an async connection from the pool.
