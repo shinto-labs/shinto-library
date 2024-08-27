@@ -26,7 +26,7 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
     """AsyncConnectionPool class."""
 
     @asynccontextmanager
-    async def connection(  # noqa: D102, inherit docrstring from base method
+    async def connection(  # noqa: D102, inherit docstring from base method
         self,
         timeout: float | None = None,  # noqa: ASYNC109, RUF100 does not make sense for overloading connection method
     ) -> AsyncGenerator[AsyncConnection, None, None]:
