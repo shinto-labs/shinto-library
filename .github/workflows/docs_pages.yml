@@ -1,0 +1,82 @@
+name: Build Sphinx docs
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    outputs:
+      start_time: ${{ steps.start_time.outputs.start_time }}
+
+    steps:
+      - name: Start time
+        id: start_time
+        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v3
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          pdm sync -d
+
+      - name: Generate modules
+        run: pdm run sphinx-apidoc -f -o docs/modules shinto
+
+      - name: Build HTML docs
+        run: |
+          cd docs
+          make html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs/_build/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  send_to_loki:
+    if: always()
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Send results to Loki
+        env:
+          LOKI_ADDRESS: "https://loki.shintolabs.net"
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          STATUS: ${{ job.status }}
+          RUN_NUMBER: ${{ github.run_number }}
+          ACTOR: ${{ github.actor }}
+          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
+          REF: ${{ github.ref }}
+          START_TIME: ${{ needs.build.outputs.start_time }}
+        run: ./scripts/send_to_loki.sh
