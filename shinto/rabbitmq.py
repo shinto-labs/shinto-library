@@ -5,12 +5,13 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from pika import BasicProperties, BlockingConnection, ConnectionParameters, PlainCredentials
+from pika import BlockingConnection, ConnectionParameters, PlainCredentials
 from pika.exceptions import AMQPError
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
 
+    from pika import BasicProperties
     from pika.amqp_object import Method
     from pika.channel import Channel
     from pika.connection import Connection

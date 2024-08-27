@@ -168,6 +168,19 @@ class TestLogging(unittest.TestCase):
         with log_filename.open() as log_file:
             self.assertIn('msg="Bytes: b\'{\\"key\\": \\"value\\"}\'"', log_file.read())
 
+    def test_uvicorn_logging(self):
+        """Test setup_logging function with setup_uvicorn_logging=True."""
+        setup_logging(setup_uvicorn_logging=True)
+        logger = logging.getLogger()
+        self.assertEqual(logger.level, logging.WARNING)
+        self.assertTrue(isinstance(logger.handlers[0], logging.StreamHandler))
+        self.assertEqual(len(logger.handlers), 1)
+        for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+            uvicorn_logger = logging.getLogger(logger_name)
+            self.assertEqual(uvicorn_logger.level, logging.WARNING)
+            self.assertTrue(uvicorn_logger.propagate)
+            self.assertEqual(len(uvicorn_logger.handlers), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

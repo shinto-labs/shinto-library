@@ -26,3 +26,6 @@ ruff:
 
 ruff_format:
 	$(PDM_RUN) ruff format -v .
+
+generate_docs:
+	$(PDM_RUN) sphinx-apidoc -f -o docs/modules shinto && cd docs && make html

@@ -6,7 +6,7 @@ on:
       - "*"
 
 jobs:
-  build:
+  build_docs:
     runs-on: ubuntu-latest
 
     outputs:
@@ -29,13 +29,8 @@ jobs:
         run: |
           pdm sync -d
 
-      - name: Generate modules
-        run: pdm run sphinx-apidoc -f -o docs/modules shinto
-
-      - name: Build HTML docs
-        run: |
-          cd docs
-          make html
+      - name: Generate docs
+        run: make generate_docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -43,7 +38,7 @@ jobs:
           path: ./docs/_build/html
 
   deploy:
-    needs: build
+    needs: build_docs
     runs-on: ubuntu-latest
     permissions:
       pages: write # to deploy to Pages
@@ -60,7 +55,7 @@ jobs:
 
   send_to_loki:
     if: always()
-    needs: [build, deploy]
+    needs: [build_docs, deploy]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -78,5 +73,5 @@ jobs:
           ACTOR: ${{ github.actor }}
           URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
           REF: ${{ github.ref }}
-          START_TIME: ${{ needs.build.outputs.start_time }}
+          START_TIME: ${{ needs.build_docs.outputs.start_time }}
         run: ./scripts/send_to_loki.sh
