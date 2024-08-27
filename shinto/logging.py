@@ -99,7 +99,7 @@ def setup_logging(
         root_logger.addHandler(file_handler)
 
     # Setup journald logging if requested
-    if log_to_journald:
+    if log_to_journald:  # pragma: no cover # Not available on all platforms
         try:
             if find_spec("JournalHandler") is None:
                 # systemd is not available on all platforms (including Windows)
