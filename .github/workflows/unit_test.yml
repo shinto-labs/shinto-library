@@ -48,7 +48,7 @@ jobs:
         id: test
         run: |
           set +e
-          test_output=$(pdm run -v nose2 -s tests -C --coverage=shinto --coverage-report=term 2>&1)
+          test_output=$(make test_coverage 2>&1)
           exit_code=$?
           set -e
           echo "$test_output"
