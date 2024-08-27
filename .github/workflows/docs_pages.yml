@@ -2,16 +2,14 @@ name: Build Sphinx docs
 
 on:
   push:
-    tags:
-      - "*"
+    branches:
+      - main
 
 jobs:
   build_docs:
     runs-on: ubuntu-latest
-
     outputs:
       start_time: ${{ steps.start_time.outputs.start_time }}
-
     steps:
       - name: Start time
         id: start_time
@@ -40,14 +38,9 @@ jobs:
   deploy:
     needs: build_docs
     runs-on: ubuntu-latest
-    permissions:
-      pages: write # to deploy to Pages
-      id-token: write # to verify the deployment originates from an appropriate source
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
