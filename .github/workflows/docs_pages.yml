@@ -2,8 +2,8 @@ name: Build Sphinx docs
 
 on:
   push:
-    tags:
-      - "*"
+    branches:
+      - main
 
 jobs:
   build_docs:
