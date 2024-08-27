@@ -70,11 +70,24 @@ class TestConfig(unittest.TestCase):
         """Test loading a YAML config file with default values."""
         yaml_file_path = Path(self.temp_dir) / "config.yaml"
         with Path(yaml_file_path).open("w") as yaml_file:
+            yaml_file.write("test: \n  key: value\ntest2: value3")
+        self.assertTrue(Path(yaml_file_path).is_file())
+        yaml_config = load_config_file(
+            yaml_file_path, defaults={"test": {"key2": "value2"}, "test2": "value4"}
+        )
+        self.assertIsInstance(yaml_config, dict)
+        self.assertDictEqual(
+            yaml_config, {"test": {"key": "value", "key2": "value2"}, "test2": "value3"}
+        )
+
+    def test_load_config_file_yaml_with_invalid_defaults(self):
+        """Test loading a YAML config file with invalid default values."""
+        yaml_file_path = Path(self.temp_dir) / "config.yaml"
+        with Path(yaml_file_path).open("w") as yaml_file:
             yaml_file.write("test: \n  key: value")
         self.assertTrue(Path(yaml_file_path).is_file())
-        yaml_config = load_config_file(yaml_file_path, defaults={"test": {"key2": "value2"}})
-        self.assertIsInstance(yaml_config, dict)
-        self.assertDictEqual(yaml_config, {"test": {"key": "value", "key2": "value2"}})
+        with self.assertRaises(ValueError):
+            load_config_file(yaml_file_path, defaults={"test": {"key": {"key2": "value2"}}})
 
     def test_replace_passwords(self):
         """Test replacing passwords in a dictionary."""
