@@ -18,14 +18,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up PDM
-        uses: pdm-project/setup-pdm@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.x
+          python-version: "3.x"
 
       - name: Install dependencies
-        run: |
-          pdm sync -d
+        run: make install
 
       - name: Generate docs
         run: make generate_docs
