@@ -73,5 +73,5 @@ jobs:
           ACTOR: ${{ github.actor }}
           URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
           REF: ${{ github.ref }}
-          START_TIME: ${{ needs.build.outputs.start_time }}
+          START_TIME: ${{ needs.build_docs.outputs.start_time }}
         run: ./scripts/send_to_loki.sh
