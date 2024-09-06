@@ -1,3 +1,4 @@
+# Config file version = 0.1.0
 line-length = 100
 target-version = "py38"
 
@@ -15,7 +16,7 @@ ignore = [
     "D407", # https://docs.astral.sh/ruff/rules/#pydocstyle-d. Makes docstrings less readable.
     "TD002", "FIX002", # https://docs.astral.sh/ruff/rules/#flake8-todos-td. TD003 is sufficient.
     "COM812", # https://docs.astral.sh/ruff/rules/#flake8-commas-com. Trailing comma, makes code less readable in some cases? for now keep disabled
-    # "TRY003", "TRY301", # https://docs.astral.sh/ruff/rules/#tryceratops-try.
+    "TRY003", # https://docs.astral.sh/ruff/rules/#tryceratops-try.
 ]
 
 [lint.per-file-ignores]
