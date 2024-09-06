@@ -62,7 +62,7 @@ def setup_logging(
     """
     Set up logging for the application.
 
-    If log_to_file is True, log_filename must be provided.
+    If log_to_file is True, log_filename must be provided in order to log to a file.
 
     Args:
         application_name (str | None): The "name" to display in the logs. Defaults to sys.argv[0].
@@ -72,6 +72,9 @@ def setup_logging(
         log_to_journald (bool): Whether to log to journald. Defaults to False.
         log_filename (str | None): The filename to log to. Defaults to None.
         setup_uvicorn_logging (bool): Whether to setup uvicorn logging. Defaults to False.
+
+    Example:
+        >>> setup_logging(application_name="myapp", loglevel=logging.INFO)
 
     """
     if not application_name:
