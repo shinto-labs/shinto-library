@@ -25,7 +25,7 @@ class TestConnection(unittest.TestCase):
         result = Connection.execute_query(mock_conn, test_query)
 
         self.assertEqual(result, expected_data)
-        mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.execute.assert_called_once_with(test_query, None)
         mock_cursor.fetchall.assert_called_once()
 
     def test_execute_query_failure(self):
@@ -41,7 +41,7 @@ class TestConnection(unittest.TestCase):
         with self.assertRaises(psycopg.Error):
             Connection.execute_query(mock_conn, test_query)
 
-        mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.execute.assert_called_once_with(test_query, None)
         mock_cursor.fetchall.assert_not_called()
 
     def test_write_records_success(self):
@@ -96,7 +96,7 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         result = await AsyncConnection.execute_query(mock_conn, test_query)
 
         self.assertEqual(result, expected_data)
-        mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.execute.assert_called_once_with(test_query, None)
         mock_cursor.fetchall.assert_called_once()
 
     async def test_execute_query_failure(self):
@@ -112,7 +112,7 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(psycopg.Error):
             await AsyncConnection.execute_query(mock_conn, test_query)
 
-        mock_cursor.execute.assert_called_once_with(test_query)
+        mock_cursor.execute.assert_called_once_with(test_query, None)
         mock_cursor.fetchall.assert_not_called()
 
     async def test_write_records_success(self):
