@@ -10,7 +10,7 @@ import psycopg
 class Connection(psycopg.Connection):
     """Wrapper for a connection to the database."""
 
-    def execute_query(self, query: str, params: None | dict[str:Any]) -> list[tuple]:
+    def execute_query(self, query: str, params: None | dict[str:Any] = None) -> list[tuple]:
         """
         Execute a query or command to the database.
 
@@ -58,7 +58,7 @@ class Connection(psycopg.Connection):
 class AsyncConnection(psycopg.AsyncConnection):
     """Wrapper for an async connection to the database."""
 
-    async def execute_query(self, query: str, params: None | dict[str:Any]) -> list[tuple]:
+    async def execute_query(self, query: str, params: None | dict[str:Any] = None) -> list[tuple]:
         """
         Execute a query or command to the database asynchronously.
 
