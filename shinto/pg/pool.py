@@ -63,7 +63,7 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         ...     kwargs={
         ...         "host": "localhost",
         ...         "port": 6432,
-        ...         "database": "mydb",
+        ...         "dbname": "mydb",
         ...         "user": "myuser",
         ...         "password": "mypass",
         ...     },
