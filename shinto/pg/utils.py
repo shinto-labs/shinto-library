@@ -31,6 +31,7 @@ def parse_json_from_query_result(query_result: list[tuple]) -> dict | list:
         JsonParseError: If the query result is not a valid dict or list.
 
     """
+    # TODO: check if this is the correct way to handle this
     if len(query_result) == 0 or len(query_result[0]) == 0:
         msg = "Query result is empty."
         raise EmptyQueryResultError(msg)
