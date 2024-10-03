@@ -49,7 +49,7 @@ class ConnectionPool(psycopg_pool.ConnectionPool):
 
         """
         with super().connection(timeout) as conn:
-            yield Connection(conn)
+            yield Connection(conn.pgconn, conn.row_factory)
 
 
 class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
@@ -91,4 +91,4 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
 
         """
         async with super().connection(timeout) as conn:
-            yield AsyncConnection(conn)
+            yield AsyncConnection(conn.pgconn, conn.row_factory)
