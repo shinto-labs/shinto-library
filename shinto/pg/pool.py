@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 import psycopg_pool
 
+from shinto.pg.connection import AsyncConnection, Connection
+
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import AsyncGenerator, Generator
-
-    from shinto.pg.connection import AsyncConnection, Connection
 
 
 class ConnectionPool(psycopg_pool.ConnectionPool):
