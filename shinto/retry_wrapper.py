@@ -44,12 +44,13 @@ def retry(
         >>> @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
         ... async def my_method():
         ...     return "Hello, World!"
-        ... await my_method()
+        ... result = await my_method()
+        ... result
         "Hello, World!"
         >>> def my_method():
         ...     return "Hello, World!"
-        ... retry_my_method = retry(max_retries=3, delay=1, exceptions=(Exception,))(my_method)
-        ... retry_my_method()
+        ... result = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(my_method)()
+        ... result
         "Hello, World!"
 
     """
