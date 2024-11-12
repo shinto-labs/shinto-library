@@ -32,6 +32,7 @@ def parse_json_from_query_result(query_result: list[tuple]) -> dict | list:
 
     """
     # TODO: check if this is the correct way to handle this
+    # https://shintolabs.atlassian.net/browse/DOT-519
     if len(query_result) == 0 or len(query_result[0]) == 0:
         msg = "Query result is empty."
         raise EmptyQueryResultError(msg)
