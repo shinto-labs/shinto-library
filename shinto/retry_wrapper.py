@@ -16,7 +16,7 @@ class RetryError(Exception):
 def retry(
     max_retries: int = 3,
     delay: int = 1,
-    backoff: int = 1,
+    backoff: float = 1.0,
     exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable[..., Any]:
     """
@@ -30,7 +30,8 @@ def retry(
     Args:
         max_retries: The maximum number of retries.
         delay: The delay between retries.
-        backoff: The backoff factor to increase the delay between retries.
+        backoff: The backoff factor to increase the delay between retries,
+            rounded to the nearest second.
         exceptions: The exceptions to catch.
 
     Returns:
@@ -56,8 +57,8 @@ def retry(
     """
     if delay < 0:
         raise ValueError("The delay must be greater than or equal to 0.")
-    if backoff < 1:
-        raise ValueError("The backoff factor must be greater than or equal to 1.")
+    if backoff < 1.0:
+        raise ValueError("The backoff factor must be greater than or equal to 1.0.")
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if asyncio.iscoroutinefunction(func):
@@ -85,7 +86,7 @@ def _sync_retry_function(
     func: Callable[..., Any],
     max_retries: int,
     delay: int,
-    backoff: int,
+    backoff: float,
     exceptions: tuple[type[Exception], ...],
     *args: Any,  # noqa: ANN401
     **kwargs: Any,  # noqa: ANN401
@@ -107,7 +108,7 @@ def _sync_retry_function(
             )
             if retry < max_retries - 1 and delay > 0:
                 time.sleep(delay)
-                delay = min(delay * backoff, 3600)
+                delay = min(round(delay * backoff), 3600)
     raise RetryError(f"Failed to run {func_name} after {max_retries} retries.")
 
 
@@ -115,7 +116,7 @@ async def _async_retry_function(
     func: Callable[..., Any],
     max_retries: int,
     delay: int,
-    backoff: int,
+    backoff: float,
     exceptions: tuple[type[Exception], ...],
     *args: Any,  # noqa: ANN401
     **kwargs: Any,  # noqa: ANN401
@@ -137,5 +138,5 @@ async def _async_retry_function(
             )
             if retry < max_retries - 1 and delay > 0:
                 await asyncio.sleep(delay)
-                delay = min(delay * backoff, 3600)
+                delay = min(round(delay * backoff), 3600)
     raise RetryError(f"Failed to run {func_name} after {max_retries} retries.")
