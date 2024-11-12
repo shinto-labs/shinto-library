@@ -25,13 +25,12 @@ def retry(
     Retries a method if it raises an exception specified in the `exceptions` tuple.
     The method is retried up to `max_retries` times with a delay of `delay` seconds between retries.
     The delay between retries is increased by a factor of `backoff`
-    with a maximum delay of 3600 seconds.
+    with a maximum delay of 3600 seconds (1 hour), rounded to the nearest second.
 
     Args:
         max_retries: The maximum number of retries.
         delay: The delay between retries.
-        backoff: The backoff factor to increase the delay between retries,
-            rounded to the nearest second.
+        backoff: The backoff factor to increase the delay between retries.
         exceptions: The exceptions to catch.
 
     Returns:
