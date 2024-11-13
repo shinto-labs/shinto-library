@@ -28,6 +28,11 @@ class TestLogging(unittest.TestCase):
             "root": logging.root,
         }
 
+    @classmethod
+    def tearDownClass(cls):
+        """Tear down the test class."""
+        logging.root.setLevel(logging.CRITICAL)
+
     def tearDown(self) -> None:
         """Tear down the test method."""
         # Reset the logging configuration
