@@ -2,4 +2,4 @@
 
 import logging
 
-logging.disable(logging.CRITICAL)
+logging.root.setLevel(logging.CRITICAL)

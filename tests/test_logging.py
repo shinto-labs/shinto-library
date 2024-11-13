@@ -20,7 +20,6 @@ class TestLogging(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up the test class."""
-        logging.disable(logging.NOTSET)
         cls.temp_dir = tempfile.mkdtemp()
 
         # Store the initial logging configuration
@@ -32,7 +31,7 @@ class TestLogging(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Tear down the test class."""
-        logging.disable(logging.CRITICAL)
+        logging.root.setLevel(logging.CRITICAL)
 
     def tearDown(self) -> None:
         """Tear down the test method."""
