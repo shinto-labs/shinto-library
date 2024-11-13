@@ -17,6 +17,7 @@ __all__ = [
     "QueueHandler",
     "RetryError",
     "retry",
+    "retry_call",
 ]
 
 from .config import load_config_file, output_config
@@ -28,4 +29,4 @@ from .jsonschema import (
 from .logging import setup_logging
 from .metrics import inc_persistant_counter, init_persistant_metrics, push_metric
 from .rabbitmq import QueueError, QueueHandler
-from .retry_wrapper import RetryError, retry
+from .retry_wrapper import RetryError, retry, retry_call

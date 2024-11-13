@@ -3,81 +3,56 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-from shinto.retry_wrapper import RetryError, retry
+from shinto.retry_wrapper import RetryError, retry, retry_call
 
 
-class TestRetryDecorator(unittest.TestCase):
+class TestRetry(unittest.TestCase):
+    """Test the retry decorator in sync and async contexts."""
+
+    def test_retry_call_invalid_max_tries(self):
+        """Test the retry decorator with an invalid max tries."""
+        mock_func = MagicMock(return_value="Hello, World!")
+
+        with self.assertRaises(ValueError):
+            retry_call(mock_func, max_tries=-1)
+
+    def test_retry_call_invalid_delay(self):
+        """Test the retry decorator with an invalid delay."""
+        mock_func = MagicMock(return_value="Hello, World!")
+
+        with self.assertRaises(ValueError):
+            retry_call(mock_func, delay=-1)
+
+    def test_retry_call_invalid_backoff(self):
+        """Test the retry decorator with an invalid backoff."""
+        mock_func = MagicMock(return_value="Hello, World!")
+
+        with self.assertRaises(ValueError):
+            retry_call(mock_func, backoff=0)
+
+    def test_retry_call_invalid_increment_delay(self):
+        """Test the retry decorator with an invalid delay increment."""
+        mock_func = MagicMock(return_value="Hello, World!")
+
+        with self.assertRaises(ValueError):
+            retry_call(mock_func, delay_increment=-1)
+
+    def test_retry_call_invalid_max_delay(self):
+        """Test the retry decorator with an invalid max delay."""
+        mock_func = MagicMock(return_value="Hello, World!")
+
+        with self.assertRaises(ValueError):
+            retry_call(mock_func, max_delay=-1)
+
+
+class TestRetrySync(unittest.TestCase):
     """Test the retry decorator."""
 
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_success(self, mock_sleep: MagicMock):
-        """Test a successful sync method."""
-        mock_func = MagicMock(return_value="Mock Function Result")
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_retry_success(self, mock_sleep: MagicMock):
+        """Test a successful method."""
 
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
-        result = decorated_func()
-        self.assertEqual(result, "Mock Function Result")
-        mock_sleep.assert_not_called()
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_success_fail_once(self, mock_sleep: MagicMock):
-        """Test a successful sync method that fails once."""
-        mock_func = MagicMock(
-            side_effect=[Exception("Mock Function Exception"), "Mock Function Result"],
-            __name__="mock_func",
-        )
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
-        result = decorated_func()
-        self.assertEqual(result, "Mock Function Result")
-        mock_sleep.assert_called_once_with(1)
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_exception(self, mock_sleep: MagicMock):
-        """Test a sync method that always raises an exception."""
-        mock_func = MagicMock(side_effect=Exception("Mock Function Exception"))
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
-        with self.assertRaises(RetryError):
-            decorated_func()
-        mock_func.assert_has_calls([call] * 3)
-        mock_sleep.assert_has_calls([call(1)] * 2)
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_with_exception_backoff(self, mock_sleep: MagicMock):
-        """Test a sync method that always raises an exception and uses a backoff factor."""
-        mock_func = MagicMock(side_effect=Exception("Mock Function Exception"))
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=2, exceptions=(Exception,))(
-            mock_func
-        )
-        with self.assertRaises(RetryError):
-            decorated_func()
-        mock_func.assert_has_calls([call] * 3)
-        mock_sleep.assert_has_calls([call(1), call(2)])
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_unhandled_error(self, mock_sleep: MagicMock):
-        """Test a sync method that always raises a KeyError."""
-        mock_func = MagicMock(side_effect=ValueError("Mock Function KeyError"))
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(KeyError,))(mock_func)
-        with self.assertRaises(ValueError):
-            decorated_func()
-        mock_func.assert_called_once()
-        mock_sleep.assert_not_called()
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_decorator_approach(self, mock_sleep: MagicMock):
-        """Test the retry decorator approach."""
-
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
+        @retry()
         def my_method() -> str:
             """Hello world mock method."""
             return "Hello, World!"
@@ -86,129 +61,68 @@ class TestRetryDecorator(unittest.TestCase):
         self.assertEqual(result, "Hello, World!")
         mock_sleep.assert_not_called()
 
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_decorator_approach_exception(self, mock_sleep: MagicMock):
-        """Test the retry decorator approach with an exception."""
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_retry_call_success(self, mock_sleep: MagicMock):
+        """Test a successful method."""
+        mock_func = MagicMock(return_value="Mock Function Result")
 
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
-        def my_method() -> str:
-            """Hello world mock method."""
-            raise KeyError("Mock Exception")
-
-        with self.assertRaises(RetryError):
-            my_method()
-        mock_sleep.assert_has_calls([call(1)] * 2)
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_decorator_approach_with_params(self, mock_sleep: MagicMock):
-        """Test the retry decorator with a function that takes parameters."""
-
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
-        def my_method(param: int) -> str:
-            """Hello world mock method."""
-            return f"Hello, World! {param}"
-
-        result = my_method(1)
-        self.assertEqual(result, "Hello, World! 1")
-        mock_sleep.assert_not_called()
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_invalid_delay(self, mock_sleep: MagicMock):
-        """Test the retry decorator with an invalid delay."""
-        with self.assertRaises(ValueError):
-
-            @retry(max_retries=3, delay=-1, backoff=1, exceptions=(Exception,))
-            def my_method() -> str:
-                """Hello world mock method."""
-                return "Hello, World!"
-
-        mock_sleep.assert_not_called()
-
-    @patch("shinto.retry_wrapper.time.sleep", return_value=None)
-    def test_sync_retry_invalid_backoff(self, mock_sleep: MagicMock):
-        """Test the retry decorator with an invalid backoff."""
-        with self.assertRaises(ValueError):
-
-            @retry(max_retries=3, delay=1, backoff=0, exceptions=(Exception,))
-            def my_method() -> str:
-                """Hello world mock method."""
-                return "Hello, World!"
-
-        mock_sleep.assert_not_called()
-
-
-class TestRetryDecoratorAsync(unittest.IsolatedAsyncioTestCase):
-    """Test the retry decorator with async methods."""
-
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_success(self, mock_sleep: AsyncMock):
-        """Test a successful sync method."""
-        mock_func = AsyncMock(return_value="Mock Function Result")
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
-        result = await decorated_func()
+        result = retry_call(mock_func)
         self.assertEqual(result, "Mock Function Result")
         mock_sleep.assert_not_called()
 
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_success_fail_once(self, mock_sleep: AsyncMock):
-        """Test a successful async method that fails once."""
-        mock_func = AsyncMock(
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_retry_call_success_fail_once(self, mock_sleep: MagicMock):
+        """Test a successful method that fails once."""
+        mock_func = MagicMock(
             side_effect=[Exception("Mock Function Exception"), "Mock Function Result"],
             __name__="mock_func",
         )
 
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
-        result = await decorated_func()
+        result = retry_call(mock_func)
         self.assertEqual(result, "Mock Function Result")
-        mock_sleep.assert_called_once_with(1)
+        mock_sleep.assert_called_once()
 
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_exception(self, mock_sleep: AsyncMock):
-        """Test an async method that always raises an exception."""
-        mock_func = AsyncMock(side_effect=Exception("Mock Function Exception"))
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_retry_call_exception(self, mock_sleep: MagicMock):
+        """Test a method that always raises an exception."""
+        mock_func = MagicMock(side_effect=Exception("Mock Function Exception"))
 
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))(
-            mock_func
-        )
         with self.assertRaises(RetryError):
-            await decorated_func()
+            retry_call(mock_func, max_tries=3)
         mock_func.assert_has_calls([call] * 3)
-        mock_sleep.assert_has_calls([call(1)] * 2)
+        mock_sleep.assert_has_calls([call(0.0)] * 2)
 
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_with_exception_backoff(self, mock_sleep: AsyncMock):
-        """Test an async method that always raises an exception and uses a backoff factor."""
-        mock_func = AsyncMock(side_effect=Exception("Mock Function Exception"))
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_retry_call_unhandled_error(self, mock_sleep: MagicMock):
+        """Test a method that always raises a ValueError."""
+        mock_func = MagicMock(side_effect=ValueError("Mock Function KeyError"))
 
-        decorated_func = retry(max_retries=3, delay=1, backoff=2, exceptions=(Exception,))(
-            mock_func
-        )
-        with self.assertRaises(RetryError):
-            await decorated_func()
-        mock_func.assert_has_calls([call] * 3)
-        mock_sleep.assert_has_calls([call(1), call(2)])
-
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_unhandled_error(self, mock_sleep: AsyncMock):
-        """Test an async method that always raises a ValueError."""
-        mock_func = AsyncMock(side_effect=ValueError("Mock Function KeyError"))
-
-        decorated_func = retry(max_retries=3, delay=1, backoff=1, exceptions=(KeyError,))(mock_func)
         with self.assertRaises(ValueError):
-            await decorated_func()
+            retry_call(mock_func, max_tries=3, delay=1, exceptions=(KeyError,))
         mock_func.assert_called_once()
         mock_sleep.assert_not_called()
 
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_decorator_approach(self, mock_sleep: AsyncMock):
-        """Test the retry decorator approach with an async method."""
+    @patch("shinto.retry_wrapper.time.sleep")
+    def test_valid_max_delay(self, mock_sleep: MagicMock):
+        """Test a method with a valid max delay."""
+        mock_func = MagicMock(
+            side_effect=[Exception("Mock Function Exception"), "Mock Function Result"],
+            __name__="mock_func",
+        )
 
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
+        result = retry_call(mock_func, delay=2.0, max_delay=1)
+        self.assertEqual(result, "Mock Function Result")
+        mock_sleep.assert_called_once_with(1.0)
+
+
+class TestRetryAsync(unittest.IsolatedAsyncioTestCase):
+    """Test the retry decorator with async methods."""
+
+    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
+    async def test_async_retry_success(self, mock_sleep: AsyncMock):
+        """Test a successful method."""
+
+        @retry()
         async def my_method() -> str:
             """Hello world mock method."""
             return "Hello, World!"
@@ -218,54 +132,58 @@ class TestRetryDecoratorAsync(unittest.IsolatedAsyncioTestCase):
         mock_sleep.assert_not_called()
 
     @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_decorator_approach_exception(self, mock_sleep: AsyncMock):
-        """Test the retry decorator approach with an async method that raises an exception."""
+    async def test_async_retry_call_success(self, mock_sleep: AsyncMock):
+        """Test a successful method."""
+        mock_func = AsyncMock(return_value="Mock Function Result")
 
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
-        async def my_method() -> str:
-            """Hello world mock method."""
-            raise KeyError("Mock Exception")
+        result = await retry_call(mock_func)
+        self.assertEqual(result, "Mock Function Result")
+        mock_sleep.assert_not_called()
 
+    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
+    async def test_async_retry_call_success_fail_once(self, mock_sleep: AsyncMock):
+        """Test a successful async method that fails once."""
+        mock_func = AsyncMock(
+            side_effect=[Exception("Mock Function Exception"), "Mock Function Result"],
+            __name__="mock_func",
+        )
+
+        result = await retry_call(mock_func)
+        self.assertEqual(result, "Mock Function Result")
+        mock_sleep.assert_called_once()
+
+    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
+    async def test_async_retry_call_exception(self, mock_sleep: AsyncMock):
+        """Test an async method that always raises an exception."""
+        mock_func = AsyncMock(side_effect=Exception("Mock Function Exception"))
+
+        decorated_func = retry(max_tries=3)(mock_func)
         with self.assertRaises(RetryError):
-            await my_method()
-        mock_sleep.assert_has_calls([call(1)] * 2)
+            await decorated_func()
+        mock_func.assert_has_calls([call] * 3)
+        mock_sleep.assert_has_calls([call(0.0)] * 2)
 
     @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_decorator_approach_with_params(self, mock_sleep: AsyncMock):
-        """Test the retry decorator with an async function that takes parameters."""
+    async def test_async_retry_call_unhandled_error(self, mock_sleep: AsyncMock):
+        """Test an async method that always raises a ValueError."""
+        mock_func = AsyncMock(side_effect=ValueError("Mock Function KeyError"))
 
-        @retry(max_retries=3, delay=1, backoff=1, exceptions=(Exception,))
-        async def my_method(param: int) -> str:
-            """Hello world mock method."""
-            return f"Hello, World! {param}"
-
-        result = await my_method(1)
-        self.assertEqual(result, "Hello, World! 1")
-        mock_sleep.assert_not_called()
-
-    @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_invalid_delay(self, mock_sleep: AsyncMock):
-        """Test the retry decorator with an invalid delay."""
         with self.assertRaises(ValueError):
-
-            @retry(max_retries=3, delay=-1, backoff=1, exceptions=(Exception,))
-            async def my_method() -> str:
-                """Hello world mock method."""
-                return "Hello, World!"
-
+            await retry_call(mock_func, max_tries=3, delay=1, exceptions=(KeyError,))
+        mock_func.assert_called_once()
         mock_sleep.assert_not_called()
 
     @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
-    async def test_async_retry_invalid_backoff(self, mock_sleep: AsyncMock):
-        """Test the retry decorator with an invalid backoff."""
-        with self.assertRaises(ValueError):
+    async def test_valid_max_delay(self, mock_sleep: AsyncMock):
+        """Test an async method with a valid max delay."""
+        mock_func = AsyncMock(
+            side_effect=[Exception("Mock Function Exception"), "Mock Function Result"],
+            __name__="mock_func",
+        )
 
-            @retry(max_retries=3, delay=1, backoff=0, exceptions=(Exception,))
-            async def my_method() -> str:
-                """Hello world mock method."""
-                return "Hello, World!"
-
-        mock_sleep.assert_not_called()
+        result = await retry_call(mock_func, delay=2.0, max_delay=1)
+        self.assertEqual(result, "Mock Function Result")
+        mock_sleep.assert_called_once_with(1.0)
 
 
 if __name__ == "__main__":
