@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-from shinto.retry_wrapper import RetryError, retry, retry_call
+from shinto.retry_wrapper import retry, retry_call
 
 
 class TestRetry(unittest.TestCase):
@@ -85,9 +85,9 @@ class TestRetrySync(unittest.TestCase):
     @patch("shinto.retry_wrapper.time.sleep")
     def test_retry_call_exception(self, mock_sleep: MagicMock):
         """Test a method that always raises an exception."""
-        mock_func = MagicMock(side_effect=Exception("Mock Function Exception"))
+        mock_func = MagicMock(side_effect=ValueError("Mock Function Exception"))
 
-        with self.assertRaises(RetryError):
+        with self.assertRaises(ValueError):
             retry_call(mock_func, max_tries=3)
         mock_func.assert_has_calls([call] * 3)
         mock_sleep.assert_has_calls([call(0.0)] * 2)
@@ -155,10 +155,10 @@ class TestRetryAsync(unittest.IsolatedAsyncioTestCase):
     @patch("shinto.retry_wrapper.asyncio.sleep", return_value=None)
     async def test_async_retry_call_exception(self, mock_sleep: AsyncMock):
         """Test an async method that always raises an exception."""
-        mock_func = AsyncMock(side_effect=Exception("Mock Function Exception"))
+        mock_func = AsyncMock(side_effect=ValueError("Mock Function Exception"))
 
         decorated_func = retry(max_tries=3)(mock_func)
-        with self.assertRaises(RetryError):
+        with self.assertRaises(ValueError):
             await decorated_func()
         mock_func.assert_has_calls([call] * 3)
         mock_sleep.assert_has_calls([call(0.0)] * 2)

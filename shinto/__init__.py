@@ -15,7 +15,6 @@ __all__ = [
     "push_metric",
     "QueueError",
     "QueueHandler",
-    "RetryError",
     "retry",
     "retry_call",
 ]
@@ -29,4 +28,4 @@ from .jsonschema import (
 from .logging import setup_logging
 from .metrics import inc_persistant_counter, init_persistant_metrics, push_metric
 from .rabbitmq import QueueError, QueueHandler
-from .retry_wrapper import RetryError, retry, retry_call
+from .retry_wrapper import retry, retry_call
