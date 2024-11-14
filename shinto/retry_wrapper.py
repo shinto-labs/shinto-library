@@ -9,10 +9,6 @@ from functools import wraps
 from typing import Any, Awaitable, Callable, Coroutine
 
 
-class RetryError(Exception):
-    """An exception raised when the maximum number of retries is reached."""
-
-
 def _retry_internal(
     func: Callable[..., Any],
     fargs: tuple[Any, ...],
@@ -33,6 +29,8 @@ def _retry_internal(
         try:
             return func(*fargs, **fkwargs)
         except exceptions as e:
+            if tries == 0:
+                error = e
             tries += 1
             _log_exception(func_name, tries, max_tries, current_delay, e)
 
@@ -40,7 +38,7 @@ def _retry_internal(
             time.sleep(current_delay)
             current_delay = _next_delay(current_delay, backoff, delay_increment, max_delay)
 
-    raise RetryError(f"Failed to run {func_name} after {tries} tries.")
+    raise error
 
 
 async def _retry_internal_async(
@@ -63,6 +61,8 @@ async def _retry_internal_async(
         try:
             return await func(*fargs, **fkwargs)
         except exceptions as e:
+            if tries == 0:
+                error = e
             tries += 1
             _log_exception(func_name, tries, max_tries, current_delay, e)
 
@@ -70,7 +70,7 @@ async def _retry_internal_async(
             await asyncio.sleep(current_delay)
             current_delay = _next_delay(current_delay, backoff, delay_increment, max_delay)
 
-    raise RetryError(f"Failed to run {func_name} after {tries} tries.")
+    raise error
 
 
 def _function_isasync(func: Callable[..., Any]) -> bool:
@@ -83,7 +83,7 @@ def _get_function_name(func: Callable[..., Any]) -> str:
 
 def _log_exception(func_name: str, tries: int, max_tries: int, delay: float, e: Exception) -> None:
     retry_msg = "" if tries == max_tries else f" Retrying in {delay} seconds."
-    logging.error(
+    logging.warning(
         "An exception occurred while running %s on attempt %s/%s.%s",
         func_name,
         tries,
