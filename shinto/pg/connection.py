@@ -54,12 +54,11 @@ class Connection(psycopg.Connection):
             try:
                 cur.executemany(query, records, returning=False)
                 self.commit()
-            except psycopg.Error as e:
+            except psycopg.Error:
                 self.rollback()
-                error = e
-            cur.execute("DEALLOCATE ALL")
-            if error:
-                raise error
+                raise
+            finally:
+                cur.execute("DEALLOCATE ALL")
             return cur.rowcount
 
 
@@ -110,10 +109,9 @@ class AsyncConnection(psycopg.AsyncConnection):
             try:
                 await cur.executemany(query, records, returning=False)
                 await self.commit()
-            except psycopg.Error as e:
+            except psycopg.Error:
                 await self.rollback()
-                error = e
-            await cur.execute("DEALLOCATE ALL")
-            if error:
-                raise error
+                raise
+            finally:
+                await cur.execute("DEALLOCATE ALL")
             return cur.rowcount
