@@ -51,7 +51,15 @@ class Connection(psycopg.Connection):
         with self.cursor() as cur:
             # TODO: look at copy instead of executemany
             # https://shintolabs.atlassian.net/browse/DOT-422
-            cur.executemany(query, records, returning=False)
+            try:
+                cur.executemany(query, records, returning=False)
+                self.commit()
+            except psycopg.Error as e:
+                self.rollback()
+                error = e
+            cur.execute("DEALLOCATE ALL")
+            if error:
+                raise error
             return cur.rowcount
 
 
@@ -99,5 +107,13 @@ class AsyncConnection(psycopg.AsyncConnection):
         async with self.cursor() as cur:
             # TODO: look at copy instead of executemany
             # https://shintolabs.atlassian.net/browse/DOT-422
-            await cur.executemany(query, records, returning=False)
+            try:
+                await cur.executemany(query, records, returning=False)
+                await self.commit()
+            except psycopg.Error as e:
+                await self.rollback()
+                error = e
+            await cur.execute("DEALLOCATE ALL")
+            if error:
+                raise error
             return cur.rowcount
