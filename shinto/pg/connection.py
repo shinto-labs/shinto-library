@@ -31,7 +31,9 @@ class Connection(psycopg.Connection):
         """
         with self.cursor() as cur:
             cur.execute(query, params)
-            return cur.fetchall()
+            if cur.rowcount > 0:
+                return cur.fetchall()
+            return []
 
     def write_records(self, query: str, records: list[tuple]) -> int:
         """
@@ -86,7 +88,9 @@ class AsyncConnection(psycopg.AsyncConnection):
         """
         async with self.cursor() as cur:
             await cur.execute(query, params)
-            return await cur.fetchall()
+            if cur.rowcount > 0:
+                return await cur.fetchall()
+            return []
 
     async def write_records(self, query: str, records: list[tuple]) -> int:
         """
