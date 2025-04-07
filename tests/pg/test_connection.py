@@ -18,7 +18,6 @@ class TestConnection(unittest.TestCase):
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.rowcount = len(expected_data)
         mock_cursor.fetchall.return_value = expected_data
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
@@ -77,6 +76,39 @@ class TestConnection(unittest.TestCase):
             Connection.write_records(mock_conn, test_query, test_records)
 
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
+
+    def test_execute_command_success(self):
+        """Test execute_command method with a successful command."""
+        test_command = "DELETE FROM test_table WHERE id = 1"
+        expected_rowcount = 1
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = expected_rowcount
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+        result = Connection.execute_command(mock_conn, test_command)
+
+        self.assertEqual(result, expected_rowcount)
+        mock_cursor.execute.assert_called_once_with(test_command, None)
+        mock_conn.commit.assert_called_once()
+
+    def test_execute_command_failure(self):
+        """Test execute_command method with a failed command."""
+        test_command = "DELETE FROM test_table WHERE id = 1"
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = psycopg.Error
+        mock_conn.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+        with self.assertRaises(psycopg.Error):
+            Connection.execute_command(mock_conn, test_command)
+
+        mock_cursor.execute.assert_called_once_with(test_command, None)
+        mock_conn.rollback.assert_called_once()
 
 
 class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
@@ -152,6 +184,41 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
             await AsyncConnection.write_records(mock_conn, test_query, test_records)
 
         mock_cursor.executemany.assert_called_once_with(test_query, test_records, returning=False)
+
+    async def test_execute_command_success(self):
+        """Test execute_command method with a successful command."""
+        test_command = "DELETE FROM test_table WHERE id = 1"
+        expected_rowcount = 1
+
+        mock_conn = MagicMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.rowcount = expected_rowcount
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.commit = AsyncMock()
+
+        result = await AsyncConnection.execute_command(mock_conn, test_command)
+
+        self.assertEqual(result, expected_rowcount)
+        mock_cursor.execute.assert_called_once_with(test_command, None)
+        mock_conn.commit.assert_called_once()
+
+    async def test_execute_command_failure(self):
+        """Test execute_command method with a failed command."""
+        test_command = "DELETE FROM test_table WHERE id = 1"
+
+        mock_conn = MagicMock()
+        mock_cursor = AsyncMock()
+        mock_cursor.execute = AsyncMock(side_effect=psycopg.Error)
+        mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
+        mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.rollback = AsyncMock()
+
+        with self.assertRaises(psycopg.Error):
+            await AsyncConnection.execute_command(mock_conn, test_command)
+
+        mock_cursor.execute.assert_called_once_with(test_command, None)
+        mock_conn.rollback.assert_called_once()
 
 
 if __name__ == "__main__":
