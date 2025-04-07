@@ -17,6 +17,7 @@ ignore = [
     "TD002", "FIX002", # https://docs.astral.sh/ruff/rules/#flake8-todos-td. TD003 is sufficient.
     "COM812", # https://docs.astral.sh/ruff/rules/#flake8-commas-com. Trailing comma, makes code less readable in some cases? for now keep disabled
     "TRY003", # https://docs.astral.sh/ruff/rules/#tryceratops-try.
+    "LOG015", # Allow calling default logger
 ]
 
 [lint.per-file-ignores]
