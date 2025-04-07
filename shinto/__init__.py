@@ -1,22 +1,22 @@
 """Shinto Library."""
 
 __all__ = [
-    "load_config_file",
-    "output_config",
     "AsyncDatabaseConnection",
     "DatabaseConnection",
-    "get_json_object_from_query_result",
-    "validate_json_against_schemas_async",
-    "validate_json_against_schemas",
-    "validate_json_against_schemas_complete",
-    "setup_logging",
-    "inc_persistant_counter",
-    "init_persistant_metrics",
-    "push_metric",
     "QueueError",
     "QueueHandler",
+    "get_json_object_from_query_result",
+    "inc_persistant_counter",
+    "init_persistant_metrics",
+    "load_config_file",
+    "output_config",
+    "push_metric",
     "retry",
     "retry_call",
+    "setup_logging",
+    "validate_json_against_schemas",
+    "validate_json_against_schemas_async",
+    "validate_json_against_schemas_complete",
 ]
 
 from .config import load_config_file, output_config
