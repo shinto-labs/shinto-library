@@ -31,9 +31,36 @@ class Connection(psycopg.Connection):
         """
         with self.cursor() as cur:
             cur.execute(query, params)
-            if cur.rowcount > 0:
-                return cur.fetchall()
-            return []
+            return cur.fetchall()
+
+    def execute_command(self, query: str, params: None | dict[str:Any] = None) -> int:
+        """
+        Execute a command (INSERT, UPDATE, DELETE) that doesn't return data.
+
+        Args:
+            query (str): The command to execute.
+            params (dict): The query parameters to format the command.
+
+        Returns:
+            int: The number of rows affected.
+
+        Raises:
+            psycopg.Error: If the command execution fails.
+
+        Example:
+            >>> conn.execute_command("DELETE FROM table WHERE id = %(id)s", {"id": 1})
+            1
+
+        """
+        with self.cursor() as cur:
+            try:
+                cur.execute(query, params)
+                self.commit()
+            except psycopg.Error:
+                self.rollback()
+                raise
+            else:
+                return cur.rowcount
 
     def write_records(self, query: str, records: list[tuple]) -> int:
         """
@@ -88,9 +115,36 @@ class AsyncConnection(psycopg.AsyncConnection):
         """
         async with self.cursor() as cur:
             await cur.execute(query, params)
-            if cur.rowcount > 0:
-                return await cur.fetchall()
-            return []
+            return await cur.fetchall()
+
+    async def execute_command(self, query: str, params: None | dict[str:Any] = None) -> int:
+        """
+        Execute a command (INSERT, UPDATE, DELETE) that doesn't return data asynchronously.
+
+        Args:
+            query (str): The command to execute.
+            params (dict): The query parameters to format the command.
+
+        Returns:
+            int: The number of rows affected.
+
+        Raises:
+            psycopg.Error: If the command execution fails.
+
+        Example:
+            >>> await conn.execute_command("DELETE FROM table WHERE id = %(id)s", {"id": 1})
+            1
+
+        """
+        async with self.cursor() as cur:
+            try:
+                await cur.execute(query, params)
+                await self.commit()
+            except psycopg.Error:
+                await self.rollback()
+                raise
+            else:
+                return cur.rowcount
 
     async def write_records(self, query: str, records: list[tuple]) -> int:
         """
