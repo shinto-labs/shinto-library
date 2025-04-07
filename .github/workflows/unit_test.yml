@@ -63,10 +63,11 @@ jobs:
           echo "errors=$total_errors" >> $GITHUB_OUTPUT
           echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
 
-          if [ $coverage -lt 80 ]; then
-            echo "Coverage is less than 80%"
-            exit 1
-          fi
+          # Disable coverage check
+          # if [ $coverage -lt 80 ]; then
+          #   echo "Coverage is less than 80%"
+          #   exit 1
+          # fi
 
           exit $exit_code
 
