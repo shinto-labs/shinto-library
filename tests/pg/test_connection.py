@@ -18,6 +18,7 @@ class TestConnection(unittest.TestCase):
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
+        mock_cursor.rowcount = len(expected_data)
         mock_cursor.fetchall.return_value = expected_data
         mock_conn.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
@@ -88,6 +89,7 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
 
         mock_conn = MagicMock()
         mock_cursor = AsyncMock()
+        mock_cursor.rowcount = len(expected_data)
         mock_cursor.execute = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=expected_data)
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
@@ -127,6 +129,7 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_cursor.rowcount = 2
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.commit = AsyncMock()
 
         result = await AsyncConnection.write_records(mock_conn, test_query, test_records)
 
@@ -143,6 +146,7 @@ class TestAsyncConnection(unittest.IsolatedAsyncioTestCase):
         mock_cursor.executemany.side_effect = psycopg.Error
         mock_conn.cursor.return_value.__aenter__.return_value = mock_cursor
         mock_conn.cursor.return_value.__aexit__.return_value = None
+        mock_conn.rollback = AsyncMock()
 
         with self.assertRaises(psycopg.Error):
             await AsyncConnection.write_records(mock_conn, test_query, test_records)

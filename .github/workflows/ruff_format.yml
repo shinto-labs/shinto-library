@@ -1,3 +1,4 @@
+# file_version = "0.1.1"
 name: Ruff format check
 
 on:
@@ -25,14 +26,22 @@ jobs:
 
     steps:
       - name: Start time
-        id: start_time
-        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+        uses: shinto-labs/send-log-to-loki@v1.0.3
+        with:
+          measurement: start
 
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ruff
-        run: pip install ruff
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
 
       - name: Check code format
         id: ruff
@@ -49,19 +58,12 @@ jobs:
 
           exit "$exit_code"
 
-      - name: Send results to Loki
+      - name: Send Logs to Loki
         if: always()
-        env:
-          LOKI_ADDRESS: "https://loki.shintolabs.net"
-          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
-          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
-          REPOSITORY: ${{ github.repository }}
-          WORKFLOW: ${{ github.workflow }}
-          STATUS: ${{ job.status }}
-          RUN_NUMBER: ${{ github.run_number }}
-          ACTOR: ${{ github.actor }}
-          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
-          REF: ${{ github.ref }}
-          START_TIME: ${{ steps.start_time.outputs.start_time }}
-          VALUES: "ruff_errors=${{ steps.ruff.outputs.errors }}"
-        run: ./scripts/send_to_loki.sh
+        uses: shinto-labs/send-log-to-loki@v1.0.3
+        with:
+          loki_address: "https://loki.shintolabs.net"
+          loki_username: ${{ secrets.LOKI_USERNAME }}
+          loki_password: ${{ secrets.LOKI_PASSWORD }}
+          status: ${{ job.status }}
+          additional_labels: "ruff_errors=${{ steps.ruff.outputs.errors }}"

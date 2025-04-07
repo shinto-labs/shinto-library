@@ -2,8 +2,8 @@
 
 __all__ = [
     "AsyncConnection",
-    "Connection",
     "AsyncConnectionPool",
+    "Connection",
     "ConnectionPool",
     "EmptyQueryResultError",
     "InvalidJsonError",

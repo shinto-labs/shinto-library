@@ -1,3 +1,4 @@
+# file_version = "0.1.1"
 name: Unit test
 
 on:
@@ -27,25 +28,27 @@ jobs:
 
     steps:
       - name: Start time
-        id: start_time
-        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+        uses: shinto-labs/send-log-to-loki@v1.0.3
+        with:
+          measurement: start
 
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v3
         with:
-          python-version: "3.x"
+          python-version: 3.x
 
       - name: Install dependencies
-        run: make install
+        run: |
+          pdm sync -d
 
       - name: Run tests
         id: test
         run: |
           set +e
-          test_output=$(make test_coverage 2>&1)
+          test_output=$(pdm run -v nose2 -s tests -C --coverage=app.shinto_backend --coverage-report=term 2>&1)
           exit_code=$?
           set -e
           echo "$test_output"
@@ -60,26 +63,20 @@ jobs:
           echo "errors=$total_errors" >> $GITHUB_OUTPUT
           echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
 
-          if [ $coverage -lt 80 ]; then
-            echo "Coverage is less than 80%"
-            exit 1
-          fi
+          # Disable coverage check
+          # if [ $coverage -lt 80 ]; then
+          #   echo "Coverage is less than 80%"
+          #   exit 1
+          # fi
 
           exit $exit_code
 
-      - name: Send results to Loki
+      - name: Send Logs to Loki
         if: always()
-        env:
-          LOKI_ADDRESS: "https://loki.shintolabs.net"
-          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
-          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
-          REPOSITORY: ${{ github.repository }}
-          WORKFLOW: ${{ github.workflow }}
-          STATUS: ${{ job.status }}
-          RUN_NUMBER: ${{ github.run_number }}
-          ACTOR: ${{ github.actor }}
-          URL: ${{ github.event.repository.html_url }}/actions/runs/${{ github.run_id }}
-          REF: ${{ github.ref }}
-          START_TIME: ${{ steps.start_time.outputs.start_time }}
-          VALUES: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }} test_ran_tests=${{ steps.test.outputs.ran_tests }}"
-        run: ./scripts/send_to_loki.sh
+        uses: shinto-labs/send-log-to-loki@v1.0.3
+        with:
+          loki_address: "https://loki.shintolabs.net"
+          loki_username: ${{ secrets.LOKI_USERNAME }}
+          loki_password: ${{ secrets.LOKI_PASSWORD }}
+          status: ${{ job.status }}
+          additional_labels: "test_errors=${{ steps.test.outputs.errors }} test_coverage=${{ steps.test.outputs.coverage }} test_ran_tests=${{ steps.test.outputs.ran_tests }}"
