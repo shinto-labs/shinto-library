@@ -48,7 +48,7 @@ jobs:
         id: test
         run: |
           set +e
-          test_output=$(pdm run -v nose2 -s tests -C --coverage=app.shinto_backend --coverage-report=term 2>&1)
+          test_output=$(make test_coverage 2>&1)
           exit_code=$?
           set -e
           echo "$test_output"
@@ -63,11 +63,10 @@ jobs:
           echo "errors=$total_errors" >> $GITHUB_OUTPUT
           echo "ran_tests=$ran_tests" >> $GITHUB_OUTPUT
 
-          # Disable coverage check
-          # if [ $coverage -lt 80 ]; then
-          #   echo "Coverage is less than 80%"
-          #   exit 1
-          # fi
+          if [ $coverage -lt 80 ]; then
+            echo "Coverage is less than 80%"
+            exit 1
+          fi
 
           exit $exit_code
 
