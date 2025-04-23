@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 import jsonschema.exceptions
 
 from shinto.jsonschema import (
+    JsonSchemaRegistry,
     validate_json_against_schemas,
     validate_json_against_schemas_async,
     validate_json_against_schemas_complete,
@@ -20,6 +21,166 @@ test_schema = {
     "type": "object",
     "properties": {"name": {"type": "string"}},
 }
+
+
+class TestJsonSchemaRegistry(unittest.TestCase):
+    """Test cases for the JsonSchemaRegistry class."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.registry = JsonSchemaRegistry()
+        self.test_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "test_schema",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+        self.test_schema_filepath = "test_schema.json"
+
+    def tearDown(self):
+        """Tear down test fixtures."""
+        # Clear the singleton instance
+        JsonSchemaRegistry._instance = None  # noqa: SLF001
+        JsonSchemaRegistry._initialized = False  # noqa: SLF001
+
+    @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_register_schema(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+        """Test registering a schema."""
+        mock_exists.return_value = True
+        mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+            self.test_schema
+        )
+
+        schema_id = self.registry.register_schema(self.test_schema_filepath)
+        self.assertEqual(schema_id, "test_schema")
+        self.assertEqual(self.registry._registry["test_schema"], self.test_schema)  # noqa: SLF001
+        self.assertEqual(
+            self.registry._schema_mappings[  # noqa: SLF001
+                self.registry._convert_schema_filepath(self.test_schema_filepath)  # noqa: SLF001
+            ],
+            "test_schema",
+        )
+
+    @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_register_schema_conflict(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+        """Test registering a schema with conflicting $id."""
+        mock_exists.return_value = True
+        mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+            self.test_schema
+        )
+
+        # Register first schema
+        self.registry.register_schema(self.test_schema_filepath)
+
+        # Try to register conflicting schema
+        conflicting_schema = self.test_schema.copy()
+        conflicting_schema["properties"]["name"]["type"] = "integer"
+        mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+            conflicting_schema
+        )
+
+        with self.assertRaises(KeyError):
+            self.registry.register_schema("conflicting_schema.json")
+
+    def test_get_schema_id(self):
+        """Test getting schema ID from filepath."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        schema_id = self.registry.get_schema_id(self.test_schema_filepath)
+        self.assertEqual(schema_id, "test_schema")
+
+    def test_get_schema_id_not_found(self):
+        """Test getting schema ID for non-existent schema."""
+        with self.assertRaises(KeyError):
+            self.registry.get_schema_id("non_existent_schema.json")
+
+    def test_get_schema_by_filepath(self):
+        """Test getting schema by filepath."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        schema = self.registry.get_schema_by_filepath(self.test_schema_filepath)
+        self.assertEqual(schema, self.test_schema)
+
+    def test_get_schema_by_filepath_not_found(self):
+        """Test getting schema for non-existent filepath."""
+        with self.assertRaises(KeyError):
+            self.registry.get_schema_by_filepath("non_existent_schema.json")
+
+    def test_validate_json_against_schemas(self):
+        """Test validating JSON against registered schemas."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test valid data
+        data = {"name": "John Doe"}
+        self.registry.validate_json_against_schemas(data, [self.test_schema_filepath])
+
+        # Test invalid data
+        invalid_data = {"name": 123}
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            self.registry.validate_json_against_schemas(invalid_data, [self.test_schema_filepath])
+
+    def test_validate_json_against_schemas_complete(self):
+        """Test validating JSON against registered schemas and getting all errors."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test valid data
+        data = {"name": "John Doe"}
+        errors = self.registry.validate_json_against_schemas_complete(
+            data, [self.test_schema_filepath]
+        )
+        self.assertEqual(len(errors), 0)
+
+        # Test invalid data
+        invalid_data = {"name": 123}
+        errors = self.registry.validate_json_against_schemas_complete(
+            invalid_data, [self.test_schema_filepath]
+        )
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], jsonschema.exceptions.ValidationError)
+
+    def test_convert_schema_filepath(self):
+        """Test converting schema filepath to schema ID."""
+        test_cases = [
+            ("/path/to/schema.json", "path_to_schema"),
+            ("schema.json", "schema"),
+            ("/path/to/schema.with.dots.json", "path_to_schema_with_dots"),
+        ]
+        for filepath, expected in test_cases:
+            self.assertEqual(self.registry._convert_schema_filepath(filepath), expected)  # noqa: SLF001
 
 
 class TestJsonSchema(unittest.TestCase):
