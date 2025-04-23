@@ -54,13 +54,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
 
         schema_id = self.registry.register_schema(self.test_schema_filepath)
         self.assertEqual(schema_id, "test_schema")
-        self.assertEqual(self.registry._registry["test_schema"], self.test_schema)  # noqa: SLF001
-        self.assertEqual(
-            self.registry._schema_mappings[  # noqa: SLF001
-                self.registry._convert_schema_filepath(self.test_schema_filepath)  # noqa: SLF001
-            ],
-            "test_schema",
-        )
+        self.assertEqual(self.registry.registry["test_schema"], self.test_schema)
 
     @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
@@ -103,26 +97,6 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         """Test getting schema ID for non-existent schema."""
         with self.assertRaises(KeyError):
             self.registry.get_schema_id("non_existent_schema.json")
-
-    def test_get_schema_by_filepath(self):
-        """Test getting schema by filepath."""
-        # Register a schema first
-        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
-            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
-        ) as mock_exists:
-            mock_exists.return_value = True
-            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
-                self.test_schema
-            )
-            self.registry.register_schema(self.test_schema_filepath)
-
-        schema = self.registry.get_schema_by_filepath(self.test_schema_filepath)
-        self.assertEqual(schema, self.test_schema)
-
-    def test_get_schema_by_filepath_not_found(self):
-        """Test getting schema for non-existent filepath."""
-        with self.assertRaises(KeyError):
-            self.registry.get_schema_by_filepath("non_existent_schema.json")
 
     def test_validate_json_against_schemas(self):
         """Test validating JSON against registered schemas."""

@@ -157,6 +157,11 @@ class JsonSchemaRegistry:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
+    @property
+    def registry(self) -> SchemaRegistry:
+        """Get the registry."""
+        return self._registry
+
     def register_schema(self, schema_filepath: str) -> str:
         """
         Add a schema to the registry.
@@ -203,22 +208,6 @@ class JsonSchemaRegistry:
 
         """
         return self._schema_mappings[self._convert_schema_filepath(schema_filepath)]
-
-    def get_schema_by_filepath(self, schema_filepath: str) -> dict:
-        """
-        Get the JSON schema for a given schema filepath.
-
-        Args:
-            schema_filepath (str): The path to the schema file.
-
-        Returns:
-            dict: The JSON schema.
-
-        Raises:
-            KeyError: If no schema is found for the given filepath.
-
-        """
-        return self._registry[self.get_schema_id(schema_filepath)]
 
     def validate_json_against_schemas(self, data: dict | list, schema_filepaths: list[str]):
         """
