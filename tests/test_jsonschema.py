@@ -56,9 +56,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         self.assertEqual(schema_id, "test_schema")
         self.assertEqual(self.registry.registry.contents(schema_id), self.test_schema)
         self.assertEqual(
-            self.registry.schema_mappings[
-                self.registry._convert_schema_filepath(self.test_schema_filepath)  # noqa: SLF001
-            ],
+            self.registry.schema_mappings[self.test_schema_filepath],
             "test_schema",
         )
 
@@ -151,16 +149,6 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         )
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], jsonschema.exceptions.ValidationError)
-
-    def test_convert_schema_filepath(self):
-        """Test converting schema filepath to schema ID."""
-        test_cases = [
-            ("/path/to/schema.json", "path_to_schema"),
-            ("schema.json", "schema"),
-            ("/path/to/schema.with.dots.json", "path_to_schema_with_dots"),
-        ]
-        for filepath, expected in test_cases:
-            self.assertEqual(self.registry._convert_schema_filepath(filepath), expected)  # noqa: SLF001
 
 
 class TestJsonSchema(unittest.TestCase):

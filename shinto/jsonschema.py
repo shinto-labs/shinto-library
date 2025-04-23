@@ -212,7 +212,7 @@ class JsonSchemaRegistry:
             else:
                 self._registry = self._registry.with_resource(schema_id, Resource(schema, DRAFT7))
                 self._validator_cache.clear()
-            self._schema_mappings[self._convert_schema_filepath(schema_filepath)] = schema_id
+            self._schema_mappings[schema_filepath] = schema_id
             return schema_id
 
     def get_schema_id(self, schema_filepath: str) -> str:
@@ -229,7 +229,7 @@ class JsonSchemaRegistry:
             KeyError: If no schema ID is found for the given filepath.
 
         """
-        return self._schema_mappings[self._convert_schema_filepath(schema_filepath)]
+        return self._schema_mappings[schema_filepath]
 
     def validate_json_against_schemas(self, data: dict | list, schema_filepaths: list[str]):
         """
@@ -272,11 +272,6 @@ class JsonSchemaRegistry:
             validator = self._get_validator(schema_id)
             validation_errors.extend(list(validator.iter_errors(data)))
         return validation_errors
-
-    def _convert_schema_filepath(self, schema_filepath: str) -> str:
-        """Convert a schema filepath to a schema ID."""
-        trimmed = schema_filepath[1:] if schema_filepath.startswith("/") else schema_filepath
-        return trimmed.replace(".json", "").replace("/", "_").replace(".", "_")
 
     def _get_validator(self, schema_id: str) -> Draft7Validator:
         """Get a validator for a schema, creating it if it doesn't exist in the cache."""
