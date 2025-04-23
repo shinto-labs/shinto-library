@@ -173,6 +173,17 @@ class JsonSchemaRegistry:
         """
         return self._registry
 
+    @property
+    def schema_mappings(self) -> dict[str, str]:
+        """
+        Get the schema mappings.
+
+        Returns:
+            dict[str, str]: A copy of the schema mappings.
+
+        """
+        return self._schema_mappings.copy()
+
     def register_schema(self, schema_filepath: str) -> str:
         """
         Add a schema to the registry.
