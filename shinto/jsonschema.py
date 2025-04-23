@@ -12,7 +12,7 @@ import anyio
 import jsonschema
 from deprecated.sphinx import deprecated
 from jsonschema import Draft7Validator, FormatChecker
-from referencing import Registry
+from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT7
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -144,7 +144,7 @@ class JsonSchemaRegistry:
         with JsonSchemaRegistry._lock:
             if JsonSchemaRegistry._initialized:
                 return
-            self._registry = Registry().with_resource("", DRAFT7)
+            self._registry = Registry()
             self._schema_mappings = {}
             self._validator_cache = {}
             JsonSchemaRegistry._initialized = True
@@ -159,7 +159,18 @@ class JsonSchemaRegistry:
 
     @property
     def registry(self) -> SchemaRegistry:
-        """Get the registry."""
+        """
+        Get the registry.
+
+        Returns:
+            referencing.jsonschema.SchemaRegistry: The registry.
+
+        Example:
+            >>> registry = JsonSchemaRegistry()
+            >>> registry.register_schema("schema.json")
+            >>> schema = registry.registry.contents(registry.get_schema_id("schema.json"))
+
+        """
         return self._registry
 
     def register_schema(self, schema_filepath: str) -> str:
@@ -188,7 +199,7 @@ class JsonSchemaRegistry:
                         f"but is different from '{schema_filepath}'"
                     )
             else:
-                self._registry = self._registry.with_resource(schema_id, schema)
+                self._registry = self._registry.with_resource(schema_id, Resource(schema, DRAFT7))
                 self._validator_cache.clear()
             self._schema_mappings[self._convert_schema_filepath(schema_filepath)] = schema_id
             return schema_id
@@ -259,7 +270,7 @@ class JsonSchemaRegistry:
     def _get_validator(self, schema_id: str) -> Draft7Validator:
         """Get a validator for a schema, creating it if it doesn't exist in the cache."""
         if schema_id not in self._validator_cache:
-            schema = self._registry[schema_id]
+            schema = self._registry.contents(schema_id)
             self._validator_cache[schema_id] = Draft7Validator(
                 schema, format_checker=FormatChecker(), registry=self._registry
             )
