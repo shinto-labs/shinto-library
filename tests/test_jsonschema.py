@@ -54,7 +54,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
 
         schema_id = self.registry.register_schema(self.test_schema_filepath)
         self.assertEqual(schema_id, "test_schema")
-        self.assertEqual(self.registry.registry["test_schema"], self.test_schema)
+        self.assertEqual(self.registry.registry.contents(schema_id), self.test_schema)
 
     @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
