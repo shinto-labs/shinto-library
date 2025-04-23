@@ -198,6 +198,7 @@ class JsonSchemaRegistry:
             KeyError: If a conflicting schema is already registered.
 
         """
+        schema_filepath = self._remove_leading_slash(schema_filepath)
         with JsonSchemaRegistry._lock, Path(schema_filepath).resolve().open(
             encoding="UTF-8"
         ) as file:
@@ -229,6 +230,7 @@ class JsonSchemaRegistry:
             KeyError: If no schema ID is found for the given filepath.
 
         """
+        schema_filepath = self._remove_leading_slash(schema_filepath)
         return self._schema_mappings[schema_filepath]
 
     def validate_json_against_schemas(self, data: dict | list, schema_filepaths: list[str]):
@@ -281,3 +283,7 @@ class JsonSchemaRegistry:
                 schema, format_checker=FormatChecker(), registry=self._registry
             )
         return self._validator_cache[schema_id]
+
+    def _remove_leading_slash(self, schema_filepath: str) -> str:
+        """Remove the leading slash from a schema filepath."""
+        return schema_filepath[1:] if schema_filepath.startswith("/") else schema_filepath
