@@ -203,7 +203,7 @@ class JsonSchemaRegistry:
             encoding="UTF-8"
         ) as file:
             schema = json.load(file)
-            schema_id = schema.get("$id", schema_filepath)
+            schema_id = schema.get("$id", self._filepath_to_id(schema_filepath))
             if schema_id in self._registry:
                 if self._registry[schema_id] != schema:
                     raise KeyError(
@@ -287,3 +287,7 @@ class JsonSchemaRegistry:
     def _remove_leading_slash(self, schema_filepath: str) -> str:
         """Remove the leading slash from a schema filepath."""
         return schema_filepath[1:] if schema_filepath.startswith("/") else schema_filepath
+
+    def _filepath_to_id(self, schema_filepath: str) -> str:
+        """Convert a schema filepath to a schema ID."""
+        return schema_filepath.replace("/", "_").replace(".", "_")
