@@ -12,6 +12,8 @@ import anyio
 import jsonschema
 from deprecated.sphinx import deprecated
 from jsonschema import Draft7Validator, FormatChecker
+from referencing import Registry
+from referencing.jsonschema import DRAFT7
 
 if TYPE_CHECKING:  # pragma: no cover
     from jsonschema.exceptions import ValidationError
@@ -142,7 +144,7 @@ class JsonSchemaRegistry:
         with JsonSchemaRegistry._lock:
             if JsonSchemaRegistry._initialized:
                 return
-            self._registry = {}
+            self._registry = Registry().with_resource("", DRAFT7)
             self._schema_mappings = {}
             self._validator_cache = {}
             JsonSchemaRegistry._initialized = True
@@ -181,7 +183,7 @@ class JsonSchemaRegistry:
                         f"but is different from '{schema_filepath}'"
                     )
             else:
-                self._registry[schema_id] = schema
+                self._registry = self._registry.with_resource(schema_id, schema)
                 self._validator_cache.clear()
             self._schema_mappings[self._convert_schema_filepath(schema_filepath)] = schema_id
             return schema_id
