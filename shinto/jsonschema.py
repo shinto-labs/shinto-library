@@ -169,7 +169,9 @@ class JsonSchemaRegistry:
             schema_id = self._clean_schema_id(schema.get("$id", schema_filepath))
             schema["$id"] = schema_id
             if self.schema_id_in_registry(schema_id):
-                if self.contents(schema_id) != schema:
+                if self.contents(schema_id) != schema and self._resolve_schema_refs(
+                    self.contents(schema_id)
+                ) != self._resolve_schema_refs(schema):
                     raise KeyError(
                         f"Schema with $id '{schema_id}' exists, "
                         f"but is different from '{schema_filepath}'"
