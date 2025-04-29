@@ -54,9 +54,9 @@ class TestJsonSchemaRegistry(unittest.TestCase):
 
         schema_id = self.registry.register_schema(self.test_schema_filepath)
         self.assertEqual(schema_id, "test_schema")
-        self.assertEqual(self.registry.registry.contents(schema_id), self.test_schema)
+        self.assertEqual(self.registry.contents(schema_id), self.test_schema)
         self.assertEqual(
-            self.registry.schema_mappings[self.test_schema_filepath],
+            self.registry.get_schema_id(self.test_schema_filepath),
             "test_schema",
         )
 
@@ -99,8 +99,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
 
     def test_get_schema_id_not_found(self):
         """Test getting schema ID for non-existent schema."""
-        with self.assertRaises(KeyError):
-            self.registry.get_schema_id("non_existent_schema.json")
+        self.assertEqual(None, self.registry.get_schema_id("non_existent_schema.json"))
 
     def test_validate_json_against_schemas(self):
         """Test validating JSON against registered schemas."""
@@ -149,6 +148,126 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         )
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], jsonschema.exceptions.ValidationError)
+
+    def test_schema_registered(self):
+        """Test checking if a schema is registered."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test registered schema
+        self.assertTrue(self.registry.schema_registered(self.test_schema_filepath))
+        # Test non-registered schema
+        self.assertFalse(self.registry.schema_registered("non_existent_schema.json"))
+
+    def test_schema_id_in_registry(self):
+        """Test checking if a schema ID is in the registry."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test registered schema ID
+        self.assertTrue(self.registry.schema_id_in_registry("test_schema"))
+        # Test non-registered schema ID
+        self.assertFalse(self.registry.schema_id_in_registry("non_existent_schema"))
+
+    def test_next_filepath_for_schema_id(self):
+        """Test getting filepath for a schema ID."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test getting filepath for registered schema ID
+        self.assertEqual(
+            self.registry.next_filepath_for_schema_id("test_schema"),
+            str(Path(self.test_schema_filepath).resolve()),
+        )
+        # Test getting filepath for non-registered schema ID
+        self.assertIsNone(self.registry.next_filepath_for_schema_id("non_existent_schema"))
+
+    def test_update_schema_refs(self):
+        """Test updating schema references."""
+        # Create a schema with references
+        schema_with_refs = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "parent_schema",
+            "type": "object",
+            "properties": {
+                "child": {"$ref": "child_schema.json"},
+                "nested": {
+                    "type": "object",
+                    "properties": {
+                        "grandchild": {"$ref": "grandchild_schema.json#/definitions/type"}
+                    },
+                },
+            },
+        }
+
+        child_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "child_schema",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+        grandchild_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "grandchild_schema",
+            "definitions": {"type": {"type": "string"}},
+        }
+
+        # Register schemas
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.side_effect = [
+                json.dumps(schema_with_refs),
+                json.dumps(child_schema),
+                json.dumps(grandchild_schema),
+            ]
+            self.registry.register_schema("parent_schema.json")
+            self.registry.register_schema("child_schema.json")
+            self.registry.register_schema("grandchild_schema.json")
+
+        # Test updating refs to IDs
+        self.registry.update_schema_refs_to_ids()
+        schema = self.registry.contents("parent_schema")
+        self.assertEqual(schema["properties"]["child"]["$ref"], "child_schema")
+        self.assertEqual(
+            schema["properties"]["nested"]["properties"]["grandchild"]["$ref"],
+            "grandchild_schema#/definitions/type",
+        )
+
+        # Test updating refs to filepaths
+        self.registry.update_schema_refs_to_filepaths()
+        schema = self.registry.contents("parent_schema")
+        self.assertEqual(
+            schema["properties"]["child"]["$ref"],
+            str(Path("child_schema.json").resolve()),
+        )
+        self.assertEqual(
+            schema["properties"]["nested"]["properties"]["grandchild"]["$ref"],
+            f"{Path('grandchild_schema.json').resolve()!s}#/definitions/type",
+        )
 
 
 class TestJsonSchema(unittest.TestCase):
