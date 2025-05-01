@@ -16,10 +16,10 @@ test:
 	$(PDM_RUN) nose2 -v -s tests
 
 test_coverage:
-	$(PDM_RUN) nose2 -v -s tests -C --coverage=shinto --coverage-report=term
+	$(PDM_RUN) nose2 -v -s tests -C --coverage=shinto --coverage-report=term --coverage-report=term-missing
 
 test_coverage_html:
-	$(PDM_RUN) nose2 -v -s tests -C --coverage=shinto --coverage-report=term --coverage-report=html
+	$(PDM_RUN) nose2 -v -s tests -C --coverage=shinto --coverage-report=term --coverage-report=term-missing --coverage-report=html
 
 ruff:
 	$(PDM_RUN) ruff check -v .

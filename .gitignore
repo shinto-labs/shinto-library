@@ -2,6 +2,7 @@
 
 .vscode
 .specstory
+.cursorindexingignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
