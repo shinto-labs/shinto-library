@@ -7,7 +7,7 @@ import json
 import logging
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import anyio
 import jsonschema
@@ -248,20 +248,19 @@ class JsonSchemaRegistry:
         schema_filepath = str(Path(schema_filepath).resolve())
         return self._schema_mappings.get(schema_filepath)
 
-    def update_schema_refs_to_ids(self):
-        """Update schema refs to schema IDs."""
-        self._validator_cache.clear()
-        for schema_id in self._registry:
-            schema = self._registry.contents(schema_id)
-            new_schema = self._resolve_schema_refs(schema, True)
-            self._registry = self._registry.with_resource(schema_id, Resource(new_schema, DRAFT7))
+    def update_schema_refs_to(self, convert_to: Literal["id", "filepath"]):
+        """
+        Update all schema refs in schemas in the registry to IDs or filepaths.
 
-    def update_schema_refs_to_filepaths(self):
-        """Update schema refs to schema filepaths."""
+        Args:
+            convert_to (Literal["id", "filepath"]): If "id", convert refs to schema IDs,
+            otherwise to filepaths.
+
+        """
         self._validator_cache.clear()
         for schema_id in self._registry:
             schema = self._registry.contents(schema_id)
-            new_schema = self._resolve_schema_refs(schema, False)
+            new_schema = self._resolve_schema_refs(schema, convert_to)
             self._registry = self._registry.with_resource(schema_id, Resource(new_schema, DRAFT7))
 
     def _get_validator(self, schema_id: str) -> Draft7Validator:
@@ -281,27 +280,26 @@ class JsonSchemaRegistry:
             schema_id = schema_id.replace("__", "_")
         return schema_id.strip("_")
 
-    def _resolve_schema_refs(self, schema: dict, convert_to_id: bool) -> dict:
+    def _resolve_schema_refs(self, schema: dict, convert_to: Literal["id", "filepath"]) -> dict:
         """
         Update schema refs to schema IDs or filepaths.
 
         Args:
-            schema (dict): The schema to process
-            convert_to_id (bool): If True, convert refs to schema IDs, otherwise to filepaths
+            schema (dict): The schema to process.
+            convert_to (Literal["id", "filepath"]): If "id", convert refs to schema IDs,
+            otherwise to filepaths.
 
         Returns:
-            dict: The processed schema with updated refs
+            dict: The processed schema with updated refs.
 
         """
         result = {}
         for key, value in schema.items():
             if isinstance(value, dict):
-                result[key] = self._resolve_schema_refs(value, convert_to_id)
+                result[key] = self._resolve_schema_refs(value, convert_to)
             elif isinstance(value, list):
                 result[key] = [
-                    self._resolve_schema_refs(item, convert_to_id)
-                    if isinstance(item, dict)
-                    else item
+                    self._resolve_schema_refs(item, convert_to) if isinstance(item, dict) else item
                     for item in value
                 ]
             elif key == "$ref" and not value.startswith("#"):
@@ -320,7 +318,7 @@ class JsonSchemaRegistry:
                 else:
                     logging.warning("Referenced schema %s not found in registry.", ref_identifier)
 
-                if convert_to_id:
+                if convert_to == "id":
                     result[key] = f"{schema_id}{fragment}"
                 else:
                     result[key] = f"{filepath}{fragment}"

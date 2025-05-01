@@ -249,7 +249,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             self.registry.register_schema("grandchild_schema.json")
 
         # Test updating refs to IDs
-        self.registry.update_schema_refs_to_ids()
+        self.registry.update_schema_refs_to("id")
         schema = self.registry.contents("parent_schema")
         self.assertEqual(schema["properties"]["child"]["$ref"], "child_schema")
         self.assertEqual(
@@ -258,7 +258,7 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         )
 
         # Test updating refs to filepaths
-        self.registry.update_schema_refs_to_filepaths()
+        self.registry.update_schema_refs_to("filepath")
         schema = self.registry.contents("parent_schema")
         self.assertEqual(
             schema["properties"]["child"]["$ref"],
