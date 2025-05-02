@@ -11,6 +11,7 @@ import jsonschema.exceptions
 
 from shinto.jsonschema import (
     JsonSchemaRegistry,
+    ValidationErrorGroup,
     validate_json_against_schemas,
     validate_json_against_schemas_async,
     validate_json_against_schemas_complete,
@@ -147,7 +148,9 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             invalid_data, [self.test_schema_filepath]
         )
         self.assertEqual(len(errors), 1)
-        self.assertIsInstance(errors[0], jsonschema.exceptions.ValidationError)
+        self.assertIsInstance(errors[0], ValidationErrorGroup)
+        self.assertEqual(errors[0].schema_id, "test_schema")
+        self.assertIsInstance(errors[0].errors[0], jsonschema.exceptions.ValidationError)
 
     def test_schema_registered(self):
         """Test checking if a schema is registered."""
