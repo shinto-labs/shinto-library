@@ -287,8 +287,7 @@ class JsonSchemaRegistry:
                 unique_errors[message].append(error)
 
             for message, errors in unique_errors.items():
-                group_msg = f"A validation error occured {len(errors)} times: {message}"
-                validation_errors.append(ValidationErrorGroup(schema_id, group_msg, errors))
+                validation_errors.append(ValidationErrorGroup(schema_id, message, errors))
         return validation_errors
 
     def _get_validator(self, schema_id: str) -> Draft7Validator:
