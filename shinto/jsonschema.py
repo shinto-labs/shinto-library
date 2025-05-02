@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -146,84 +147,103 @@ class JsonSchemaRegistry:
 
     @property
     def schema_mappings(self) -> dict[str, str]:
-        """Get the schema mappings."""
+        """Get the schema filepath mappings."""
         return self._schema_mappings.copy()
 
-    def register_schema(self, schema_filepath: str) -> str:
+    def register_directory(self, directory: str, pattern: str = "**/*.json"):
+        """Register all schemas in a directory."""
+        for schema_filepath in Path(directory).resolve().glob(pattern):
+            self.register_schema(schema_filepath)
+
+    def register_schema(self, schema: str | dict) -> str:
         """
         Add a schema to the registry.
 
+        When registering a schema from a dict,
+        you can only reference the schema using the $id not the filepath.
+        When registering a schema from a filepath, and the schema does not have a $id,
+        the schema ID is generated from the filepath.
+
         Args:
-            schema_filepath (str): The path to the schema file.
+            schema (str | dict): JSON schema or filepath to schema.
 
         Returns:
             str: The schema ID.
 
         Raises:
+            ValueError: If the schema does not have a $id. For filepaths,
             KeyError: If a conflicting schema is already registered.
 
         """
-        schema_filepath = str(Path(schema_filepath).resolve())
-        with JsonSchemaRegistry._lock, Path(schema_filepath).open(encoding="UTF-8") as file:
-            schema = json.load(file)
-            schema_id = self._clean_schema_id(schema.get("$id", schema_filepath))
-            schema["$id"] = schema_id
-            if self.schema_id_in_registry(schema_id):
-                if self.contents(schema_id) != schema and self._resolve_schema_refs(
-                    self.contents(schema_id),
-                    True,
-                ) != self._resolve_schema_refs(schema, True):
-                    raise KeyError(
-                        f"Schema with $id '{schema_id}' exists, "
-                        f"but is different from '{schema_filepath}'"
-                    )
-            else:
-                self._registry = self._registry.with_resource(schema_id, Resource(schema, DRAFT7))
-                self._validator_cache.clear()
+        if isinstance(schema, str):
+            schema_filepath = str(Path(schema).resolve())
+            with JsonSchemaRegistry._lock, Path(schema_filepath).open(encoding="UTF-8") as file:
+                schema = json.load(file)
+            schema["$id"] = self._clean_schema_id(schema.get("$id", schema_filepath))
+            schema_id = self._register_schema(schema)
             self._schema_mappings[schema_filepath] = schema_id
             return schema_id
+        return self._register_schema(schema)
 
-    def validate_json_against_schemas(self, data: dict | list, schema_filepaths: list[str]):
+    def _register_schema(self, schema: dict | str) -> str:
+        if not schema.get("$id"):
+            raise ValueError("Schema must have a $id.")
+        schema_id = self._clean_schema_id(schema["$id"])
+        if self.schema_id_in_registry(schema_id):
+            if self.contents(schema_id) != schema and self._resolve_schema_refs(
+                self.contents(schema_id),
+                True,
+            ) != self._resolve_schema_refs(schema, True):
+                raise KeyError(f"Schema '{schema_id}' already registered with different contents.")
+        else:
+            self._registry = self._registry.with_resource(schema_id, Resource(schema, DRAFT7))
+            self._validator_cache.clear()
+        return schema_id
+
+    def validate_json_against_schemas(self, data: dict | list, schema_ids: list[str]):
         """
         Validate JSON data against JSON schemas.
 
         Args:
             data (dict | list): The JSON data to validate.
-            schema_filepaths (list[str]): A list of schema filepaths to validate against.
+            schema_ids (list[str]): A list of schema IDs to validate against.
 
         Raises:
-            KeyError: If the schema is not found in the registry.
-            jsonschema.exceptions.ValidationError: The first validation error, if any.
-            (Any other jsonschema.exceptions exceptions)
+            jsonschema.exceptions.ValidationError: The first validation error.
 
         """
-        for schema_id in [self.get_schema_id(str(Path(fp).resolve())) for fp in schema_filepaths]:
+        for schema_id in schema_ids:
             validator = self._get_validator(schema_id)
             validator.validate(data)
 
     def validate_json_against_schemas_complete(
-        self, data: dict | list, schema_filepaths: list[str]
+        self, data: dict | list, schema_ids: list[str]
     ) -> list[ValidationError]:
         """
         Validate JSON data against JSON schemas and return all errors.
 
         Args:
             data (dict | list): The JSON data to validate.
-            schema_filepaths (list[str]): A list of schema filepaths to validate against.
+            schema_ids (list[str]): A list of schema IDs to validate against.
 
         Returns:
             list[jsonschema.exceptions.ValidationError]: A list of validation errors.
 
-        Raises:
-            KeyError: If the schema is not found in the registry.
-            (Any other jsonschema.exceptions exceptions)
-
         """
         validation_errors = []
-        for schema_id in [self.get_schema_id(str(Path(fp).resolve())) for fp in schema_filepaths]:
+        for schema_id in schema_ids:
             validator = self._get_validator(schema_id)
             validation_errors.extend(list(validator.iter_errors(data)))
         return validation_errors
+
+    def _get_validator(self, schema_id: str) -> Draft7Validator:
+        """Get a validator for a schema, creating it if it doesn't exist in the cache."""
+        if schema_id not in self._validator_cache:
+            schema = self._registry.contents(schema_id)
+            self._validator_cache[schema_id] = Draft7Validator(
+                schema, format_checker=FormatChecker(), registry=self._registry
+            )
+        return self._validator_cache[schema_id]
 
     def schema_registered(self, schema_filepath: str) -> bool:
         """Check if a schema filepath is registered."""
@@ -248,13 +268,20 @@ class JsonSchemaRegistry:
         schema_filepath = str(Path(schema_filepath).resolve())
         return self._schema_mappings.get(schema_filepath)
 
+    def _clean_schema_id(self, schema_id: str) -> str:
+        """Clean a schema ID or convert a schema filepath to a schema ID."""
+        schema_id = re.sub(r"[^a-z0-9_]", "", schema_id.replace("/", "_").lower())
+        return re.sub(r"_+", "_", schema_id).strip("_")
+
     def update_schema_refs_to(self, convert_to: Literal["id", "filepath"]):
         """
-        Update all schema refs in schemas in the registry to IDs or filepaths.
+        Update schema refs.
+
+        Update all schema refs in schemas in the registry if possible.
+        If the reference cannot be updated, it is left unchanged.
 
         Args:
-            convert_to (Literal["id", "filepath"]): If "id", convert refs to schema IDs,
-            otherwise to filepaths.
+            convert_to (Literal["id", "filepath"]): What to replace the refs by.
 
         """
         self._validator_cache.clear()
@@ -263,36 +290,8 @@ class JsonSchemaRegistry:
             new_schema = self._resolve_schema_refs(schema, convert_to)
             self._registry = self._registry.with_resource(schema_id, Resource(new_schema, DRAFT7))
 
-    def _get_validator(self, schema_id: str) -> Draft7Validator:
-        """Get a validator for a schema, creating it if it doesn't exist in the cache."""
-        if schema_id not in self._validator_cache:
-            schema = self._registry.contents(schema_id)
-            self._validator_cache[schema_id] = Draft7Validator(
-                schema, format_checker=FormatChecker(), registry=self._registry
-            )
-        return self._validator_cache[schema_id]
-
-    def _clean_schema_id(self, schema_id: str) -> str:
-        """Clean a schema ID or convert a schema filepath to a schema ID."""
-        schema_id = schema_id.lower()
-        schema_id = "".join(c if c.isalnum() else "_" for c in schema_id)
-        while "__" in schema_id:
-            schema_id = schema_id.replace("__", "_")
-        return schema_id.strip("_")
-
     def _resolve_schema_refs(self, schema: dict, convert_to: Literal["id", "filepath"]) -> dict:
-        """
-        Update schema refs to schema IDs or filepaths.
-
-        Args:
-            schema (dict): The schema to process.
-            convert_to (Literal["id", "filepath"]): If "id", convert refs to schema IDs,
-            otherwise to filepaths.
-
-        Returns:
-            dict: The processed schema with updated refs.
-
-        """
+        """Update schema refs to schema IDs or filepaths."""
         result = {}
         for key, value in schema.items():
             if isinstance(value, dict):
@@ -303,26 +302,43 @@ class JsonSchemaRegistry:
                     for item in value
                 ]
             elif key == "$ref" and not value.startswith("#"):
-                parts = value.split("#", 1)
-                ref_identifier = parts[0]
-                fragment = f"#{parts[1]}" if len(parts) > 1 else ""
-                schema_id = None
-                filepath = None
-
-                if self.schema_registered(ref_identifier):
-                    schema_id = self.get_schema_id(ref_identifier)
-                    filepath = str(Path(ref_identifier).resolve())
-                elif self.schema_id_in_registry(ref_identifier):
-                    schema_id = self._clean_schema_id(ref_identifier)
-                    filepath = self.next_filepath_for_schema_id(ref_identifier)
-                else:
-                    logging.warning("Referenced schema %s not found in registry.", ref_identifier)
-
-                if convert_to == "id":
-                    result[key] = f"{schema_id}{fragment}"
-                else:
-                    result[key] = f"{filepath}{fragment}"
+                result[key] = self._resolve_ref(value, convert_to)
             else:
                 result[key] = value
 
         return result
+
+    def _resolve_ref(self, ref: str, convert_to: Literal["id", "filepath"]) -> str:
+        """Resolve a ref to a schema ID or filepath."""
+        parts = ref.split("#", 1)
+        ref_identifier = parts[0]
+        fragment = f"#{parts[1]}" if len(parts) > 1 else ""
+        schema_id = None
+        filepath = None
+        found_ref = False
+
+        if self.schema_registered(ref_identifier):
+            found_ref = True
+            schema_id = self.get_schema_id(ref_identifier)
+            filepath = str(Path(ref_identifier).resolve())
+        elif self.schema_id_in_registry(ref_identifier):
+            found_ref = True
+            schema_id = self._clean_schema_id(ref_identifier)
+            filepath = self.next_filepath_for_schema_id(ref_identifier)
+
+        if found_ref:
+            if convert_to == "id":
+                return f"{schema_id}{fragment}"
+            if convert_to == "filepath":
+                if filepath:
+                    return f"{filepath}{fragment}"
+
+                logging.warning(
+                    "Referenced schema %s is registered from a JSON schema and does not "
+                    "have a filepath. Skipping ref update.",
+                    ref_identifier,
+                )
+        else:
+            logging.warning("Referenced schema %s not found in registry.", ref_identifier)
+
+        return ref
