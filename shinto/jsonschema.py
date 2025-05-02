@@ -153,7 +153,7 @@ class JsonSchemaRegistry:
     def register_directory(self, directory: str, pattern: str = "**/*.json"):
         """Register all schemas in a directory."""
         for schema_filepath in Path(directory).resolve().glob(pattern):
-            self.register_schema(schema_filepath)
+            self.register_schema(str(schema_filepath))
 
     def register_schema(self, schema: str | dict) -> str:
         """
