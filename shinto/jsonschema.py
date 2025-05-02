@@ -129,6 +129,26 @@ async def validate_json_against_schemas_async(data: dict | list, schema_filename
             raise exception
 
 
+class ValidationErrorGroup:
+    """
+    A group of validation errors.
+
+    schema_id: The ID of the schema that the errors belong to.
+    message: A message describing the errors.
+    errors: A list of validation errors.
+    """
+
+    schema_id: str
+    message: str
+    errors: list[ValidationError]
+
+    def __init__(self, schema_id: str, message: str, errors: list[ValidationError]):
+        """Initialize the ValidationErrorGroup class."""
+        self.schema_id = schema_id
+        self.message = message
+        self.errors = errors
+
+
 class JsonSchemaRegistry:
     """Class for validating JSON against JSON schemas."""
 
@@ -234,7 +254,7 @@ class JsonSchemaRegistry:
         data: dict | list,
         schema_filepaths: list[str] | None = None,
         schema_ids: list[str] | None = None,
-    ) -> list[ValidationError]:
+    ) -> list[ValidationErrorGroup]:
         """
         Validate JSON data against JSON schemas and return all errors.
 
@@ -244,7 +264,7 @@ class JsonSchemaRegistry:
             schema_ids (list[str]): A list of schema IDs to validate against.
 
         Returns:
-            list[jsonschema.exceptions.ValidationError]: A list of validation errors.
+            list[ValidationErrorGroup]: A list of validation error groups.
 
         """
         schema_ids = schema_ids or []
@@ -257,7 +277,18 @@ class JsonSchemaRegistry:
             if not self.schema_id_in_registry(schema_id):
                 raise KeyError(f"Schema '{schema_id}' not found in registry.")
             validator = self._get_validator(schema_id)
-            validation_errors.extend(list(validator.iter_errors(data)))
+            errors = list(validator.iter_errors(data))
+
+            unique_errors = {}
+            for error in errors:
+                path = ".".join(p if isinstance(p, str) else "item" for p in error.path)
+                message = f"{path}: {error.message}"
+                unique_errors.setdefault(message, [])
+                unique_errors[message].append(error)
+
+            for message, errors in unique_errors.items():
+                group_msg = f"A validation error occured {len(errors)} times: {message}"
+                validation_errors.append(ValidationErrorGroup(schema_id, group_msg, errors))
         return validation_errors
 
     def _get_validator(self, schema_id: str) -> Draft7Validator:
