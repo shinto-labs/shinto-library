@@ -200,38 +200,62 @@ class JsonSchemaRegistry:
             self._validator_cache.clear()
         return schema_id
 
-    def validate_json_against_schemas(self, data: dict | list, schema_ids: list[str]):
+    def validate_json_against_schemas(
+        self,
+        data: dict | list,
+        schema_filepaths: list[str] | None = None,
+        schema_ids: list[str] | None = None,
+    ):
         """
         Validate JSON data against JSON schemas.
 
         Args:
             data (dict | list): The JSON data to validate.
+            schema_filepaths (list[str]): A list of schema filepaths to validate against.
             schema_ids (list[str]): A list of schema IDs to validate against.
 
         Raises:
             jsonschema.exceptions.ValidationError: The first validation error.
 
         """
+        schema_ids = schema_ids or []
+        if schema_filepaths:
+            schema_ids.extend(
+                [sid for fp in schema_filepaths if (sid := self.get_schema_id(fp)) is not None]
+            )
         for schema_id in schema_ids:
+            if not self.schema_id_in_registry(schema_id):
+                raise KeyError(f"Schema '{schema_id}' not found in registry.")
             validator = self._get_validator(schema_id)
             validator.validate(data)
 
     def validate_json_against_schemas_complete(
-        self, data: dict | list, schema_ids: list[str]
+        self,
+        data: dict | list,
+        schema_filepaths: list[str] | None = None,
+        schema_ids: list[str] | None = None,
     ) -> list[ValidationError]:
         """
         Validate JSON data against JSON schemas and return all errors.
 
         Args:
             data (dict | list): The JSON data to validate.
+            schema_filepaths (list[str]): A list of schema filepaths to validate against.
             schema_ids (list[str]): A list of schema IDs to validate against.
 
         Returns:
             list[jsonschema.exceptions.ValidationError]: A list of validation errors.
 
         """
+        schema_ids = schema_ids or []
+        if schema_filepaths:
+            schema_ids.extend(
+                [sid for fp in schema_filepaths if (sid := self.get_schema_id(fp)) is not None]
+            )
         validation_errors = []
         for schema_id in schema_ids:
+            if not self.schema_id_in_registry(schema_id):
+                raise KeyError(f"Schema '{schema_id}' not found in registry.")
             validator = self._get_validator(schema_id)
             validation_errors.extend(list(validator.iter_errors(data)))
         return validation_errors
