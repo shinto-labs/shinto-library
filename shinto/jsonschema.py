@@ -324,7 +324,9 @@ class JsonSchemaRegistry:
 
     def _clean_schema_id(self, schema_id: str) -> str:
         """Clean a schema ID or convert a schema filepath to a schema ID."""
-        schema_id = re.sub(r"[^a-z0-9_]", "", schema_id.replace("/", "_").lower())
+        schema_id = re.sub(
+            r"[^a-z0-9_]", "", schema_id.replace("/", "_").replace(".json", "").lower()
+        )
         return re.sub(r"_+", "_", schema_id).strip("_")
 
     def update_schema_refs_to(self, convert_to: Literal["id", "filepath"]):
