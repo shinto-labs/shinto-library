@@ -6,7 +6,6 @@ import logging
 import logging.config
 import re
 import sys
-from importlib.util import find_spec
 
 SHINTO_LOG_FORMAT = (
     "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
@@ -102,11 +101,12 @@ def setup_logging(
         root_logger.addHandler(file_handler)
 
     # Setup journald logging if requested
-    if log_to_journald:  # pragma: no cover # Not available on all platforms
+    # systemd is not available on all platforms (including Windows)
+    if log_to_journald:  # pragma: no cover
         try:
-            if find_spec("JournalHandler") is None:
-                # systemd is not available on all platforms (including Windows)
-                from systemd.journal import JournalHandler  # type: ignore[reportMissingImports]
+            from systemd.journal import (  # pyright: ignore[reportMissingImports], noqa: F401
+                JournalHandler,
+            )
 
             journald_handler = JournalHandler()
             journald_handler.setFormatter(formatter)
