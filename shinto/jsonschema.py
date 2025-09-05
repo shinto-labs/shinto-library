@@ -308,6 +308,10 @@ class JsonSchemaRegistry:
         """Check if a schema ID is in the registry."""
         return self._clean_schema_id(schema_id) in self._registry
 
+    def get_schema(self, schema_id: str) -> dict:
+        """Get a schema by its ID."""
+        return self._registry.contents(self._clean_schema_id(schema_id))
+
     def contents(self, schema_id: str) -> dict:
         """Get the contents of a schema."""
         return self._registry.contents(self._clean_schema_id(schema_id))
