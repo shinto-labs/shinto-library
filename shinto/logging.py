@@ -7,12 +7,6 @@ import logging.config
 import re
 import sys
 
-try:
-    from systemd.journal import JournalHandler  # pyright: ignore[reportMissingImports]
-except ImportError:
-    logging.exception("systemd.journal.JournalHandler not available")
-    JournalHandler = None
-
 SHINTO_LOG_FORMAT = (
     "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
     'name="%(application_name)s" logger_name="%(name)s" level="%(levelname)s" msg="%(message)s"'
@@ -108,7 +102,11 @@ def setup_logging(
 
     # Setup journald logging if requested
     # systemd is not available on all platforms (including Windows)
-    if log_to_journald and JournalHandler:  # pragma: no cover
+    if log_to_journald:  # pragma: no cover
+        try:
+            from systemd.journal import JournalHandler  # pyright: ignore[reportMissingImports]
+        except ImportError:
+            logging.exception("systemd.journal.JournalHandler not available")
         journald_handler = JournalHandler()
         journald_handler.setFormatter(formatter)
         root_logger.addHandler(journald_handler)
