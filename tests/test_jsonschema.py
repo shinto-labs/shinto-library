@@ -169,6 +169,25 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         # Test non-registered schema
         self.assertFalse(self.registry.schema_registered("non_existent_schema.json"))
 
+    def test_get_schema(self):
+        """Test getting a schema by its ID."""
+        # Register a schema first
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+                self.test_schema
+            )
+            self.registry.register_schema(self.test_schema_filepath)
+
+        # Test getting registered schema
+        schema = self.registry.get_schema("test_schema")
+        self.assertEqual(schema, self.test_schema)
+        # Test getting non-registered schema
+        with self.assertRaises(KeyError):
+            self.registry.get_schema("non_existent_schema")
+
     def test_schema_id_in_registry(self):
         """Test checking if a schema ID is in the registry."""
         # Register a schema first

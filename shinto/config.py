@@ -6,6 +6,8 @@ import configparser
 import copy
 import io
 import json
+import os
+import re
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,53 @@ class ConfigType(Enum):
 
 class ConfigError(Exception):
     """Gets raised when an unsupported config file type is found."""
+
+
+def _substitute_env_vars(
+    data: dict[str, Any] | list[Any] | str,
+    raise_on_missing: bool = False,
+) -> dict[str, Any] | list[Any] | str:
+    """
+    Recursively substitute environment variables in config data.
+
+    Supports ${VAR_NAME} and ${VAR_NAME:default_value} syntax.
+
+    Args:
+        data: The data to process (dict, list, or string).
+        raise_on_missing: If True, raises KeyError for missing env vars without defaults.
+
+    Returns:
+        The data with environment variables substituted.
+
+    Raises:
+        KeyError: If raise_on_missing is True and an env var is missing without a default.
+
+    """
+    if isinstance(data, dict):
+        return {key: _substitute_env_vars(value, raise_on_missing) for key, value in data.items()}
+    if isinstance(data, list):
+        return [_substitute_env_vars(item, raise_on_missing) for item in data]
+    if isinstance(data, str):
+        # Pattern to match ${VAR_NAME} or ${VAR_NAME:default_value}
+        pattern = re.compile(r"\$\{([^}:]+)(?::([^}]*))?\}")
+
+        def replace_match(match: re.Match[str]) -> str:
+            var_name = match.group(1)
+            default_value = match.group(2)
+
+            env_value = os.environ.get(var_name)
+            if env_value is not None:
+                return env_value
+            if default_value is not None:
+                return default_value
+            if raise_on_missing:
+                msg = f"Environment variable '{var_name}' not found and no default provided"
+                raise KeyError(msg)
+            # Return the original placeholder if env var not found and no default
+            return match.group(0)
+
+        return pattern.sub(replace_match, data)
+    return data
 
 
 def _merge_dicts(d1: dict, d2: dict) -> dict:
@@ -86,6 +135,8 @@ def _read_config_file(file_path: str) -> dict[str, Any]:
 def load_config_file(
     file_path: str,
     defaults: dict[str, Any] | None = None,
+    substitute_env_vars: bool = True,
+    raise_on_missing_env: bool = False,
 ) -> dict[str, Any]:
     """
     Load config from file.
@@ -93,6 +144,8 @@ def load_config_file(
     Args:
         file_path (str): The path to the config file.
         defaults (dict): If provided, the default values to merge with the config file.
+        substitute_env_vars (bool): If True, substitute environment variables in config values.
+        raise_on_missing_env (bool): If True, raise error for missing env vars without defaults.
 
     Returns:
         dict: The config data.
@@ -105,6 +158,9 @@ def load_config_file(
         raise FileNotFoundError(msg)
 
     config = _read_config_file(file_path)
+
+    if substitute_env_vars:
+        config = _substitute_env_vars(config, raise_on_missing_env)
 
     return _merge_dicts(config, defaults)
 
