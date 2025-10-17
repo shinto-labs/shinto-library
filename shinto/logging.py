@@ -6,7 +6,12 @@ import logging
 import logging.config
 import re
 import sys
-from importlib.util import find_spec
+
+try:
+    from systemd.journal import JournalHandler  # pyright: ignore[reportMissingImports]
+except ImportError:
+    logging.exception("systemd.journal.JournalHandler not available")
+    JournalHandler = None
 
 SHINTO_LOG_FORMAT = (
     "time=%(asctime)s.%(msecs)03d+00:00 pid=%(process)06d "
@@ -102,19 +107,11 @@ def setup_logging(
         root_logger.addHandler(file_handler)
 
     # Setup journald logging if requested
-    if log_to_journald:  # pragma: no cover # Not available on all platforms
-        try:
-            if find_spec("JournalHandler") is None:
-                # systemd is not available on all platforms (including Windows)
-                from systemd.journal import JournalHandler  # type: ignore[reportMissingImports]
-
-            journald_handler = JournalHandler()
-            journald_handler.setFormatter(formatter)
-            root_logger.addHandler(journald_handler)
-        except ImportError:
-            root_logger.exception(
-                "Failed to import systemd.journal. Journal logging not available."
-            )
+    # systemd is not available on all platforms (including Windows)
+    if log_to_journald and JournalHandler:  # pragma: no cover
+        journald_handler = JournalHandler()
+        journald_handler.setFormatter(formatter)
+        root_logger.addHandler(journald_handler)
 
     # Update the log record factory to include the application name
     existing_record_factory = logging.getLogRecordFactory()
