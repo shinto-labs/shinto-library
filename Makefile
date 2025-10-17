@@ -29,3 +29,6 @@ ruff_format:
 
 generate_docs:
 	$(PDM_RUN) sphinx-apidoc -f -o docs/modules shinto && cd docs && make html
+
+merge_dev:
+	git checkout main && git pull && git merge --no-ff -m "Merge development into main" development && git push && git checkout development
