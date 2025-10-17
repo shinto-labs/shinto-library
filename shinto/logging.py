@@ -103,10 +103,8 @@ def setup_logging(
     # Setup journald logging if requested
     # systemd is not available on all platforms (including Windows)
     if log_to_journald:  # pragma: no cover
-        try:
-            from systemd.journal import JournalHandler  # pyright: ignore[reportMissingImports]
-        except ImportError:
-            logging.exception("systemd.journal.JournalHandler not available")
+        from systemd.journal import JournalHandler  # pyright: ignore[reportMissingImports]
+
         journald_handler = JournalHandler()
         journald_handler.setFormatter(formatter)
         root_logger.addHandler(journald_handler)
