@@ -33,13 +33,16 @@ class Connection(psycopg.Connection):
             cur.execute(query, params)
             return cur.fetchall()
 
-    def execute_command(self, query: str, params: None | dict[str:Any] = None) -> int:
+    def execute_command(
+        self, query: str, params: None | dict[str:Any] = None, should_commit: bool = True
+    ) -> int:
         """
         Execute a command (INSERT, UPDATE, DELETE) that doesn't return data.
 
         Args:
             query (str): The command to execute.
             params (dict): The query parameters to format the command.
+            should_commit (bool): Whether to commit the transaction after execution.
 
         Returns:
             int: The number of rows affected.
@@ -55,9 +58,11 @@ class Connection(psycopg.Connection):
         with self.cursor() as cur:
             try:
                 cur.execute(query, params)
-                self.commit()
+                if should_commit:
+                    self.commit()
             except psycopg.Error:
-                self.rollback()
+                if should_commit:
+                    self.rollback()
                 raise
             else:
                 return cur.rowcount
@@ -117,13 +122,19 @@ class AsyncConnection(psycopg.AsyncConnection):
             await cur.execute(query, params)
             return await cur.fetchall()
 
-    async def execute_command(self, query: str, params: None | dict[str:Any] = None) -> int:
+    async def execute_command(
+        self,
+        query: str,
+        params: None | dict[str:Any] = None,
+        should_commit: bool = True,
+    ) -> int:
         """
         Execute a command (INSERT, UPDATE, DELETE) that doesn't return data asynchronously.
 
         Args:
             query (str): The command to execute.
             params (dict): The query parameters to format the command.
+            should_commit (bool): Whether to commit the transaction after execution.
 
         Returns:
             int: The number of rows affected.
@@ -139,9 +150,11 @@ class AsyncConnection(psycopg.AsyncConnection):
         async with self.cursor() as cur:
             try:
                 await cur.execute(query, params)
-                await self.commit()
+                if should_commit:
+                    await self.commit()
             except psycopg.Error:
-                await self.rollback()
+                if should_commit:
+                    await self.rollback()
                 raise
             else:
                 return cur.rowcount
