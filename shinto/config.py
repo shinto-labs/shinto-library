@@ -157,7 +157,7 @@ def load_config_file(
         msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    config = _read_config_file(file_path)
+    config = _read_config_file(file_path) or {}
 
     if substitute_env_vars:
         config = _substitute_env_vars(config, raise_on_missing_env)
