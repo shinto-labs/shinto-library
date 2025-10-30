@@ -46,6 +46,16 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(yaml_config, dict)
         self.assertDictEqual(yaml_config, {"test": "value"})
 
+    def test_empty_file(self):
+        """Test loading an empty config file."""
+        empty_file_path = Path(self.temp_dir) / "empty.yaml"
+        with Path(empty_file_path).open("w") as empty_file:
+            empty_file.write("")
+        self.assertTrue(Path(empty_file_path).is_file())
+        empty_config = load_config_file(empty_file_path)
+        self.assertIsInstance(empty_config, dict)
+        self.assertDictEqual(empty_config, {})
+
     def test_load_config_file_json(self):
         """Test loading a JSON config file."""
         json_file_path = Path(self.temp_dir) / "config.json"
