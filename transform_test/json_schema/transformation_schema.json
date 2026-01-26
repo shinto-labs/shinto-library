@@ -1,0 +1,312 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Transformation Pipeline Schema",
+  "description": "Schema for project transformation pipeline configuration",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/step"
+  },
+  "definitions": {
+    "step": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the pipeline step"
+        },
+        "init": {
+          "type": "string",
+          "enum": ["copy", "empty"],
+          "default": "copy",
+          "description": "Initialization strategy: 'copy' to start with input row, 'empty' to start fresh"
+        },
+        "transformations": {
+          "type": "array",
+          "description": "List of transformation actions to apply",
+          "items": {
+            "$ref": "#/definitions/action"
+          }
+        },
+        "filter": {
+          "$ref": "#/definitions/filter",
+          "description": "Optional filter to apply after transformations; rows that don't pass are dropped"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["action"],
+      "oneOf": [
+        { "$ref": "#/definitions/addFieldAction" },
+        { "$ref": "#/definitions/setFieldAction" },
+        { "$ref": "#/definitions/removeFieldAction" },
+        { "$ref": "#/definitions/renameFieldAction" },
+        { "$ref": "#/definitions/copyFieldAction" }
+      ]
+    },
+    "addFieldAction": {
+      "type": "object",
+      "required": ["action", "key"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "add_field"
+        },
+        "key": {
+          "type": "string",
+          "description": "Name of the field to add"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "str", "text", "int", "integer", "float", "number", "bool", "boolean", "json", "object", "dict"],
+          "description": "Data type for casting the value"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["project", "stage"],
+          "description": "Level of the field (project or stage) for proper reconstruction"
+        },
+        "source": {
+          "$ref": "#/definitions/source",
+          "description": "Source specification for the field value"
+        }
+      }
+    },
+    "setFieldAction": {
+      "type": "object",
+      "required": ["action", "key"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "set_field"
+        },
+        "key": {
+          "type": "string",
+          "description": "Name of the field to set (overwrites if exists)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "str", "text", "int", "integer", "float", "number", "bool", "boolean", "json", "object", "dict"],
+          "description": "Data type for casting the value"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["project", "stage"],
+          "description": "Level of the field (project or stage) for proper reconstruction"
+        },
+        "source": {
+          "$ref": "#/definitions/source",
+          "description": "Source specification for the field value"
+        }
+      }
+    },
+    "removeFieldAction": {
+      "type": "object",
+      "required": ["action", "key"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "remove_field"
+        },
+        "key": {
+          "type": "string",
+          "description": "Name of the field to remove"
+        }
+      },
+      "additionalProperties": false
+    },
+    "renameFieldAction": {
+      "type": "object",
+      "required": ["action", "from", "to"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "rename_field"
+        },
+        "from": {
+          "type": "string",
+          "description": "Source field name"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target field name"
+        }
+      },
+      "additionalProperties": false
+    },
+    "copyFieldAction": {
+      "type": "object",
+      "required": ["action", "from", "to"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "copy_field"
+        },
+        "from": {
+          "type": "string",
+          "description": "Source field name to copy from"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target field name to copy to"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "description": "Source specification for field value resolution",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["const"],
+          "properties": {
+            "const": {
+              "description": "Constant value"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Field path to extract from the row (using glom notation)"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["template"],
+          "properties": {
+            "template": {
+              "type": "string",
+              "description": "String template using {field_name} placeholders"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["expr"],
+          "properties": {
+            "expr": {
+              "type": "string",
+              "description": "Python expression to evaluate with row fields as variables"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "filter": {
+      "type": "object",
+      "description": "Filter specification",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["expr"],
+          "properties": {
+            "expr": {
+              "type": "string",
+              "description": "Boolean Python expression to evaluate"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["all"],
+          "properties": {
+            "all": {
+              "type": "array",
+              "description": "All filters must pass (AND logic)",
+              "items": {
+                "$ref": "#/definitions/filter"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["any"],
+          "properties": {
+            "any": {
+              "type": "array",
+              "description": "At least one filter must pass (OR logic)",
+              "items": {
+                "$ref": "#/definitions/filter"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["not"],
+          "properties": {
+            "not": {
+              "$ref": "#/definitions/filter",
+              "description": "Negates the filter result"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["exists"],
+          "properties": {
+            "exists": {
+              "type": "object",
+              "required": ["path"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Field path to check for existence"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["eq"],
+          "properties": {
+            "eq": {
+              "type": "array",
+              "description": "Equality comparison: [left_source, right_source]",
+              "items": {
+                "$ref": "#/definitions/source"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["in"],
+          "properties": {
+            "in": {
+              "type": "array",
+              "description": "Membership test: [value_source, collection_source]",
+              "items": {
+                "$ref": "#/definitions/source"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
