@@ -1,0 +1,434 @@
+{
+    "fields": [
+        {
+            "field": "naam",
+            "type": "text",
+            "label": "Projectnaam",
+            "level": "project"
+        },
+        {
+            "field": "vertrouwelijk",
+            "type": "categorical",
+            "label": "Vertrouwelijk",
+            "level": "project",
+            "values": [
+                {
+                    "value": "ja",
+                    "label": "Vertrouwelijk",
+                    "rank": 0
+                },
+                {
+                    "value": "nee",
+                    "label": "Niet vertrouwelijk",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "share_profile_provincie",
+            "type": "categorical",
+            "label": "Gedeeld met de Provincie",
+            "level": "project",
+            "values": [
+                {
+                    "value": "alleen_aantallen",
+                    "label": "alleen_aantallen",
+                    "rank": 0
+                },
+                {
+                    "value": "naam_locatie_en_aantallen",
+                    "label": "naam_locatie_en_aantallen",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "project_id",
+            "type": "number",
+            "label": "Project volgnummer",
+            "level": "project"
+        },
+        {
+            "field": "share_profile_regio",
+            "type": "categorical",
+            "label": "Gedeeld met de Regio",
+            "level": "project",
+            "values": [
+                {
+                    "value": "alleen_aantallen",
+                    "label": "alleen_aantallen",
+                    "rank": 0
+                },
+                {
+                    "value": "naam_locatie_en_aantallen",
+                    "label": "naam_locatie_en_aantallen",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "project_creation_datetime",
+            "type": "date-time",
+            "label": "Project aangemaakt op",
+            "level": "project"
+        },
+        {
+            "field": "geo",
+            "type": "polygon",
+            "label": "Geometrie",
+            "level": "project"
+        },
+        {
+            "field": "info_from_point",
+            "type": "text",
+            "label": "info_from_point",
+            "level": "project"
+        },
+        {
+            "field": "bestemmingsplan_status",
+            "type": "categorical",
+            "label": "Status bestemmingsplan",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "1_geen_aanvraag_zacht_poc_",
+                    "label": "1. geen aanvraag/ zacht (POC)",
+                    "rank": 0
+                },
+                {
+                    "value": "2_ontwerp_bp_zacht_otw_",
+                    "label": "2. ontwerp bp/ zacht (OTW)",
+                    "rank": 1
+                },
+                {
+                    "value": "3_concept_bp_zacht_plv_",
+                    "label": "3. concept bp/ zacht (PLV)",
+                    "rank": 2
+                },
+                {
+                    "value": "4_vastgesteld_hard_vst_",
+                    "label": "4. vastgesteld/ hard (VST)",
+                    "rank": 3
+                },
+                {
+                    "value": "5_onherroepelijk_hard_onh_",
+                    "label": "5. onherroepelijk/ hard (ONH)",
+                    "rank": 4
+                }
+            ]
+        },
+        {
+            "field": "bestuurlijk_opdrachtgever",
+            "type": "string",
+            "label": "Bestuurlijk opdrachtgever",
+            "level": "stage"
+        },
+        {
+            "field": "bruto_aantalwoningen",
+            "type": "number",
+            "label": "Bruto aantalwoningen",
+            "level": "stage"
+        },
+        {
+            "field": "collectieve_woonvorm",
+            "type": "categorical",
+            "label": "Collectieve woonvorm",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "ja",
+                    "label": "ja",
+                    "rank": 0
+                },
+                {
+                    "value": "nee",
+                    "label": "nee",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "huur_koop",
+            "type": "categorical",
+            "label": "Huur/Koop",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "huur",
+                    "label": "Huur",
+                    "rank": 0
+                },
+                {
+                    "value": "koop",
+                    "label": "Koop",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "intern_projectummer",
+            "type": "string",
+            "label": "Intern projectnummer",
+            "level": "stage"
+        },
+        {
+            "field": "netto_aantalwoningen",
+            "type": "number",
+            "label": "Netto aantalwoningen",
+            "level": "stage"
+        },
+        {
+            "field": "onzelfstandig",
+            "type": "categorical",
+            "label": "Onzelfstandig",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "ja",
+                    "label": "Onzelfstandig",
+                    "rank": 0
+                },
+                {
+                    "value": "nee",
+                    "label": "Zelfstandig",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "opleverjaar",
+            "type": "number",
+            "label": "Opleverjaar",
+            "level": "stage"
+        },
+        {
+            "field": "oplevermaand",
+            "type": "number",
+            "label": "Oplevermaand",
+            "level": "stage"
+        },
+        {
+            "field": "planstatus",
+            "type": "categorical",
+            "label": "Planstatus",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "actief",
+                    "label": "Actief",
+                    "rank": 0
+                },
+                {
+                    "value": "gereed",
+                    "label": "Gereed",
+                    "rank": 1
+                }
+            ]
+        },
+        {
+            "field": "prijsklasse",
+            "type": "categorical",
+            "label": "Prijsklasse",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "sociale_huur",
+                    "label": "Sociale huur",
+                    "rank": 0
+                },
+                {
+                    "value": "middeldure_huur",
+                    "label": "Middeldure huur",
+                    "rank": 1
+                },
+                {
+                    "value": "huur_duur",
+                    "label": "Huur duur",
+                    "rank": 2
+                },
+                {
+                    "value": "goedkope_koop",
+                    "label": "Goedkope koop",
+                    "rank": 3
+                },
+                {
+                    "value": "middeldure_koop",
+                    "label": "Middeldure koop",
+                    "rank": 4
+                },
+                {
+                    "value": "koop_duur",
+                    "label": "Koop duur",
+                    "rank": 5
+                },
+                {
+                    "value": "koop_onbekend",
+                    "label": "Koop onbekend",
+                    "rank": 6
+                },
+                {
+                    "value": "huur_onbekend",
+                    "label": "Huur onbekend",
+                    "rank": 7
+                }
+            ]
+        },
+        {
+            "field": "procesfase",
+            "type": "categorical",
+            "label": "Procesfase",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "0_verdichtingsopgave_in_voorbereiding",
+                    "label": "0. verdichtingsopgave in voorbereiding",
+                    "rank": 0
+                },
+                {
+                    "value": "1_vooroverleg_conceptverzoek",
+                    "label": "1. vooroverleg/conceptverzoek",
+                    "rank": 1
+                },
+                {
+                    "value": "2_kerngroep_stuurgroep",
+                    "label": "2. kerngroep-stuurgroep",
+                    "rank": 2
+                },
+                {
+                    "value": "3_aanvraag_bopa_herziening_bestemmingsplan",
+                    "label": "3. aanvraag BOPA/herziening bestemmingsplan",
+                    "rank": 3
+                },
+                {
+                    "value": "4_in_afwachting_aanvraag_omgevingsvergunning",
+                    "label": "4. in afwachting aanvraag omgevingsvergunning",
+                    "rank": 4
+                },
+                {
+                    "value": "5_aanvraag_omgevingsvergunning",
+                    "label": "5. aanvraag omgevingsvergunning",
+                    "rank": 5
+                },
+                {
+                    "value": "6_omgevingsvergunning_verleend",
+                    "label": "6. omgevingsvergunning verleend",
+                    "rank": 6
+                },
+                {
+                    "value": "7_start_bouw",
+                    "label": "7. start bouw",
+                    "rank": 7
+                },
+                {
+                    "value": "8_opgeleverd",
+                    "label": "8. opgeleverd",
+                    "rank": 8
+                },
+                {
+                    "value": "10_vervallen",
+                    "label": "10. vervallen",
+                    "rank": 9
+                },
+                {
+                    "value": "11_on_hold",
+                    "label": "11. on hold",
+                    "rank": 10
+                }
+            ]
+        },
+        {
+            "field": "projectfase",
+            "type": "categorical",
+            "label": "Projectfase",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "1_zacht_geen_status",
+                    "label": "1. zacht geen status",
+                    "rank": 0
+                },
+                {
+                    "value": "2_zacht_in_voorbereiding",
+                    "label": "2. zacht in voorbereiding",
+                    "rank": 1
+                },
+                {
+                    "value": "3_hard_in_voorbereiding",
+                    "label": "3. hard in voorbereiding",
+                    "rank": 2
+                },
+                {
+                    "value": "4_hard_in_uitvoering",
+                    "label": "4. hard in uitvoering",
+                    "rank": 3
+                }
+            ]
+        },
+        {
+            "field": "projectleider",
+            "type": "string",
+            "label": "Projectleider",
+            "level": "stage"
+        },
+        {
+            "field": "sloop_aantalwoningen",
+            "type": "number",
+            "label": "Sloop aantalwoningen",
+            "level": "stage"
+        },
+        {
+            "field": "stage_modified_datetime",
+            "type": "date-time",
+            "label": "Bouwcluster bijgewerkt op",
+            "level": "stage"
+        },
+        {
+            "field": "stage_naam",
+            "type": "text",
+            "label": "Bouwcluster naam",
+            "level": "stage"
+        },
+        {
+            "field": "stage_uuid",
+            "type": "string",
+            "label": "Bouwcluster identificatie",
+            "level": "stage"
+        },
+        {
+            "field": "startbouwjaar",
+            "type": "number",
+            "label": "Startbouwjaar",
+            "level": "stage"
+        },
+        {
+            "field": "startbouwmaand",
+            "type": "number",
+            "label": "Startbouwmaand",
+            "level": "stage"
+        },
+        {
+            "field": "tekening_nr",
+            "type": "string",
+            "label": "Tekeningnummer",
+            "level": "stage"
+        },
+        {
+            "field": "woningtype",
+            "type": "categorical",
+            "label": "Woningtype",
+            "level": "stage",
+            "values": [
+                {
+                    "value": "grondgebonden",
+                    "label": "Grondgebonden",
+                    "rank": 0
+                },
+                {
+                    "value": "gestapeld",
+                    "label": "Gestapeld",
+                    "rank": 1
+                }
+            ]
+        }
+    ]
+}
