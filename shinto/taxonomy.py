@@ -68,7 +68,7 @@ class TaxonomyField:
     label: str
     values: list[TaxonomyFieldValue] | None
     description: str | None
-    level: str | None
+    level: TAXONOMY_LEVEL | None
     tags: list[str] | None
 
     def __init__(self, field_dict: dict):
@@ -94,7 +94,7 @@ class TaxonomyField:
         self.label = field_dict["label"]
         self.description = field_dict.get("description")
         self.level = field_dict.get("level")
-        self.tags = field_dict.get("tag")
+        self.tags = field_dict.get("tags")
         self.values = None
         if "values" in field_dict:
             if not isinstance(field_dict["values"], list):
@@ -231,7 +231,7 @@ class Taxonomy:
             if field.field_id in data:
                 field.validate(data[field.field_id])
 
-            if field.level and "stage" in field.level and "stages" in data:
+            if field.level and field.level == "stage_plus" and "stages" in data:
                 stages = data["stages"]
                 for idx, stage in enumerate(stages):
                     if field.field_id in stage:
