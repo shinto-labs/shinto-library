@@ -2,10 +2,11 @@
 
 __all__ = [
     "AsyncDatabaseConnection",
-    "check_taxonomy_compliance",
     "DatabaseConnection",
     "QueueError",
     "QueueHandler",
+    "Taxonomy",
+    "TaxonomyComplianceError",
     "get_json_object_from_query_result",
     "inc_persistant_counter",
     "init_persistant_metrics",
@@ -17,8 +18,6 @@ __all__ = [
     "retry_call",
     "setup_logging",
     "stage_data_to_projects",
-    "Taxonomy",
-    "TaxonomyComplianceError",
     "transform_data",
     "validate_json_against_schemas",
     "validate_json_against_schemas_async",
@@ -35,5 +34,5 @@ from .logging import setup_logging
 from .metrics import inc_persistant_counter, init_persistant_metrics, push_metric
 from .rabbitmq import QueueError, QueueHandler
 from .retry_wrapper import retry, retry_call
-from .taxonomy import check_taxonomy_compliance, Taxonomy, TaxonomyComplianceError
+from .taxonomy import Taxonomy, TaxonomyComplianceError
 from .transform import transform_data
