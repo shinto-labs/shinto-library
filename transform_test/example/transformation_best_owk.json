@@ -8,7 +8,7 @@
         "key": "include_for_owk",
         "type": "boolean",
         "source": {
-          "expr": "vertrouwelijk == 'nee' and share_profile_owk in ['naam_locatie_en_aantallen', 'full']"
+          "expr": "opleverjaar >= 2025 and opleverjaar <= 2040 and share_profile_owk in ['naam_locatie_en_aantallen', 'full']"
         }
       }
     ],
@@ -87,6 +87,21 @@
       {
         "action": "remove_field",
         "key": "include_for_owk"
+      },
+      {
+        "action": "rename_field",
+        "from": "publieke_naam",
+        "to": "naam"
+      },
+      {
+        "action": "rename_field",
+        "from": "publieke_omschrijving",
+        "to": "omschrijving"
+      },
+      {
+        "action": "rename_field",
+        "from": "publieke_ontwikkelaar",
+        "to": "ontwikkelaar"
       }
     ]
   }
