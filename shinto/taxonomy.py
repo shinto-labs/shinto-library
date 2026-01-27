@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 import datetime
+import json
+from pathlib import Path
 from typing import Any
 
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
 from typing_extensions import Literal
+
+GEOJSON_FEATURE_SCHEMA = json.loads(
+    (Path(__file__).parent / "json_schema/geojson_feature_schema.json").read_text()
+)
 
 TAXONOMY_LEVEL = Literal["stage_plus"]
 
@@ -25,8 +33,8 @@ type_mapping = {
     "string": str,
     "date-time": str,
     "categorical": str,
-    "multi_categorical": list[str],
-    "polygon": list[dict],
+    "multi_categorical": list,
+    "polygon": list,
 }
 
 
@@ -101,7 +109,6 @@ class TaxonomyField:
             TaxonomyComplianceError: If value doesn't comply
 
         """
-        # Skip None values (field is optional)
         # TODO: Should we enforce required fields?
         if value is None:
             raise TaxonomyComplianceError(f"Field '{self.field_id}' is required but missing.")
@@ -113,33 +120,60 @@ class TaxonomyField:
             )
 
         if self.type == "multi_categorical":
-            if not isinstance(value, list):
-                raise TaxonomyComplianceError(
-                    f"Field '{self.field_id}' expects a list of values, "
-                    f"got {type(value).__name__}: {value}"
-                )
-            for v in value:
-                if v not in [val.value for val in self.values]:
-                    raise TaxonomyComplianceError(
-                        f"Field '{self.field_id}' has invalid value '{v}'. "
-                        f"Allowed values are {[val.value for val in self.values]}"
-                    )
+            self._validate_multi_categorical(value)
+        elif self.type == "categorical":
+            self._validate_categorical(value)
+        elif self.type == "date-time":
+            self._validate_date_time(value)
 
-        if self.type == "categorical" and value not in [val.value for val in self.values]:
+        if self.type == "polygon":
+            self._validate_polygon(value)
+
+    def _validate_multi_categorical(self, value: Any):  # noqa: ANN401
+        """Validate multi_categorical field value."""
+        for v in value:
+            if v not in [val.value for val in self.values]:
+                raise TaxonomyComplianceError(
+                    f"Field '{self.field_id}' has invalid value '{v}'. "
+                    f"Allowed values are {[val.value for val in self.values]}"
+                )
+
+    def _validate_categorical(self, value: Any):  # noqa: ANN401
+        """Validate categorical field value."""
+        if value not in [val.value for val in self.values]:
             raise TaxonomyComplianceError(
                 f"Field '{self.field_id}' has invalid value '{value}'. "
                 f"Allowed values are {[val.value for val in self.values]}"
             )
 
-        if self.type == "date-time":
-            try:
-                datetime.datetime.fromisoformat(value)
-            except ValueError as e:
-                raise TaxonomyComplianceError(
-                    f"Field '{self.field_id}' expects a date-time in ISO 8601 format, got: {value}"
-                ) from e
+    def _validate_date_time(self, value: Any):  # noqa: ANN401
+        """Validate date-time field value."""
+        try:
+            datetime.datetime.fromisoformat(value)
+        except ValueError as e:
+            raise TaxonomyComplianceError(
+                f"Field '{self.field_id}' expects a date-time in ISO 8601 format, got: {value}"
+            ) from e
 
-        # TODO: how do we validate polygon?
+    def _validate_polygon(self, value: Any):  # noqa: ANN401
+        """Validate polygon field value."""
+        # TODO: Is polygon always a list of GeoJSON features?
+        try:
+            for item in value:
+                if "geometry" not in item:
+                    raise TaxonomyComplianceError(
+                        f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
+                    )
+                geojson_feature = {
+                    "type": item.get("type", "Feature"),
+                    "geometry": item["geometry"],
+                    "properties": item.get("properties", None),
+                }
+                validate(geojson_feature, GEOJSON_FEATURE_SCHEMA)
+        except ValidationError as e:
+            raise TaxonomyComplianceError(
+                f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
+            ) from e
 
 
 class Taxonomy:
