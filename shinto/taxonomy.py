@@ -115,7 +115,8 @@ class TaxonomyField:
         if self.type == "multi_categorical":
             if not isinstance(value, list):
                 raise TaxonomyComplianceError(
-                    f"Field '{self.field_id}' expects a list of values, got {type(value).__name__}: {value}"
+                    f"Field '{self.field_id}' expects a list of values, "
+                    f"got {type(value).__name__}: {value}"
                 )
             for v in value:
                 if v not in [val.value for val in self.values]:
