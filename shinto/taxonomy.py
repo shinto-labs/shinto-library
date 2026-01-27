@@ -72,7 +72,14 @@ class TaxonomyField:
     tags: list[str] | None
 
     def __init__(self, field_dict: dict):
-        """Initialize the Field from a dictionary."""
+        """
+        Initialize the Field from a dictionary.
+
+        Raises:
+            TypeError: If field_dict is not valid
+            ValueError: If field_dict is missing required fields
+
+        """
         if not isinstance(field_dict, dict):
             raise TypeError("field_dict must be a dictionary.")
         if "field" not in field_dict or "type" not in field_dict or "label" not in field_dict:
@@ -183,7 +190,14 @@ class Taxonomy:
     fields: list[TaxonomyField]
 
     def __init__(self, taxonomy_dict: dict):
-        """Initialize the Taxonomy from a dictionary."""
+        """
+        Initialize the Taxonomy from a dictionary.
+
+        Raises:
+            TypeError: If taxonomy_dict is not valid
+            ValueError: If taxonomy_dict is missing required fields
+
+        """
         if not isinstance(taxonomy_dict, dict):
             raise TypeError("taxonomy_dict must be a dictionary.")
         if "fields" not in taxonomy_dict:
