@@ -1,6 +1,6 @@
 [project]
 name = "shinto"
-version = "1.1.25"
+version = "1.1.26"
 description = "Shinto Labs default python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
@@ -17,7 +17,7 @@ dependencies = [
     "glom>=23.5.0",
     "simpleeval>=0.9.13",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.14"
 readme = "README.md"
 
 [tool.setuptools]
