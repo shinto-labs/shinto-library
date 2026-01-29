@@ -1,0 +1,60 @@
+{'id': '0873b28b-811f-4866-88a1-23afc35a305a', 'timestamp': '2025-12-18T04: 00: 41.599993+00: 00', 'action': 'created', 'user_id': 'e391633f-0074-47fd-b70d-659451b6c873', 'group_id': '6dadbc68-a58c-4f39-a6ca-b3a9274a28fc', 'tags': [], 'parent_ids': [], 'taxonomy_id': None, 'taxonomy_timestamp': None, 'data': {'geo': [
+            {'geometry': {'type': 'Polygon', 'coordinates': [
+                        [
+                            [
+                                5.400056,
+                                51.513856
+                            ],
+                            [
+                                5.399374,
+                                51.51461
+                            ],
+                            [
+                                5.398291,
+                                51.51483
+                            ],
+                            [
+                                5.398043,
+                                51.514657
+                            ],
+                            [
+                                5.398549,
+                                51.51456
+                            ],
+                            [
+                                5.3985,
+                                51.514416
+                            ],
+                            [
+                                5.399417,
+                                51.513592
+                            ],
+                            [
+                                5.400056,
+                                51.513856
+                            ]
+                        ]
+                    ]
+                }
+            },
+            {'geometry': {'type': 'Point', 'coordinates': [
+                        5.398741,
+                        51.51434
+                    ]
+                }
+            }
+        ], 'naam': 'Nieuwstraat ', 'stages': [
+            {'breiding': 'inbreiding', 'huur_koop': 'koop', 'nultreden': 'overig', 'planstatus': 'actief', 'procesfase': 'planologische_voorbereiding', 'stage_naam': 'blok 2026-2030 deel 1', 'stage_uuid': 'a2ca0877-9141-4412-a53f-54e6133330d0', 'woningtype': 'eengezins', 'woonmilieu': 'gs', 'opleverjaar': 2028, 'prijsklasse': '\n  Koop betaalbaar\n  ', 'oplevermaand': 1, 'nieuw_verbouw': 'nieuwbouw_vervangend', 'projectleider': 'Sander van Kollenburg', 'startbouwjaar': 2024, 'startbouwmaand': 1, 'juridische_status': 'plv', 'bruto_aantalwoningen': 17, 'netto_aantalwoningen': 17, 'sloop_aantalwoningen': 0, 'stage_modified_datetime': '2022-04-14T00: 00: 00'
+            },
+            {'breiding': 'inbreiding', 'huur_koop': 'koop', 'nultreden': 'overig', 'planstatus': 'actief', 'procesfase': 'planologische_voorbereiding', 'stage_naam': 'blok 2026-2030 deel 3', 'stage_uuid': '59706717-6f5f-4577-8612-1aa9a1dfa14b', 'woningtype': 'eengezins', 'woonmilieu': 'gs', 'opleverjaar': 2028, 'prijsklasse': '\n  Koop duur\n  ', 'oplevermaand': 1, 'nieuw_verbouw': 'nieuwbouw_vervangend', 'projectleider': 'Sander van Kollenburg', 'startbouwjaar': 2024, 'startbouwmaand': 1, 'juridische_status': 'plv', 'bruto_aantalwoningen': 2, 'netto_aantalwoningen': 2, 'sloop_aantalwoningen': 0, 'stage_modified_datetime': '2022-04-14T00: 00: 00'
+            },
+            {'breiding': 'inbreiding', 'huur_koop': 'koop', 'nultreden': 'overig', 'planstatus': 'actief', 'procesfase': 'planologische_voorbereiding', 'stage_naam': 'blok 2026-2030 deel 2', 'stage_uuid': '126da022-4f62-4d8e-836a-13c04f3946fe', 'woningtype': 'eengezins', 'woonmilieu': 'gs', 'opleverjaar': 2028, 'prijsklasse': 'koop_laag_middelduur', 'oplevermaand': 1, 'nieuw_verbouw': 'nieuwbouw_vervangend', 'projectleider': 'Sander van Kollenburg', 'startbouwjaar': 2024, 'startbouwmaand': 1, 'juridische_status': 'plv', 'bruto_aantalwoningen': 10, 'netto_aantalwoningen': 10, 'sloop_aantalwoningen': 0, 'stage_modified_datetime': '2022-04-14T00: 00: 00'
+            }
+        ], 'project_id': 43, 'publieke_naam': 'Nieuwstraat ', 'vertrouwelijk': 'ja', 'info_from_point': {'wijk': {'level': 'wijk', 'wijk_code': 'WK075300', 'wijk_naam': 'Wijk 00 Best'
+            }, 'buurt': {'level': 'buurt', 'buurt_code': 'BU07530001', 'buurt_naam': 'Centrum'
+            }, 'perceel': {'gml_id': 'NL.IMKAD.KadastraalObject.39350254170000', 'sectie': 'H', 'volgnummer': 0, 'identificatie': 39350254170000, 'perceelnummer': 2541, 'akr_gemeente_waarde': 'BES00'
+            }, 'gemeente': {'level': 'gemeente', 'gemeente_code': 'GM0753', 'gemeente_naam': 'Best'
+            }
+        }, 'share_profile_owk': 'naam_locatie_en_aantallen', 'share_profile_provincie': 'alleen_aantallen', 'project_creation_datetime': '2022-02-28T00: 00: 00'
+    }
+}

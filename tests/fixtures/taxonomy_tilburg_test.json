@@ -1,0 +1,519 @@
+{
+  "level": "stage_plus",
+  "fields": [
+    { "type": "text", "field": "naam", "label": "Projectnaam" },
+    { "type": "text", "field": "stage_naam", "label": "Bouwcluster naam" },
+    {
+      "type": "categorical",
+      "field": "planstatus",
+      "label": "Planstatus",
+      "values": [
+        { "rank": 0, "label": "Actief", "value": "actief" },
+        { "rank": 1, "label": "Gereed", "value": "gereed" }
+      ]
+    },
+    {
+      "type": "categorical",
+      "field": "vertrouwelijk",
+      "label": "Vertrouwelijk",
+      "values": [
+        { "rank": 0, "label": "Vertrouwelijk", "value": "ja" },
+        { "rank": 1, "label": "Niet vertrouwelijk", "value": "nee" }
+      ]
+    },
+    {
+      "tags": ["count"],
+      "type": "number",
+      "field": "bruto_aantalwoningen",
+      "label": "Bruto Aantalwoningen"
+    },
+    {
+      "tags": ["count"],
+      "type": "number",
+      "field": "sloop_aantalwoningen",
+      "label": "Sloop Aantalwoningen"
+    },
+    {
+      "tags": ["count"],
+      "type": "number",
+      "field": "netto_aantalwoningen",
+      "label": "Netto Aantalwoningen"
+    },
+    {
+      "tags": ["owk"],
+      "type": "categorical",
+      "field": "share_profile_owk",
+      "label": "Gedeeld met de OWK",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Naam, locatie en aantallen",
+          "value": "naam_locatie_en_aantallen"
+        },
+        { "rank": 1, "label": "Alleen aantallen", "value": "alleen_aantallen" }
+      ]
+    },
+    {
+      "type": "categorical",
+      "field": "share_profile_provincie",
+      "label": "Gedeeld met de Provincie",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Naam, locatie en aantallen",
+          "value": "naam_locatie_en_aantallen"
+        },
+        { "rank": 1, "label": "Alleen aantallen", "value": "alleen_aantallen" }
+      ]
+    },
+    {
+      "type": "categorical",
+      "field": "share_profile_regio",
+      "label": "Gedeeld met de Regio",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Naam, locatie en aantallen",
+          "value": "naam_locatie_en_aantallen"
+        },
+        { "rank": 1, "label": "Alleen aantallen", "value": "alleen_aantallen" }
+      ]
+    },
+    {
+      "tags": ["owk"],
+      "type": "text",
+      "field": "publieke_omschrijving",
+      "label": "Publieke omschrijving"
+    },
+    {
+      "tags": ["owk"],
+      "type": "text",
+      "field": "publieke_naam",
+      "label": "Publieke naam"
+    },
+    {
+      "tags": ["owk"],
+      "type": "text",
+      "field": "publieke_ontwikkelaar",
+      "label": "Publieke ontwikkelaar"
+    },
+    {
+      "tags": ["owk"],
+      "type": "categorical",
+      "field": "has_image",
+      "label": "Afbeelding gebruiken"
+    },
+    {
+      "tags": ["owk"],
+      "type": "text",
+      "field": "web_adres",
+      "label": "Website"
+    },
+    {
+      "type": "text",
+      "field": "project_description",
+      "label": "Project omschrijving"
+    },
+    {
+      "type": "multi_categorical",
+      "field": "knelpunt",
+      "label": "Knelpunt",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Moeizaam onderhandelingstraject (bijvoorbeeld AOK)",
+          "value": "moeizaam_onderhandelingstraject_bijvoorbeeld_aok_"
+        },
+        {
+          "rank": 1,
+          "label": "Moeizame samenspraak/participatie/inspraak buurt",
+          "value": "moeizame_samenspraak_participatie_inspraak_buurt"
+        },
+        {
+          "rank": 2,
+          "label": "Ontwikkelaars issues (loslaten deadlines, geen sluitende businesscase, moeizame afname)",
+          "value": "ontwikkelaars_issues_loslaten_deadlines_geen_sluitende_businesscase_moeizame_afname_"
+        },
+        {
+          "rank": 3,
+          "label": "Vertraging in procedures (bestemmingsplan, wabo en/of andere juridische procedures)",
+          "value": "vertraging_in_procedures_bestemmingsplan_wabo_en_of_andere_juridische_procedures_"
+        },
+        {
+          "rank": 4,
+          "label": "Economische omstandigheden (waaronder beschikbaarheid bouwmaterialen en bouwvakkers)",
+          "value": "economische_omstandigheden_waaronder_beschikbaarheid_bouwmaterialen_en_bouwvakkers_"
+        },
+        {
+          "rank": 5,
+          "label": "Interne oorzaken (beleidsstapeling, capaciteitsgebrek, loslaten deadlines)",
+          "value": "interne_oorzaken_beleidsstapeling_capaciteitsgebrek_loslaten_deadlines_"
+        },
+        {
+          "rank": 6,
+          "label": "Onvoorziene omstandigheden (bodemverontreiniging, archeologie, stikstof, etc.)",
+          "value": "onvoorziene_omstandigheden_bodemverontreiniging_archeologie_stikstof_etc_"
+        },
+        {
+          "rank": 7,
+          "label": "Versnelling RO of vergunningenprocedures",
+          "value": "versnelling_ro_of_vergunningenprocedures"
+        },
+        {
+          "rank": 8,
+          "label": "Goed verloop inspraaktraject",
+          "value": "goed_verloop_inspraaktraject"
+        },
+        {
+          "rank": 9,
+          "label": "Snellere integrale besluitvorming",
+          "value": "snellere_integrale_besluitvorming"
+        },
+        {
+          "rank": 10,
+          "label": "Keuze voor snelle bouwmethode/concept",
+          "value": "keuze_voor_snelle_bouwmethode_concept"
+        },
+        {
+          "rank": 11,
+          "label": "Interventie/escalatie",
+          "value": "interventie_escalatie"
+        }
+      ]
+    },
+    {
+      "tag": ["meta"],
+      "type": "date-time",
+      "field": "project_creation_datetime",
+      "label": "Project aangemaakt op"
+    },
+    {
+      "tag": ["meta"],
+      "type": "date-time",
+      "field": "stage_modified_datetime",
+      "label": "Bouwcluster bijgewerkt op"
+    },
+    {
+      "tag": ["meta"],
+      "type": "text",
+      "field": "stage_modified_username",
+      "label": "Bouwcluster bijgewerkt door"
+    },
+    {
+      "tag": ["id"],
+      "type": "text",
+      "field": "stage_uuid",
+      "label": "Bouwcluster identificatie"
+    },
+    {
+      "tag": ["id"],
+      "type": "text",
+      "field": "project_id",
+      "label": "Project volgnummer"
+    },
+    {
+      "type": "categorical",
+      "field": "onzelfstandig",
+      "label": "Onzelfstandig",
+      "values": [
+        { "rank": 0, "label": "Onzelfstandig", "value": "ja" },
+        { "rank": 1, "label": "Zelfstandig", "value": "nee" }
+      ]
+    },
+    { "type": "number", "field": "oplevermaand", "label": "Oplevermaand" },
+    {
+      "type": "multi_categorical",
+      "field": "woonvorm",
+      "label": "Woonvorm",
+      "values": [
+        { "rank": 0, "label": "CPO", "value": "cpo" },
+        { "rank": 1, "label": "Flex", "value": "flex" },
+        {
+          "rank": 2,
+          "label": "Geclusterd ouderen",
+          "value": "geclusterd_ouderen"
+        },
+        {
+          "rank": 3,
+          "label": "Geclusterd overig",
+          "value": "geclusterd_overig"
+        },
+        { "rank": 4, "label": "PO", "value": "po" },
+        { "rank": 5, "label": "Studenten", "value": "studenten" },
+        { "rank": 6, "label": "Tiny House", "value": "tiny_house" }
+      ]
+    },
+    {
+      "type": "text",
+      "field": "interne_toelichting",
+      "label": "Toelichting (intern)"
+    },
+    { "type": "string", "field": "projectleider", "label": "Projectleider" },
+    { "type": "categorical", "field": "fase", "label": "Fase" },
+    { "type": "string", "field": "aanvrager", "label": "Aanvrager" },
+    {
+      "type": "multi_categorical",
+      "field": "kenmerk",
+      "label": "Kenmerken",
+      "values": []
+    },
+    {
+      "type": "categorical",
+      "field": "huur_koop",
+      "label": "Huur/Koop",
+      "values": [
+        { "rank": 0, "label": "Huur", "value": "huur" },
+        { "rank": 1, "label": "Koop", "value": "koop" }
+      ]
+    },
+    {
+      "type": "categorical",
+      "field": "nultreden",
+      "label": "Woningen geschikt voor ouderen",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Nultreden woningen",
+          "value": "nultreden_woningen"
+        },
+        {
+          "rank": 1,
+          "label": "Geclusterde woonvorm",
+          "value": "geclusterde_woonvorm"
+        },
+        {
+          "rank": 2,
+          "label": "Zorggeschikte woning",
+          "value": "zorggeschikte_woning"
+        },
+        {
+          "rank": 3,
+          "label": "Overig geschikt voor ouderen",
+          "value": "overig_geschikt_voor_ouderen"
+        }
+      ]
+    },
+    {
+      "type": "string",
+      "field": "oorspronkelijk_percentage",
+      "label": "Oorspronkelijk percentage"
+    },
+    { "type": "number", "field": "opleverjaar", "label": "Opleverjaar" },
+    { "type": "string", "field": "ontwikkelaar", "label": "Ontwikkelaar" },
+    {
+      "type": "categorical",
+      "field": "bestemmingsplan_status",
+      "label": "Status bestemmingsplan",
+      "values": [
+        {
+          "rank": 0,
+          "label": "1. geen aanvraag/ zacht (POC)",
+          "value": "1_geen_aanvraag_zacht_poc_"
+        },
+        {
+          "rank": 1,
+          "label": "2. ontwerp bp/ zacht (OTW)",
+          "value": "2_ontwerp_bp_zacht_otw_"
+        },
+        {
+          "rank": 2,
+          "label": "3. concept bp/ zacht (PLV)",
+          "value": "3_concept_bp_zacht_plv_"
+        },
+        {
+          "rank": 3,
+          "label": "4. vastgesteld/ hard (VST)",
+          "value": "4_vastgesteld_hard_vst_"
+        },
+        {
+          "rank": 4,
+          "label": "5. onherroepelijk/ hard (ONH)",
+          "value": "5_onherroepelijk_hard_onh_"
+        }
+      ]
+    },
+    { "type": "string", "field": "corporatie", "label": "Corporatie" },
+    {
+      "type": "string",
+      "field": "intern_projectummer",
+      "label": "Projectcode"
+    },
+    { "type": "string", "field": "squitnummer", "label": "RX-Mission nummer" },
+    {
+      "type": "categorical",
+      "field": "prijsklasse",
+      "label": "Prijsklasse",
+      "values": [
+        { "rank": 0, "label": "Sociale huur", "value": "sociale_huur" },
+        { "rank": 1, "label": "Middeldure huur", "value": "middeldure_huur" },
+        { "rank": 2, "label": "Huur duur", "value": "huur_duur" },
+        { "rank": 3, "label": "Goedkope koop", "value": "goedkope_koop" },
+        { "rank": 4, "label": "Middeldure koop", "value": "middeldure_koop" },
+        { "rank": 5, "label": "Koop duur", "value": "koop_duur" },
+        { "rank": 7, "label": "Koop onbekend", "value": "koop_onbekend" },
+        { "rank": 8, "label": "Huur onbekend", "value": "huur_onbekend" }
+      ]
+    },
+    { "type": "number", "field": "startbouwjaar", "label": "Startbouwjaar" },
+    {
+      "type": "categorical",
+      "field": "woningtype",
+      "label": "Woningtype",
+      "values": [
+        { "rank": 0, "label": "Grondgebonden", "value": "grondgebonden" },
+        { "rank": 1, "label": "Gestapeld", "value": "gestapeld" }
+      ]
+    },
+    { "type": "string", "field": "programma", "label": "Programma" },
+    {
+      "type": "multi_categorical",
+      "field": "doelgroep",
+      "label": "Doelgroep",
+      "values": [
+        { "rank": 0, "label": "Overig", "value": "overig" },
+        { "rank": 1, "label": "Senioren", "value": "senioren" },
+        { "rank": 2, "label": "Starters", "value": "starters" },
+        { "rank": 3, "label": "Studenten", "value": "studenten" }
+      ]
+    },
+    {
+      "type": "string",
+      "field": "bestemmingsplan_nr",
+      "label": "Bestemmingsplannummer"
+    },
+    {
+      "type": "categorical",
+      "field": "nieuw_verbouw",
+      "label": "Plantype",
+      "values": [
+        {
+          "rank": 0,
+          "label": "Pand transformatie",
+          "value": "pand_transformatie"
+        },
+        {
+          "rank": 1,
+          "label": "Transformatiegebied",
+          "value": "transformatiegebied"
+        },
+        { "rank": 2, "label": "Herstructurering", "value": "herstructurering" },
+        { "rank": 3, "label": "Verdichting", "value": "verdichting" },
+        {
+          "rank": 4,
+          "label": "Uitbreiding uitleg",
+          "value": "uitbreiding_uitleg"
+        },
+        {
+          "rank": 5,
+          "label": "Uitbreiding overig",
+          "value": "uitbreiding_overig"
+        }
+      ]
+    },
+    {
+      "type": "categorical",
+      "field": "projectfase",
+      "label": "Status project",
+      "values": [
+        {
+          "rank": 0,
+          "label": "1. zacht geen status",
+          "value": "1_zacht_geen_status"
+        },
+        {
+          "rank": 1,
+          "label": "2. zacht in voorbereiding",
+          "value": "2_zacht_in_voorbereiding"
+        },
+        {
+          "rank": 2,
+          "label": "3. hard in voorbereiding",
+          "value": "3_hard_in_voorbereiding"
+        },
+        {
+          "rank": 3,
+          "label": "4. hard in uitvoering",
+          "value": "4_hard_in_uitvoering"
+        }
+      ]
+    },
+    { "type": "number", "field": "startbouwmaand", "label": "Startbouwmaand" },
+    {
+      "type": "string",
+      "field": "bestuurlijk_opdrachtgever",
+      "label": "Best.Opdrachtgever"
+    },
+    {
+      "type": "categorical",
+      "field": "procesfase",
+      "label": "Procesfase",
+      "values": [
+        {
+          "rank": 0,
+          "label": "0. verdichtingsopgave in voorbereiding",
+          "value": "0_verdichtingsopgave_in_voorbereiding"
+        },
+        {
+          "rank": 1,
+          "label": "1. vooroverleg/conceptverzoek",
+          "value": "1_vooroverleg_conceptverzoek"
+        },
+        {
+          "rank": 2,
+          "label": "2. kerngroep-stuurgroep",
+          "value": "2_kerngroep_stuurgroep"
+        },
+        {
+          "rank": 3,
+          "label": "3. aanvraag BOPA/herziening bestemmingsplan",
+          "value": "3_aanvraag_bopa_herziening_bestemmingsplan"
+        },
+        {
+          "rank": 4,
+          "label": "4. in afwachting aanvraag omgevingsvergunning",
+          "value": "4_in_afwachting_aanvraag_omgevingsvergunning"
+        },
+        {
+          "rank": 5,
+          "label": "5. aanvraag omgevingsvergunning",
+          "value": "5_aanvraag_omgevingsvergunning"
+        },
+        {
+          "rank": 6,
+          "label": "6. omgevingsvergunning verleend",
+          "value": "6_omgevingsvergunning_verleend"
+        },
+        { "rank": 7, "label": "7. start bouw", "value": "7_start_bouw" },
+        { "rank": 8, "label": "8. opgeleverd", "value": "8_opgeleverd" },
+        { "rank": 9, "label": "10. vervallen", "value": "10_vervallen" },
+        { "rank": 10, "label": "11. on hold", "value": "11_on_hold" }
+      ]
+    },
+    {
+      "type": "string",
+      "field": "gedelegeerd_opdrachtgever",
+      "label": "Gedel. Opdrachtgever"
+    },
+    { "type": "polygon", "field": "geo", "label": "Geometrie" },
+    { "type": "string", "field": "attachments", "label": "Documenten" },
+    {
+      "tags": ["computed"],
+      "type": "date-time",
+      "field": "timestamp_deleted",
+      "label": "Project verwijderd op"
+    },
+    {
+      "tags": ["computed"],
+      "type": "text",
+      "field": "info_from_point",
+      "label": "info_from_point"
+    },
+    {
+      "tags": ["woningbouwplan", "Kadaster", "computed"],
+      "type": "text",
+      "field": "perceel",
+      "label": "Perceel",
+      "description": "Het kadastrale perceel waar het woningbouwplan is gelokaliseerd"
+    }
+  ]
+}
