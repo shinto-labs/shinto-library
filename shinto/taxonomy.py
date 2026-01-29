@@ -33,6 +33,15 @@ type_mapping = {
     "multi_categorical": list,
     "polygon": list,
 }
+jsonschema_type_mapping = {
+    "number": "integer",
+    "text": "string",
+    "string": "string",
+    "date-time": "string",
+    "categorical": "string",
+    "multi_categorical": "array",
+    "polygon": "array",
+}
 
 
 @lru_cache(maxsize=1)
@@ -112,22 +121,18 @@ class TaxonomyField:
         """Build the JSON schema definition for this field."""
         field_schema: dict = {"title": self.label, "type": None}
 
+        field_schema["description"] = self.label
         if self.description:
-            field_schema["description"] = self.description
+            field_schema["description"] += "\n" + self.description
 
-        if self.type == "number":
-            field_schema["type"] = "integer"
-        elif self.type in ["text", "string"]:
-            field_schema["type"] = "string"
-        elif self.type == "date-time":
-            field_schema["type"] = "string"
+        field_schema["type"] = jsonschema_type_mapping[self.type]
+
+        if self.type == "date-time":
             field_schema["format"] = "date-time"
         elif self.type == "categorical":
-            field_schema["type"] = "string"
             if self.values:
                 field_schema["enum"] = [val.value for val in self.values]
         elif self.type == "multi_categorical":
-            field_schema["type"] = "array"
             field_schema["items"] = {"type": "string"}
             if self.values:
                 field_schema["items"]["enum"] = [val.value for val in self.values]
