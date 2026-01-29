@@ -1,6 +1,6 @@
 [project]
 name = "shinto"
-version = "1.1.22"
+version = "1.1.23"
 description = "Shinto Labs default python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
@@ -21,7 +21,7 @@ requires-python = ">=3.8"
 readme = "README.md"
 
 [tool.setuptools]
-packages = ["shinto", "shinto.pg", "shinto.transform"]
+packages = ["shinto", "shinto.pg", "shinto.juno"]
 
 [tool.pdm]
 [tool.pdm.dev-dependencies]
