@@ -36,10 +36,10 @@ type_mapping = {
 
 
 @lru_cache(maxsize=1)
-def _get_geojson_schema() -> dict:
+def _get_geojson_geometry_schema() -> dict:
     """Lazy load the GeoJSON feature schema."""
     return json.loads(
-        (Path(__file__).parent / "json_schema/geojson_feature_schema.json").read_text()
+        (Path(__file__).parent / "json_schema/geojson_geometry_schema.json").read_text()
     )
 
 
@@ -47,7 +47,7 @@ class TaxonomyComplianceError(Exception):
     """Exception raised for data that does not comply with the taxonomy."""
 
 
-class TaxonomyFieldValue:
+class TaxonomyCategoricalValue:
     """Class representing a value in a taxonomy field."""
 
     value: str
@@ -55,7 +55,7 @@ class TaxonomyFieldValue:
     description: str | None
 
     def __init__(self, value_dict: dict):
-        """Initialize the FieldValue from a dictionary."""
+        """Initialize the TaxonomyCategoricalValue from a dictionary."""
         if not isinstance(value_dict, dict):
             raise TypeError("value_dict must be a dictionary.")
         if "value" not in value_dict:
@@ -71,14 +71,13 @@ class TaxonomyField:
     field_id: str
     type: FIELD_TYPE
     label: str
-    values: list[TaxonomyFieldValue] | None
+    values: list[TaxonomyCategoricalValue] | None
     description: str | None
-    level: TAXONOMY_LEVEL | None
     tags: list[str] | None
 
     def __init__(self, field_dict: dict):
         """
-        Initialize the Field from a dictionary.
+        Initialize the TaxonomyField from a dictionary.
 
         Raises:
             TypeError: If field_dict is not valid
@@ -98,17 +97,74 @@ class TaxonomyField:
         self.type = field_dict["type"]
         self.label = field_dict["label"]
         self.description = field_dict.get("description")
-        self.level = field_dict.get("level")
         self.tags = field_dict.get("tags")
         self.values = None
         if "values" in field_dict:
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
-            self.values = [TaxonomyFieldValue(v) for v in field_dict["values"]]
+            self.values = [TaxonomyCategoricalValue(v) for v in field_dict["values"]]
         if self.type in ["categorical", "multi_categorical"] and not self.values:
             raise ValueError(
                 f"Field of type '{self.type}' must have 'values' defined '{self.field_id}'."
             )
+
+    def __to_json_schema__(self) -> dict:
+        """Build the JSON schema definition for this field."""
+        field_schema: dict = {"title": self.label, "type": None}
+
+        if self.description:
+            field_schema["description"] = self.description
+
+        if self.type == "number":
+            field_schema["type"] = "integer"
+        elif self.type in ["text", "string"]:
+            field_schema["type"] = "string"
+        elif self.type == "date-time":
+            field_schema["type"] = "string"
+            field_schema["format"] = "date-time"
+        elif self.type == "categorical":
+            field_schema["type"] = "string"
+            field_schema["enum"] = [val.value for val in self.values]
+        elif self.type == "multi_categorical":
+            field_schema["type"] = "array"
+            field_schema["items"] = {
+                "type": "string",
+                "enum": [val.value for val in self.values],
+            }
+        elif self.type == "polygon":
+            field_schema = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"geometry": {"$ref": "#/definitions/geojson_geometry"}},
+                    "required": ["geometry"],
+                },
+                "description": "A list of GeoJSON features representing polygons.",
+            }
+
+        if self.type in ("multi_categorical", "categorical"):
+            value_desc = self._build_json_schema_values_description()
+            if value_desc:
+                field_schema["description"] = (
+                    field_schema.get("description", "") + value_desc
+                ).strip()
+
+        return field_schema
+
+    def _build_json_schema_values_description(self) -> str:
+        """Generate a description of possible values for categorical fields."""
+        value_docs = []
+        for val in self.values:
+            if val.label or val.description:
+                parts = [f"'{val.value}'"]
+                if val.label:
+                    parts.append(val.label)
+                if val.description:
+                    parts.append(f"({val.description})")
+                value_docs.append(" - ".join(parts))
+        if value_docs:
+            return "\nPossible values:\n- " + "\n- ".join(value_docs)
+        return ""
 
     def validate(self, value: Any):  # noqa: ANN401
         """
@@ -176,12 +232,7 @@ class TaxonomyField:
                     raise TaxonomyComplianceError(
                         f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
                     )
-                geojson_feature = {
-                    "type": item.get("type", "Feature"),
-                    "geometry": item["geometry"],
-                    "properties": item.get("properties", None),
-                }
-                validate(geojson_feature, _get_geojson_schema())
+                validate(item["geometry"], _get_geojson_geometry_schema())
         except ValidationError as e:
             raise TaxonomyComplianceError(
                 f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
@@ -191,7 +242,7 @@ class TaxonomyField:
 class Taxonomy:
     """Class representing a taxonomy."""
 
-    level: str | None
+    level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
     def __init__(self, taxonomy_dict: dict):
@@ -211,11 +262,6 @@ class Taxonomy:
             raise TypeError("taxonomy_dict['fields'] must be a list.")
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
-        if "level" in taxonomy_dict and taxonomy_dict["level"] not in TAXONOMY_LEVEL.__args__:
-            raise TypeError(
-                f"Unrecognized taxonomy level: {taxonomy_dict['level']}."
-                f"Must be one of {TAXONOMY_LEVEL.__args__}."
-            )
         self.level = taxonomy_dict.get("level")
         self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
 
@@ -231,14 +277,12 @@ class Taxonomy:
 
         """
         for field in self.fields:
-            # Check if field is present in data
             # TODO: Or are fields always required?
             if field.field_id in data:
                 field.validate(data[field.field_id])
 
-            if field.level and field.level == "stage_plus" and "stages" in data:
-                stages = data["stages"]
-                for idx, stage in enumerate(stages):
+            if "stages" in data:
+                for idx, stage in enumerate(data["stages"]):
                     if field.field_id in stage:
                         try:
                             field.validate(stage[field.field_id])
@@ -249,4 +293,28 @@ class Taxonomy:
 
     def __to_json_schema__(self) -> dict:
         """Convert a taxonomy to a JSON schema."""
-        raise NotImplementedError("Not implemented yet.")
+        # TODO: Are any fields required in the data/schema?
+        definitions = {
+            "taxonomy_field_properties": {
+                "type": "object",
+                "properties": {field.field_id: field.__to_json_schema__() for field in self.fields},
+                "required": [],
+            }
+        }
+
+        if any(field.type == "polygon" for field in self.fields):
+            definitions["geojson_geometry"] = _get_geojson_geometry_schema()
+
+        return {
+            "title": "Taxonomy Data Schema",
+            "type": "object",
+            "allOf": [{"$ref": "#/definitions/taxonomy_field_properties"}],
+            "properties": {
+                "stages": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/taxonomy_field_properties"},
+                }
+            },
+            "required": [],
+            "definitions": definitions,
+        }

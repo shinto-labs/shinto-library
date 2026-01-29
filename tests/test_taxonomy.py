@@ -4,13 +4,17 @@ import json
 import unittest
 from pathlib import Path
 
+import jsonschema
+
 from shinto.taxonomy import Taxonomy, TaxonomyComplianceError, TaxonomyField
 
-TEST_TAXONOMY = json.loads(
-    (Path(__file__).parent / "fixtures/taxonomy_tilburg_test.json").read_text()
-)
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+(FIXTURES_DIR / "generated").mkdir(exist_ok=True)
+
+TEST_TAXONOMY = json.loads((FIXTURES_DIR / "taxonomy_tilburg_modified_test.json").read_text())
+TEST_TAXONOMY_INVALID = json.loads((FIXTURES_DIR / "taxonomy_tilburg_test.json").read_text())
 TEST_PROJECT_DATA_LIST = json.loads(
-    (Path(__file__).parent / "fixtures/project_data_list_tilburg_test.json").read_text()
+    (FIXTURES_DIR / "project_data_list_tilburg_test.json").read_text()
 )
 
 
@@ -247,6 +251,29 @@ class TestTaxonomy(unittest.TestCase):
 
         for item in TEST_PROJECT_DATA_LIST:
             taxonomy.validate_data(item)
+
+    def test_taxonomy_json_schema_real_schema(self):
+        """Test the JSON schema generation of a Taxonomy object."""
+        taxonomy = Taxonomy(TEST_TAXONOMY)
+        json_schema = taxonomy.__to_json_schema__()
+        self.assertIsInstance(json_schema, dict)
+        (FIXTURES_DIR / "generated/taxonomy_schema.json").write_text(
+            json.dumps(json_schema, indent=2)
+        )
+
+        jsonschema.validate(
+            instance=TEST_PROJECT_DATA_LIST,
+            schema={
+                "type": "array",
+                "items": json_schema,
+                "definitions": json_schema.get("definitions", {}),
+            },
+        )
+
+    def test_taxonomy_invalid_real_schema(self):
+        """Test that invalid data raises errors."""
+        with self.assertRaises(ValueError):
+            Taxonomy(TEST_TAXONOMY_INVALID)
 
 
 if __name__ == "__main__":

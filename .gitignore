@@ -3,6 +3,7 @@
 .vscode
 .specstory
 .cursorindexingignore
+tests/fixtures/generated/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
