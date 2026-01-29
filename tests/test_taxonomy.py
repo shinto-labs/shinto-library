@@ -272,8 +272,11 @@ class TestTaxonomy(unittest.TestCase):
 
     def test_taxonomy_invalid_real_schema(self):
         """Test that invalid data raises errors."""
-        with self.assertRaises(ValueError):
-            Taxonomy(TEST_TAXONOMY_INVALID)
+        taxonomy = Taxonomy(TEST_TAXONOMY_INVALID, strict=False)
+
+        with self.assertRaises(TaxonomyComplianceError):
+            for item in TEST_PROJECT_DATA_LIST:
+                taxonomy.validate_data(item)
 
 
 if __name__ == "__main__":
