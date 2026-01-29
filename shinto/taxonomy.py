@@ -75,7 +75,7 @@ class TaxonomyField:
     description: str | None
     tags: list[str] | None
 
-    def __init__(self, field_dict: dict):
+    def __init__(self, field_dict: dict, strict: bool = True):
         """
         Initialize the TaxonomyField from a dictionary.
 
@@ -103,7 +103,7 @@ class TaxonomyField:
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
             self.values = [TaxonomyCategoricalValue(v) for v in field_dict["values"]]
-        if self.type in ["categorical", "multi_categorical"] and not self.values:
+        if self.type in ["categorical", "multi_categorical"] and not self.values and strict:
             raise ValueError(
                 f"Field of type '{self.type}' must have 'values' defined '{self.field_id}'."
             )
@@ -247,7 +247,7 @@ class Taxonomy:
     level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
-    def __init__(self, taxonomy_dict: dict):
+    def __init__(self, taxonomy_dict: dict, strict: bool = True):
         """
         Initialize the Taxonomy from a dictionary.
 
@@ -265,7 +265,7 @@ class Taxonomy:
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
         self.level = taxonomy_dict.get("level")
-        self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
+        self.fields = [TaxonomyField(field_dict, strict) for field_dict in taxonomy_dict["fields"]]
 
     def validate_data(self, data: dict):
         """
