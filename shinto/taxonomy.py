@@ -178,6 +178,7 @@ class TaxonomyField:
 
         """
         # TODO: Should we enforce required fields?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         if value is None:
             raise TaxonomyComplianceError(f"Field '{self.field_id}' is required but missing.")
 
@@ -226,6 +227,7 @@ class TaxonomyField:
     def _validate_polygon(self, value: Any):  # noqa: ANN401
         """Validate polygon field value."""
         # TODO: Is polygon always a list of GeoJSON features?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         try:
             for item in value:
                 if "geometry" not in item:
@@ -278,6 +280,7 @@ class Taxonomy:
         """
         for field in self.fields:
             # TODO: Or are fields always required?
+            # https://shintolabs.atlassian.net/browse/DOT-755
             if field.field_id in data:
                 field.validate(data[field.field_id])
 
@@ -294,6 +297,7 @@ class Taxonomy:
     def __to_json_schema__(self) -> dict:
         """Convert a taxonomy to a JSON schema."""
         # TODO: Are any fields required in the data/schema?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         definitions = {
             "taxonomy_field_properties": {
                 "type": "object",
