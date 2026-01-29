@@ -17,7 +17,7 @@ dependencies = [
     "glom>=23.5.0",
     "simpleeval>=0.9.13",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.14"
 readme = "README.md"
 
 [tool.setuptools]
