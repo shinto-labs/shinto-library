@@ -148,9 +148,7 @@ class TaxonomyField:
             }
 
         if self.type in ("multi_categorical", "categorical") and self.values:
-            value_desc = self._build_json_schema_values_description()
-            if value_desc:
-                field_schema["description"] += value_desc
+            field_schema["description"] += self._build_json_schema_values_description() or ""
 
         return field_schema
 
