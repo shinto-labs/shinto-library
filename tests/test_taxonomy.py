@@ -273,6 +273,7 @@ class TestTaxonomy(unittest.TestCase):
     def test_taxonomy_invalid_real_schema(self):
         """Test that invalid data raises errors."""
         taxonomy = Taxonomy(TEST_TAXONOMY_INVALID, strict=False)
+        taxonomy.__to_json_schema__()
 
         with self.assertRaises(TaxonomyComplianceError):
             for item in TEST_PROJECT_DATA_LIST:
