@@ -21,6 +21,7 @@ FIELD_TYPE = Literal[
     "string",
     "multi_categorical",
     "date-time",
+    "date",
     "polygon",
 ]
 
@@ -29,6 +30,7 @@ type_mapping = {
     "text": str,
     "string": str,
     "date-time": str,
+    "date": str,
     "categorical": str,
     "multi_categorical": list,
     "polygon": list,
@@ -38,6 +40,7 @@ jsonschema_type_mapping = {
     "text": "string",
     "string": "string",
     "date-time": "string",
+    "date": "string",
     "categorical": "string",
     "multi_categorical": "array",
     "polygon": "array",
@@ -127,7 +130,7 @@ class TaxonomyField:
 
         field_schema["type"] = jsonschema_type_mapping[self.type]
 
-        if self.type == "date-time":
+        if self.type in ("date-time", "date"):
             field_schema["format"] = "date-time"
         elif self.type == "categorical":
             if self.values:
@@ -148,9 +151,7 @@ class TaxonomyField:
             }
 
         if self.type in ("multi_categorical", "categorical") and self.values:
-            value_desc = self._build_json_schema_values_description()
-            if value_desc:
-                field_schema["description"] += value_desc
+            field_schema["description"] += self._build_json_schema_values_description() or ""
 
         return field_schema
 
@@ -195,7 +196,7 @@ class TaxonomyField:
             self._validate_multi_categorical(value)
         elif self.type == "categorical":
             self._validate_categorical(value)
-        elif self.type == "date-time":
+        elif self.type in ("date-time", "date"):
             self._validate_date_time(value)
 
         if self.type == "polygon":
