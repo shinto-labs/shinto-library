@@ -124,13 +124,13 @@ class TaxonomyField:
             field_schema["format"] = "date-time"
         elif self.type == "categorical":
             field_schema["type"] = "string"
-            field_schema["enum"] = [val.value for val in self.values]
+            if self.values:
+                field_schema["enum"] = [val.value for val in self.values]
         elif self.type == "multi_categorical":
             field_schema["type"] = "array"
-            field_schema["items"] = {
-                "type": "string",
-                "enum": [val.value for val in self.values],
-            }
+            field_schema["items"] = {"type": "string"}
+            if self.values:
+                field_schema["items"]["enum"] = [val.value for val in self.values]
         elif self.type == "polygon":
             field_schema = {
                 "type": "array",
@@ -142,7 +142,7 @@ class TaxonomyField:
                 "description": "A list of GeoJSON features representing polygons.",
             }
 
-        if self.type in ("multi_categorical", "categorical"):
+        if self.type in ("multi_categorical", "categorical") and self.values:
             value_desc = self._build_json_schema_values_description()
             if value_desc:
                 field_schema["description"] = (
