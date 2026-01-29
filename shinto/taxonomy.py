@@ -123,7 +123,7 @@ class TaxonomyField:
 
         field_schema["description"] = self.label
         if self.description:
-            field_schema["description"] += "\n" + self.description
+            field_schema["description"] += "\n" + self.description.strip()
 
         field_schema["type"] = jsonschema_type_mapping[self.type]
 
@@ -150,9 +150,7 @@ class TaxonomyField:
         if self.type in ("multi_categorical", "categorical") and self.values:
             value_desc = self._build_json_schema_values_description()
             if value_desc:
-                field_schema["description"] = (
-                    field_schema.get("description", "") + value_desc
-                ).strip()
+                field_schema["description"] += value_desc
 
         return field_schema
 
