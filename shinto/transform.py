@@ -3,6 +3,8 @@
 import json
 import copy
 from typing import Any, Dict, List, Optional
+from glom import glom, PathAccessError
+import logging
 
 
 TRUE_SET = {"true", "1", "yes", "y", "ja", "j", "waar", "t"}
@@ -63,13 +65,28 @@ SAFE_BUILTINS = {
     "sorted": sorted,
     "any": any,
     "all": all,
+    "next": next,
+    "type": type,
+    "list": list,
+    "dict": dict,
+    "tuple": tuple,
+    "trim": str.strip,
 }
 
 
 class SafeContext(dict):
     """Dict that returns None for missing keys instead of raising KeyError."""
     def __missing__(self, key):
-        return None
+        # Don't intercept builtin lookups - let them fall through
+        raise KeyError(key)
+
+    def __getitem__(self, key):
+        # Return None for missing data keys, but let KeyError propagate for others
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            # If it's not in the dict, return None (for data fields)
+            return None
 
 
 def eval_expr(expr: str, ctx: Dict[str, Any]) -> Any:
@@ -79,9 +96,15 @@ def eval_expr(expr: str, ctx: Dict[str, Any]) -> Any:
     """
     try:
         safe_ctx = SafeContext(ctx)
-        return eval(expr, {"__builtins__": SAFE_BUILTINS}, safe_ctx)
-    except (NameError, TypeError, AttributeError):
+        # Add safe builtins to the context
+        for k, v in SAFE_BUILTINS.items():
+            safe_ctx[k] = v
+        # Use SafeContext directly so __getitem__ override works
+        return eval(expr, {"__builtins__": {}}, safe_ctx)
+    except Exception as e:
         # If fields are missing or comparisons fail, return None
+        logging.error(f"Expression evaluation failed: {expr} - Error: {type(e).__name__}: {e}")
+        # raise
         return None
     # return simple_eval(expr, names=ctx, functions=SAFE_BUILTINS)
 
@@ -98,7 +121,7 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
 
     Source forms:
       - {"const": 123} - constant value
-      - {"path": "field_name"} - extract field from row
+      - {"path": "field_name"} - extract field from row (supports dot notation and glom paths)
       - {"template": "Text {field}"} - format template with row fields
       - {"expr": "field1 + field2"} - evaluate Python expression
     """
@@ -107,14 +130,24 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
     if "const" in source:
         return source["const"]
     if "path" in source:
-        # Simple path extraction
-        return row.get(source["path"])
+        # Path extraction using glom (supports dot notation, array indexing, etc.)
+        try:
+            return glom(row, source["path"], default=None)
+        except (PathAccessError, KeyError):
+            return None
     if "template" in source:
         tmpl = source["template"]
         safe_map = {k: ("" if v is None else v) for k, v in row.items()}
         return tmpl.format_map(DefaultingDict(safe_map))
     if "expr" in source:
         return eval_expr(source["expr"], row)
+
+    if "remap" in source:
+        val = row.get(source["remap"]["value_source"], None)
+        mapping = source["remap"].get("mapping", {})
+        result = mapping.get(str(val), source["remap"].get("default", None))
+        return result
+
     raise ValueError(f"Unknown source spec: {source}")
 
 
@@ -146,7 +179,11 @@ def passes_filter(row: Dict[str, Any], flt: Optional[Dict[str, Any]]) -> bool:
 
     if "exists" in flt:
         p = flt["exists"]["path"]
-        return row.get(p) is not None
+        try:
+            val = glom(row, p, default=None)
+            return val is not None
+        except (PathAccessError, KeyError):
+            return False
 
     if "eq" in flt:
         left = resolve_source(row, flt["eq"][0])
@@ -173,6 +210,7 @@ def apply_action(out_row: Dict[str, Any], in_row: Dict[str, Any], action: Dict[s
       - remove_field: Remove field
       - rename_field: Rename field
       - copy_field: Copy field to another name
+      - remap_field: Remap categorical field value using mapping
     """
     kind = action.get("action")
 
@@ -205,8 +243,8 @@ def apply_action(out_row: Dict[str, Any], in_row: Dict[str, Any], action: Dict[s
     if kind == "copy_field":
         src = action["from"]
         dst = action["to"]
-        if src in out_row:
-            out_row[dst] = copy.deepcopy(out_row[src])
+        if src in in_row:
+            out_row[dst] = copy.deepcopy(in_row[src])
         return
 
     raise ValueError(f"Unknown action: {kind}")
@@ -233,7 +271,7 @@ def transform_data(data: List[Dict[str, Any]], transformation: List[Dict[str, An
         nxt: List[Dict[str, Any]] = []
         for r in cur:
             # Initialize output row
-            base = copy.deepcopy(r) if init == "copy" else {}
+            base = copy.deepcopy(r) if init == "copy" else {"_metadata": r.get("_metadata", {})}
 
             # Apply actions in order
             in_view = {**r, **base}

@@ -6,6 +6,7 @@ import logging
 from typing import Any, Dict, List
 
 
+
 def projects_to_stage_data(projects: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """ transform projects_data to stage_data.
     stage_data is a list of stages, each stage is a dict with stage info
@@ -66,10 +67,6 @@ def stage_data_to_projects(stage_data: List[Dict[str, Any]], taxonomy: Dict[str,
 
         project_data = projects_dict[project_id]["data"]
 
-        # Initialize stages array if not present
-        if "stages" not in project_data:
-            project_data["stages"] = []
-
         # Create a new stage dict for this stage's fields
         stage_dict = {}
 
@@ -85,9 +82,14 @@ def stage_data_to_projects(stage_data: List[Dict[str, Any]], taxonomy: Dict[str,
                     # Add to project data (only once, from first stage)
                     if key not in project_data:
                         project_data[key] = value
+                    elif project_data[key] != value:
+                        logging.warning(
+                            f"Conflict for project-level field {key} in project {project_id}. Using first occurrence.")
 
-        # Add the stage to the stages array
-        if stage_dict:  # Only add if there are stage fields
+        # Add the stage to the stages array (only if there are stage fields)
+        if stage_dict:
+            if "stages" not in project_data:
+                project_data["stages"] = []
             project_data["stages"].append(stage_dict)
 
     return list(projects_dict.values())
