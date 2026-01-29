@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import datetime
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing_extensions import Literal
-
-GEOJSON_FEATURE_SCHEMA = json.loads(
-    (Path(__file__).parent / "json_schema/geojson_feature_schema.json").read_text()
-)
 
 TAXONOMY_LEVEL = Literal["stage_plus"]
 
@@ -36,6 +33,14 @@ type_mapping = {
     "multi_categorical": list,
     "polygon": list,
 }
+
+
+@lru_cache(maxsize=1)
+def _get_geojson_schema() -> dict:
+    """Lazy load the GeoJSON feature schema."""
+    return json.loads(
+        (Path(__file__).parent / "json_schema/geojson_feature_schema.json").read_text()
+    )
 
 
 class TaxonomyComplianceError(Exception):
@@ -176,7 +181,7 @@ class TaxonomyField:
                     "geometry": item["geometry"],
                     "properties": item.get("properties", None),
                 }
-                validate(geojson_feature, GEOJSON_FEATURE_SCHEMA)
+                validate(geojson_feature, _get_geojson_schema())
         except ValidationError as e:
             raise TaxonomyComplianceError(
                 f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"

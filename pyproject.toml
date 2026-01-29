@@ -23,6 +23,9 @@ readme = "README.md"
 [tool.setuptools]
 packages = ["shinto", "shinto.pg", "shinto.juno"]
 
+[tool.setuptools.package-data]
+shinto = ["json_schema/*.json"]
+
 [tool.pdm]
 [tool.pdm.dev-dependencies]
 dev = [
