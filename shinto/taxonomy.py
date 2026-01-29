@@ -75,7 +75,7 @@ class TaxonomyField:
     description: str | None
     tags: list[str] | None
 
-    def __init__(self, field_dict: dict):
+    def __init__(self, field_dict: dict, strict: bool = True):
         """
         Initialize the TaxonomyField from a dictionary.
 
@@ -103,7 +103,7 @@ class TaxonomyField:
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
             self.values = [TaxonomyCategoricalValue(v) for v in field_dict["values"]]
-        if self.type in ["categorical", "multi_categorical"] and not self.values:
+        if self.type in ["categorical", "multi_categorical"] and not self.values and strict:
             raise ValueError(
                 f"Field of type '{self.type}' must have 'values' defined '{self.field_id}'."
             )
@@ -178,6 +178,7 @@ class TaxonomyField:
 
         """
         # TODO: Should we enforce required fields?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         if value is None:
             raise TaxonomyComplianceError(f"Field '{self.field_id}' is required but missing.")
 
@@ -226,6 +227,7 @@ class TaxonomyField:
     def _validate_polygon(self, value: Any):  # noqa: ANN401
         """Validate polygon field value."""
         # TODO: Is polygon always a list of GeoJSON features?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         try:
             for item in value:
                 if "geometry" not in item:
@@ -245,7 +247,7 @@ class Taxonomy:
     level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
-    def __init__(self, taxonomy_dict: dict):
+    def __init__(self, taxonomy_dict: dict, strict: bool = True):
         """
         Initialize the Taxonomy from a dictionary.
 
@@ -263,7 +265,7 @@ class Taxonomy:
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
         self.level = taxonomy_dict.get("level")
-        self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
+        self.fields = [TaxonomyField(field_dict, strict) for field_dict in taxonomy_dict["fields"]]
 
     def validate_data(self, data: dict):
         """
@@ -278,6 +280,7 @@ class Taxonomy:
         """
         for field in self.fields:
             # TODO: Or are fields always required?
+            # https://shintolabs.atlassian.net/browse/DOT-755
             if field.field_id in data:
                 field.validate(data[field.field_id])
 
@@ -294,6 +297,7 @@ class Taxonomy:
     def __to_json_schema__(self) -> dict:
         """Convert a taxonomy to a JSON schema."""
         # TODO: Are any fields required in the data/schema?
+        # https://shintolabs.atlassian.net/browse/DOT-755
         definitions = {
             "taxonomy_field_properties": {
                 "type": "object",
