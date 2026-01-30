@@ -124,21 +124,27 @@ class TaxonomyField:
         """Build the JSON schema definition for this field."""
         field_schema: dict = {"title": self.label, "type": None}
 
-        field_schema["description"] = self.label
         if self.description:
-            field_schema["description"] += "\n" + self.description.strip()
+            field_schema["description"] = self.description
 
         field_schema["type"] = jsonschema_type_mapping[self.type]
 
         if self.type in ("date-time", "date"):
             field_schema["format"] = "date-time"
-        elif self.type == "categorical":
+        elif self.type in ("categorical", "multi_categorical"):
             if self.values:
-                field_schema["enum"] = [val.value for val in self.values]
-        elif self.type == "multi_categorical":
-            field_schema["items"] = {"type": "string"}
-            if self.values:
-                field_schema["items"]["enum"] = [val.value for val in self.values]
+                categorical_options = [
+                    {
+                        "const": val.value,
+                        "title": val.label or val.value,
+                        **({"description": val.description} if val.description else {}),
+                    }
+                    for val in self.values
+                ]
+                if self.type == "categorical":
+                    field_schema["oneOf"] = categorical_options
+                else:
+                    field_schema["items"] = {"oneOf": categorical_options}
         elif self.type == "polygon":
             field_schema = {
                 "type": "array",
@@ -150,25 +156,7 @@ class TaxonomyField:
                 "description": "A list of GeoJSON features representing polygons.",
             }
 
-        if self.type in ("multi_categorical", "categorical") and self.values:
-            field_schema["description"] += self._build_json_schema_values_description() or ""
-
         return field_schema
-
-    def _build_json_schema_values_description(self) -> str:
-        """Generate a description of possible values for categorical fields."""
-        value_docs = []
-        for val in self.values:
-            if val.label or val.description:
-                parts = [f"'{val.value}'"]
-                if val.label:
-                    parts.append(val.label)
-                if val.description:
-                    parts.append(f"({val.description})")
-                value_docs.append(" - ".join(parts))
-        if value_docs:
-            return "\nPossible values:\n- " + "\n- ".join(value_docs)
-        return ""
 
     def validate(self, value: Any):  # noqa: ANN401
         """
