@@ -144,7 +144,7 @@ class TaxonomyField:
                 if self.type == "categorical":
                     field_schema["oneOf"] = categorical_options
                 else:
-                    field_schema["items"] = {"oneOf": categorical_options}
+                    field_schema["items"] = {"type": "string", "oneOf": categorical_options}
         elif self.type == "polygon":
             field_schema = {
                 "type": "array",
