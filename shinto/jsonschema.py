@@ -402,3 +402,57 @@ class JsonSchemaRegistry:
             logging.warning("Referenced schema %s not found in registry.", ref_identifier)
 
         return ref
+
+    def check_unresolvable_refs(self) -> list[dict[str, str]]:
+        """
+        Check all schemas in the registry for unresolvable references.
+
+        Returns:
+            list[dict[str, str]]: A list of unresolvable references with schema_id and ref details.
+                Each dict contains: {"schema_id": str, "ref": str, "path": str, "error": str}
+
+        """
+        unresolvable_refs = []
+        for schema_id in self._registry:
+            schema = self._registry.contents(schema_id)
+            errors = self._find_unresolvable_refs_in_schema(schema, schema_id)
+            unresolvable_refs.extend(errors)
+        return unresolvable_refs
+
+    def _find_unresolvable_refs_in_schema(
+        self, schema: dict, schema_id: str, path: str = ""
+    ) -> list[dict[str, str]]:
+        """Find all unresolvable refs in a schema recursively."""
+        unresolvable = []
+        for key, value in schema.items():
+            current_path = f"{path}.{key}" if path else key
+            if key == "$ref" and isinstance(value, str):
+                if not value.startswith("#"):
+                    parts = value.split("#", 1)
+                    ref_identifier = parts[0]
+
+                    can_resolve = self.schema_registered(
+                        ref_identifier
+                    ) or self.schema_id_in_registry(ref_identifier)
+
+                    if not can_resolve:
+                        unresolvable.append(
+                            {
+                                "schema_id": schema_id,
+                                "ref": value,
+                                "path": current_path,
+                                "error": f"Referenced schema '{ref_identifier}' not found",
+                            }
+                        )
+            elif isinstance(value, dict):
+                unresolvable.extend(
+                    self._find_unresolvable_refs_in_schema(value, schema_id, current_path)
+                )
+            elif isinstance(value, list):
+                for i, item in enumerate(value):
+                    if isinstance(item, dict):
+                        item_path = f"{current_path}[{i}]"
+                        unresolvable.extend(
+                            self._find_unresolvable_refs_in_schema(item, schema_id, item_path)
+                        )
+        return unresolvable
