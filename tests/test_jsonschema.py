@@ -291,6 +291,65 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             f"{Path('grandchild_schema.json').resolve()!s}#/definitions/type",
         )
 
+    def test_check_unresolvable_refs_none(self):
+        """Test checking for unresolvable refs when all refs are valid."""
+        parent_schema = {
+            "$id": "parent_schema",
+            "type": "object",
+            "properties": {
+                "child": {"$ref": "child_schema#/properties/name"},
+            },
+        }
+
+        child_schema = {
+            "$id": "child_schema",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.side_effect = [
+                json.dumps(parent_schema),
+                json.dumps(child_schema),
+            ]
+            self.registry.register_schema("parent_schema.json")
+            self.registry.register_schema("child_schema.json")
+
+        unresolvable = self.registry.check_unresolvable_refs()
+        self.assertEqual(len(unresolvable), 0)
+
+    def test_check_unresolvable_refs_found(self):
+        """Test checking for unresolvable refs when refs are invalid."""
+        parent_schema_2 = {
+            "$id": "parent_schema_2",
+            "type": "object",
+            "properties": {
+                "child": {"$ref": "child_schema#/properties/bad_ref"},
+            },
+        }
+
+        child_schema_2 = {
+            "$id": "child_schema_2",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+        with patch("shinto.jsonschema.Path.open", new_callable=mock_open) as mock_open_file, patch(
+            "shinto.jsonschema.Path.exists", new_callable=MagicMock()
+        ) as mock_exists:
+            mock_exists.return_value = True
+            mock_open_file.return_value.__enter__.return_value.read.side_effect = [
+                json.dumps(parent_schema_2),
+                json.dumps(child_schema_2),
+            ]
+            self.registry.register_schema("parent_schema_2.json")
+            self.registry.register_schema("child_schema_2.json")
+        unresolvable = self.registry.check_unresolvable_refs()
+        self.assertEqual(len(unresolvable), 1)
+
 
 class TestJsonSchema(unittest.TestCase):
     """Test cases for the JSON schema module."""
