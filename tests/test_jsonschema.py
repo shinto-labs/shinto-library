@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import jsonschema.exceptions
+import referencing.exceptions
 
 from shinto.jsonschema import (
     JsonSchemaRegistry,
@@ -291,13 +292,13 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             f"{Path('grandchild_schema.json').resolve()!s}#/definitions/type",
         )
 
-    def test_check_unresolvable_refs_none(self):
+    def test_check_unresolvable_refs(self):
         """Test checking for unresolvable refs when all refs are valid."""
         parent_schema = {
             "$id": "parent_schema",
             "type": "object",
             "properties": {
-                "child": {"$ref": "child_schema#/properties/name"},
+                "child": {"$ref": "child_schema.json#/properties/name"},
             },
         }
 
@@ -318,10 +319,10 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             self.registry.register_schema("parent_schema.json")
             self.registry.register_schema("child_schema.json")
 
-        unresolvable = self.registry.check_unresolvable_refs()
-        self.assertEqual(len(unresolvable), 0)
+        self.registry.update_schema_refs_to("id")
+        self.registry.check_unresolvable_refs()
 
-    def test_check_unresolvable_refs_found(self):
+    def test_check_unresolvable_refs_error(self):
         """Test checking for unresolvable refs when refs are invalid."""
         parent_schema_2 = {
             "$id": "parent_schema_2",
@@ -347,8 +348,9 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             ]
             self.registry.register_schema("parent_schema_2.json")
             self.registry.register_schema("child_schema_2.json")
-        unresolvable = self.registry.check_unresolvable_refs()
-        self.assertEqual(len(unresolvable), 1)
+
+        with self.assertRaises(referencing.exceptions.Unresolvable):
+            self.registry.check_unresolvable_refs()
 
 
 class TestJsonSchema(unittest.TestCase):
