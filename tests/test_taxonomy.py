@@ -255,7 +255,7 @@ class TestTaxonomy(unittest.TestCase):
     def test_taxonomy_json_schema_real_schema(self):
         """Test the JSON schema generation of a Taxonomy object."""
         taxonomy = Taxonomy(TEST_TAXONOMY)
-        json_schema = taxonomy.__to_json_schema__()
+        json_schema = taxonomy.__json_schema__
         self.assertIsInstance(json_schema, dict)
         (FIXTURES_DIR / "generated/taxonomy_schema.json").write_text(
             json.dumps(json_schema, indent=2)
@@ -273,7 +273,7 @@ class TestTaxonomy(unittest.TestCase):
     def test_taxonomy_invalid_real_schema(self):
         """Test that invalid data raises errors."""
         taxonomy = Taxonomy(TEST_TAXONOMY_INVALID, strict=False)
-        taxonomy.__to_json_schema__()
+        _json_schema = taxonomy.__json_schema__
 
         with self.assertRaises(TaxonomyComplianceError):
             for item in TEST_PROJECT_DATA_LIST:

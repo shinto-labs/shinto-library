@@ -120,7 +120,8 @@ class TaxonomyField:
                 f"Field of type '{self.type}' must have 'values' defined '{self.field_id}'."
             )
 
-    def __to_json_schema__(self) -> dict:
+    @property
+    def __json_schema__(self) -> dict:
         """Build the JSON schema definition for this field."""
         field_schema: dict = {"title": self.label, "type": None}
 
@@ -286,14 +287,15 @@ class Taxonomy:
                                 f"Failed to validate field '{field.field_id}' in stage {idx} "
                             ) from e
 
-    def __to_json_schema__(self) -> dict:
+    @property
+    def __json_schema__(self) -> dict:
         """Convert a taxonomy to a JSON schema."""
         # TODO: Are any fields required in the data/schema?
         # https://shintolabs.atlassian.net/browse/DOT-755
         definitions = {
             "taxonomy_field_properties": {
                 "type": "object",
-                "properties": {field.field_id: field.__to_json_schema__() for field in self.fields},
+                "properties": {field.field_id: field.__json_schema__ for field in self.fields},
                 "required": [],
             }
         }
