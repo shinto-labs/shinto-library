@@ -152,8 +152,12 @@ class TestJsonSchemaRegistry(unittest.TestCase):
         parent_schema = {
             "$id": "parent_schema",
             "type": "object",
+            "definitions": {
+                "test": {"type": "string"},
+            },
             "properties": {
                 "child": {"$ref": "child_schema.json#/properties/name"},
+                "internal": {"$ref": "#/definitions/test"},
             },
         }
 
