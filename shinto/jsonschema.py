@@ -79,7 +79,7 @@ class JsonSchemaRegistry:
         if not schema.get("$id"):
             raise ValueError("Schema must have an $id.")
 
-        schema_id = self._normalize_schema_id(schema["$id"])
+        schema_id = self.normalize_schema_id(schema["$id"])
         schema["$id"] = schema_id
 
         schema = self._normalize_schema_refs(schema)
@@ -108,7 +108,7 @@ class JsonSchemaRegistry:
             jsonschema.exceptions.ValidationError: The first validation error.
 
         """
-        schema_ids = [self._normalize_schema_id(sid) for sid in schema_ids]
+        schema_ids = [self.normalize_schema_id(sid) for sid in schema_ids]
         for schema_id in schema_ids:
             if not self.schema_id_in_registry(schema_id):
                 raise KeyError(f"Schema '{schema_id}' not found in registry.")
@@ -131,7 +131,7 @@ class JsonSchemaRegistry:
             list[ValidationErrorGroup]: A list of validation error groups.
 
         """
-        schema_ids = [self._normalize_schema_id(sid) for sid in schema_ids]
+        schema_ids = [self.normalize_schema_id(sid) for sid in schema_ids]
         validation_errors = []
         for schema_id in schema_ids:
             if not self.schema_id_in_registry(schema_id):
@@ -152,7 +152,7 @@ class JsonSchemaRegistry:
 
     def schema_id_in_registry(self, schema_id: str) -> bool:
         """Check if a schema ID is in the registry."""
-        return self._normalize_schema_id(schema_id) in self._registry
+        return self.normalize_schema_id(schema_id) in self._registry
 
     def get_schema_ids(self) -> list[str]:
         """Get all schema IDs in the registry."""
@@ -160,7 +160,7 @@ class JsonSchemaRegistry:
 
     def contents(self, schema_id: str) -> dict:
         """Get the contents of a schema."""
-        return self._registry.contents(self._normalize_schema_id(schema_id))
+        return self._registry.contents(self.normalize_schema_id(schema_id))
 
     def get_referenced_schema_ids(self, schema_id: str) -> list[str]:
         """
@@ -176,7 +176,7 @@ class JsonSchemaRegistry:
             list[str]: A list of schema IDs.
 
         """
-        schema_id = self._normalize_schema_id(schema_id)
+        schema_id = self.normalize_schema_id(schema_id)
         schema = self._registry.contents(schema_id)
         references = self._find_references_recursively(schema)
 
@@ -202,7 +202,7 @@ class JsonSchemaRegistry:
             list[str]: A list of all $ref URIs found directly or transitively.
 
         """
-        schema_id = self._normalize_schema_id(schema_id)
+        schema_id = self.normalize_schema_id(schema_id)
         schema = self._registry.contents(schema_id)
         return list(self._find_references_recursively(schema))
 
@@ -232,7 +232,7 @@ class JsonSchemaRegistry:
                 ]
             elif key == "$ref" and not value.startswith("#"):
                 parts = value.split("#", 1)
-                ref_identifier = self._normalize_schema_id(parts[0])
+                ref_identifier = self.normalize_schema_id(parts[0])
                 result[key] = f"{ref_identifier}#{parts[1]}" if len(parts) > 1 else ref_identifier
             else:
                 result[key] = value
@@ -260,7 +260,7 @@ class JsonSchemaRegistry:
                         references.update(self._find_references_recursively(item))
         return references
 
-    def _normalize_schema_id(self, schema_id: str) -> str:
+    def normalize_schema_id(self, schema_id: str) -> str:
         """
         Clean a schema ID or convert a schema filepath to a schema ID.
 
