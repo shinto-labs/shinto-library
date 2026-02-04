@@ -487,6 +487,49 @@ class TestJsonSchemaRegistry(unittest.TestCase):
 
             self.assertEqual(schema_id1, schema_id2)
 
+    @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
+    @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
+    def test_schema_alias_resolution(self, mock_exists: MagicMock, mock_open_file: MagicMock):
+        """Test that schema aliases are properly resolved."""
+        mock_exists.return_value = True
+
+        # Schema with a specific $id
+        schema_with_id = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "my_custom_schema_id",
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+
+        mock_open_file.return_value.__enter__.return_value.read.return_value = json.dumps(
+            schema_with_id
+        )
+
+        # Register using a filepath
+        schema_id = self.registry.register_schema("/path/to/my_schema.json")
+
+        # The returned ID should be the normalized $id
+        self.assertEqual(schema_id, "my_custom_schema_id")
+
+        # Should be able to look up by the $id
+        self.assertTrue(self.registry.schema_id_in_registry("my_custom_schema_id"))
+
+        # Should also be able to look up by the filepath (via alias)
+        self.assertTrue(self.registry.schema_id_in_registry("/path/to/my_schema.json"))
+
+        # Both should resolve to the same schema
+        self.assertEqual(
+            self.registry.contents("my_custom_schema_id"),
+            self.registry.contents("/path/to/my_schema.json"),
+        )
+
+        # Validate using filepath (should resolve via alias)
+        data = {"name": "test"}
+        self.registry.validate_json_against_schemas(data, ["/path/to/my_schema.json"])
+
+        # Validate using $id directly
+        self.registry.validate_json_against_schemas(data, ["my_custom_schema_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
