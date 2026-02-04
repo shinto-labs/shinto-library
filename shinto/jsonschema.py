@@ -84,10 +84,8 @@ class JsonSchemaRegistry:
             else:
                 raise ValueError("Schema must have an $id.")
 
-        # Normalize both the filepath and $id
         normalized_id = self.normalize_schema_id(schema["$id"])
 
-        # Create alias mapping: filepath -> $id (only if they differ after normalization)
         if schema_filepath:
             normalized_filepath = self.normalize_schema_id(schema_filepath)
             if normalized_filepath != normalized_id:
@@ -231,7 +229,7 @@ class JsonSchemaRegistry:
         resolver = self._registry.resolver()
         for schema_id in self._registry:
             for ref in self.get_references(schema_id):
-                resolver.lookup(ref)
+                resolver.lookup(f"{schema_id}{ref}" if ref.startswith("#") else ref)
 
     def _normalize_schema_refs(self, schema: dict) -> dict:
         """Update schema refs to schema IDs."""
