@@ -353,6 +353,11 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             self.registry.check_unresolvable_refs()
 
 
+###########################################
+# These tests are for deprecated functions.
+###########################################
+
+
 class TestJsonSchema(unittest.TestCase):
     """Test cases for the JSON schema module."""
 
