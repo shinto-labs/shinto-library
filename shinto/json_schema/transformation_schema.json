@@ -200,6 +200,31 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["remap"],
+          "properties": {
+            "remap": {
+              "type": "object",
+              "required": ["value_source", "mapping"],
+              "properties": {
+                "value_source": {
+                  "type": "string",
+                  "description": "Name of the field to remap"
+                },
+                "mapping": {
+                  "type": "object",
+                  "description": "Dictionary mapping input values to output values"
+                },
+                "default": {
+                  "description": "Default value to use when input is not found in mapping"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
