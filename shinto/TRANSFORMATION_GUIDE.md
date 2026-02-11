@@ -440,6 +440,120 @@ Evaluates a Python expression with row fields as variables.
 {"expr": "max(score1, score2, score3)"}
 ```
 
+### 5. Value Remapping - `remap`
+
+Transforms a field value by mapping it through a dictionary of key-value pairs. Useful for translating codes, normalizing values, or applying lookups.
+
+```json
+{
+  "source": {
+    "remap": {
+      "value_source": "status_code",
+      "mapping": {
+        "1": "active",
+        "2": "pending",
+        "3": "inactive"
+      },
+      "default": "unknown"
+    }
+  }
+}
+```
+
+**Properties:**
+- `value_source` (required): Name of the field to remap
+- `mapping` (required): Dictionary mapping input values to output values
+- `default` (optional): Default value to use when the input value is not found in the mapping. If not specified, unmapped values return `None`.
+
+**Notes:**
+- Keys in the mapping are always treated as strings for comparison
+- The input value is converted to a string before lookup
+- If the input value is `None` and not in the mapping, the default value is used (if specified)
+
+**Examples:**
+
+Translate status codes:
+```json
+{
+  "action": "set_field",
+  "key": "status",
+  "type": "string",
+  "source": {
+    "remap": {
+      "value_source": "status_code",
+      "mapping": {
+        "A": "Approved",
+        "P": "Pending",
+        "R": "Rejected"
+      },
+      "default": "Unknown"
+    }
+  }
+}
+```
+
+Normalize boolean values:
+```json
+{
+  "action": "set_field",
+  "key": "is_public",
+  "type": "boolean",
+  "source": {
+    "remap": {
+      "value_source": "share_profile",
+      "mapping": {
+        "public": true,
+        "shared": true,
+        "private": false,
+        "confidential": false
+      },
+      "default": false
+    }
+  }
+}
+```
+
+Convert numeric codes:
+```json
+{
+  "action": "add_field",
+  "key": "priority_label",
+  "type": "string",
+  "source": {
+    "remap": {
+      "value_source": "priority",
+      "mapping": {
+        "1": "Low",
+        "2": "Medium",
+        "3": "High",
+        "4": "Critical"
+      }
+    }
+  }
+}
+```
+
+Translate Dutch to English:
+```json
+{
+  "action": "set_field",
+  "key": "project_phase",
+  "type": "string",
+  "source": {
+    "remap": {
+      "value_source": "fase",
+      "mapping": {
+        "initiatief": "initiative",
+        "ontwerp": "design",
+        "uitvoering": "execution",
+        "afgerond": "completed"
+      },
+      "default": "unknown"
+    }
+  }
+}
+```
+
 ## Filters
 
 Filters determine which rows pass through to the next step. Rows that don't match the filter criteria are dropped.
