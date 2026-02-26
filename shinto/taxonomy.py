@@ -296,7 +296,6 @@ class Taxonomy:
             "taxonomy_field_properties": {
                 "type": "object",
                 "properties": {field.field_id: field.__json_schema__ for field in self.fields},
-                "required": [],
             }
         }
 
@@ -313,6 +312,5 @@ class Taxonomy:
                     "items": {"$ref": "#/definitions/taxonomy_field_properties"},
                 }
             },
-            "required": [],
             "definitions": definitions,
         }
