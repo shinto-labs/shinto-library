@@ -86,6 +86,7 @@ class TaxonomyField:
     values: list[TaxonomyCategoricalValue] | None
     description: str | None
     tags: list[str] | None
+    level: str | None
 
     def __init__(self, field_dict: dict, strict: bool = True):
         """
@@ -111,6 +112,7 @@ class TaxonomyField:
         self.description = field_dict.get("description")
         self.tags = field_dict.get("tags")
         self.values = None
+        self.level = field_dict.get("level")
         if "values" in field_dict:
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
@@ -273,11 +275,12 @@ class Taxonomy:
         """
         for field in self.fields:
             # TODO: Or are fields always required?
+            # Also are additional fields allowed in the data that are not defined in the taxonomy?
             # https://shintolabs.atlassian.net/browse/DOT-755
-            if field.field_id in data:
-                field.validate(data[field.field_id])
-
-            if "stages" in data:
+            if field.level == "project":
+                if field.field_id in data:
+                    field.validate(data[field.field_id])
+            elif "stages" in data:
                 for idx, stage in enumerate(data["stages"]):
                     if field.field_id in stage:
                         try:
@@ -291,13 +294,9 @@ class Taxonomy:
     def __json_schema__(self) -> dict:
         """Convert a taxonomy to a JSON schema."""
         # TODO: Are any fields required in the data/schema?
+        # Also should aditional properties be disallowed?
         # https://shintolabs.atlassian.net/browse/DOT-755
-        definitions = {
-            "taxonomy_field_properties": {
-                "type": "object",
-                "properties": {field.field_id: field.__json_schema__ for field in self.fields},
-            }
-        }
+        definitions = {}
 
         if any(field.type == "polygon" for field in self.fields):
             definitions["geojson_geometry"] = _get_geojson_geometry_schema()
@@ -305,12 +304,23 @@ class Taxonomy:
         return {
             "title": "Taxonomy Data Schema",
             "type": "object",
-            "allOf": [{"$ref": "#/definitions/taxonomy_field_properties"}],
             "properties": {
+                **{
+                    field.field_id: field.__json_schema__
+                    for field in self.fields
+                    if field.level == "project"
+                },
                 "stages": {
                     "type": "array",
-                    "items": {"$ref": "#/definitions/taxonomy_field_properties"},
-                }
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            field.field_id: field.__json_schema__
+                            for field in self.fields
+                            if not field.level or field.level != "project"
+                        },
+                    },
+                },
             },
-            "definitions": definitions,
+            **({"definitions": definitions} if definitions else {}),
         }
