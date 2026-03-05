@@ -28,7 +28,7 @@ class ConfigError(Exception):
 
 
 def _substitute_env_vars(
-    data: dict[str, Any] | list[Any] | str,
+    config_data: str,
     raise_on_missing: bool = False,
 ) -> dict[str, Any] | list[Any] | str:
     """
@@ -37,7 +37,7 @@ def _substitute_env_vars(
     Supports ${VAR_NAME} and ${VAR_NAME:default_value} syntax.
 
     Args:
-        data: The data to process (dict, list, or string).
+        config_data: The config data as a string.
         raise_on_missing: If True, raises KeyError for missing env vars without defaults.
 
     Returns:
@@ -47,31 +47,26 @@ def _substitute_env_vars(
         KeyError: If raise_on_missing is True and an env var is missing without a default.
 
     """
-    if isinstance(data, dict):
-        return {key: _substitute_env_vars(value, raise_on_missing) for key, value in data.items()}
-    if isinstance(data, list):
-        return [_substitute_env_vars(item, raise_on_missing) for item in data]
-    if isinstance(data, str):
-        # Pattern to match ${VAR_NAME} or ${VAR_NAME:default_value}
-        pattern = re.compile(r"\$\{([^}:]+)(?::([^}]*))?\}")
+    if not isinstance(config_data, str):
+        raise TypeError("Config data must be a string for environment variable substitution")
+    pattern = re.compile(r"\$\{([^}:]+)(?::(-?)([^}]*))?\}")
+    matches = pattern.findall(config_data)
+    for var_name, default_prefix, default_value in matches:
+        env_value = os.environ.get(var_name)
+        if env_value is not None:
+            config_data = config_data.replace(f"${{{var_name}}}", env_value)
+            config_data = config_data.replace(
+                f"${{{var_name}:{default_prefix}{default_value}}}", env_value
+            )
+        elif default_value is not None:
+            config_data = config_data.replace(
+                f"${{{var_name}:{default_prefix}{default_value}}}", default_value
+            )
+        elif raise_on_missing:
+            msg = f"Environment variable '{var_name}' not found and no default provided"
+            raise KeyError(msg)
 
-        def replace_match(match: re.Match[str]) -> str:
-            var_name = match.group(1)
-            default_value = match.group(2)
-
-            env_value = os.environ.get(var_name)
-            if env_value is not None:
-                return env_value
-            if default_value is not None:
-                return default_value
-            if raise_on_missing:
-                msg = f"Environment variable '{var_name}' not found and no default provided"
-                raise KeyError(msg)
-            # Return the original placeholder if env var not found and no default
-            return match.group(0)
-
-        return pattern.sub(replace_match, data)
-    return data
+    return config_data
 
 
 def _merge_dicts(d1: dict, d2: dict) -> dict:
@@ -103,7 +98,7 @@ def _merge_dicts(d1: dict, d2: dict) -> dict:
     return d2
 
 
-def _read_config_file(file_path: str) -> dict[str, Any]:
+def _read_config_file(file_path: str, config_data: str) -> dict[str, Any]:
     """
     Read config file and return as dict.
 
@@ -111,6 +106,7 @@ def _read_config_file(file_path: str) -> dict[str, Any]:
 
     Args:
         file_path (str): The path to the config file.
+        config_data (str): The config data as a string.
 
     Returns:
         dict: The config data.
@@ -118,18 +114,16 @@ def _read_config_file(file_path: str) -> dict[str, Any]:
     """
     file_extension = Path(file_path).suffix.lower()
     if file_extension in [".yaml", ".yml"]:
-        with Path(file_path).open(encoding="utf-8") as yaml_file:
-            return yaml.safe_load(yaml_file)
-    elif file_extension in [".json", ".js"]:
-        with Path(file_path).open(encoding="utf-8") as yaml_file:
-            return json.load(yaml_file)
-    elif file_extension == ".ini":
-        config_data = configparser.ConfigParser()
-        config_data.read(file_path)
-        return {section: dict(config_data.items(section)) for section in config_data.sections()}
-    else:
-        msg = f"Unsupported config file extension: {file_extension}"
-        raise ConfigError(msg)
+        return yaml.safe_load(config_data)
+    if file_extension in [".json", ".js"]:
+        return json.loads(config_data)
+    if file_extension == ".ini":
+        config = configparser.ConfigParser()
+        config.read_string(config_data)
+        return {section: dict(config[section]) for section in config.sections()}
+
+    msg = f"Unsupported config file extension: {file_extension}"
+    raise ConfigError(msg)
 
 
 def load_config_file(
@@ -157,10 +151,12 @@ def load_config_file(
         msg = f"Config file not found: {file_path}."
         raise FileNotFoundError(msg)
 
-    config = _read_config_file(file_path) or {}
+    config_data = Path(file_path).read_text(encoding="utf-8")
 
     if substitute_env_vars:
-        config = _substitute_env_vars(config, raise_on_missing_env)
+        config_data = _substitute_env_vars(config_data, raise_on_missing_env)
+
+    config = _read_config_file(file_path, config_data) or {}
 
     return _merge_dicts(config, defaults)
 
