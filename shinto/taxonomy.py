@@ -23,6 +23,7 @@ FIELD_TYPE = Literal[
     "date-time",
     "date",
     "polygon",
+    "object",
 ]
 
 type_mapping = {
@@ -34,6 +35,7 @@ type_mapping = {
     "categorical": str,
     "multi_categorical": list,
     "polygon": list,
+    "object": dict,
 }
 jsonschema_type_mapping = {
     "number": "integer",
@@ -44,6 +46,7 @@ jsonschema_type_mapping = {
     "categorical": "string",
     "multi_categorical": "array",
     "polygon": "array",
+    "object": "object",
 }
 
 
@@ -108,6 +111,11 @@ class TaxonomyField:
             )
         self.field_id = field_dict["field"]
         self.type = field_dict["type"]
+        # TODO: Converting "info_from_point" to "object" type for now
+        # This is a hack until it is fixed in the taxonomy
+        # https://shintolabs.atlassian.net/browse/DOT-755
+        if self.field_id == "info_from_point":
+            self.type = "object"
         self.label = field_dict["label"]
         self.description = field_dict.get("description")
         self.tags = field_dict.get("tags")
@@ -262,7 +270,7 @@ class Taxonomy:
         self.level = taxonomy_dict.get("level")
         self.fields = [TaxonomyField(field_dict, strict) for field_dict in taxonomy_dict["fields"]]
 
-    def validate_data(self, data: dict):
+    def validate(self, data: dict):
         """
         Validate data against the taxonomy.
 
@@ -311,6 +319,7 @@ class Taxonomy:
                     if field.level == "project"
                 },
                 "stages": {
+                    "title": "Project Stages",
                     "type": "array",
                     "items": {
                         "type": "object",
