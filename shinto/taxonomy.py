@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -91,7 +92,7 @@ class TaxonomyField:
     tags: list[str] | None
     level: str | None
 
-    def __init__(self, field_dict: dict, strict: bool = True):
+    def __init__(self, field_dict: dict):
         """
         Initialize the TaxonomyField from a dictionary.
 
@@ -125,9 +126,14 @@ class TaxonomyField:
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
             self.values = [TaxonomyCategoricalValue(v) for v in field_dict["values"]]
-        if self.type in ["categorical", "multi_categorical"] and not self.values and strict:
-            raise ValueError(
-                f"Field of type '{self.type}' must have 'values' defined '{self.field_id}'."
+        # TODO: we should probably throw an error here.
+        # This is a hack until it is fixed in the taxonomy
+        # https://shintolabs.atlassian.net/browse/DOT-755
+        if self.type in ["categorical", "multi_categorical"] and not self.values:
+            self.type = "string"
+            logging.warning(
+                "Field '%s' is categorical but has no values. Downgrading to string type.",
+                self.field_id,
             )
 
     @property
@@ -250,7 +256,7 @@ class Taxonomy:
     level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
-    def __init__(self, taxonomy_dict: dict, strict: bool = True):
+    def __init__(self, taxonomy_dict: dict):
         """
         Initialize the Taxonomy from a dictionary.
 
@@ -268,7 +274,7 @@ class Taxonomy:
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
         self.level = taxonomy_dict.get("level")
-        self.fields = [TaxonomyField(field_dict, strict) for field_dict in taxonomy_dict["fields"]]
+        self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
 
     def validate(self, data: dict):
         """
@@ -288,8 +294,8 @@ class Taxonomy:
             if field.level == "project":
                 if field.field_id in data:
                     field.validate(data[field.field_id])
-            elif "stages" in data:
-                for idx, stage in enumerate(data["stages"]):
+            else:
+                for idx, stage in enumerate(data.get("stages", [])):
                     if field.field_id in stage:
                         try:
                             field.validate(stage[field.field_id])

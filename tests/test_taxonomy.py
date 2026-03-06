@@ -11,8 +11,7 @@ from shinto.taxonomy import Taxonomy, TaxonomyComplianceError, TaxonomyField
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 (FIXTURES_DIR / "generated").mkdir(exist_ok=True)
 
-TEST_TAXONOMY = json.loads((FIXTURES_DIR / "taxonomy_tilburg_modified_test.json").read_text())
-TEST_TAXONOMY_INVALID = json.loads((FIXTURES_DIR / "taxonomy_tilburg_test.json").read_text())
+TEST_TAXONOMY = json.loads((FIXTURES_DIR / "taxonomy_tilburg_test.json").read_text())
 TEST_PROJECT_DATA_LIST = json.loads(
     (FIXTURES_DIR / "project_data_list_tilburg_test.json").read_text()
 )
@@ -23,26 +22,33 @@ class TestTaxonomy(unittest.TestCase):
 
     def test_valid_number_field(self):
         """Test validation of valid number fields."""
-        taxonomy = Taxonomy({"fields": [{"field": "count", "type": "number", "label": "Count"}]})
+        taxonomy = Taxonomy(
+            {"fields": [{"field": "count", "type": "number", "label": "Count", "level": "project"}]}
+        )
 
         # Valid number
-        taxonomy.validate_data({"count": 42})
-        taxonomy.validate_data({"count": 0})
-        taxonomy.validate_data({"count": -10})
+        taxonomy.validate({"count": 42})
+        taxonomy.validate({"count": 0})
+        taxonomy.validate({"count": -10})
 
     def test_valid_text_field(self):
         """Test validation of valid text fields."""
         taxonomy = Taxonomy(
             {
                 "fields": [
-                    {"field": "name", "type": "text", "label": "Name"},
-                    {"field": "description", "type": "string", "label": "Description"},
+                    {"field": "name", "type": "text", "label": "Name", "level": "project"},
+                    {
+                        "field": "description",
+                        "type": "string",
+                        "label": "Description",
+                        "level": "project",
+                    },
                 ]
             }
         )
 
-        taxonomy.validate_data({"name": "Project A", "description": "A test project"})
-        taxonomy.validate_data({"name": "", "description": ""})
+        taxonomy.validate({"name": "Project A", "description": "A test project"})
+        taxonomy.validate({"name": "", "description": ""})
 
     def test_valid_categorical_field(self):
         """Test validation of valid categorical fields."""
@@ -57,13 +63,14 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "active", "label": "Active"},
                             {"value": "inactive", "label": "Inactive"},
                         ],
+                        "level": "project",
                     }
                 ]
             }
         )
 
-        taxonomy.validate_data({"status": "active"})
-        taxonomy.validate_data({"status": "inactive"})
+        taxonomy.validate({"status": "active"})
+        taxonomy.validate({"status": "inactive"})
 
     def test_valid_multi_categorical_field(self):
         """Test validation of valid multi-categorical fields."""
@@ -79,29 +86,45 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "important", "label": "Important"},
                             {"value": "review", "label": "Review"},
                         ],
+                        "level": "project",
                     }
                 ]
             }
         )
 
-        taxonomy.validate_data({"tags": ["urgent"]})
-        taxonomy.validate_data({"tags": ["urgent", "important"]})
-        taxonomy.validate_data({"tags": []})
+        taxonomy.validate({"tags": ["urgent"]})
+        taxonomy.validate({"tags": ["urgent", "important"]})
+        taxonomy.validate({"tags": []})
 
     def test_valid_datetime_field(self):
         """Test validation of valid date-time fields."""
         taxonomy = Taxonomy(
-            {"fields": [{"field": "created_at", "type": "date-time", "label": "Created At"}]}
+            {
+                "fields": [
+                    {
+                        "field": "created_at",
+                        "type": "date-time",
+                        "label": "Created At",
+                        "level": "project",
+                    }
+                ]
+            }
         )
 
-        taxonomy.validate_data({"created_at": "2025-08-07T00:00:00"})
-        taxonomy.validate_data({"created_at": "2025-08-07T00:00:00.000"})
-        taxonomy.validate_data({"created_at": "2025-08-07T14:30:45"})
-        taxonomy.validate_data({"created_at": "2025-08-07T14:30:45.123456"})
+        taxonomy.validate({"created_at": "2025-08-07T00:00:00"})
+        taxonomy.validate({"created_at": "2025-08-07T00:00:00.000"})
+        taxonomy.validate({"created_at": "2025-08-07T14:30:45"})
+        taxonomy.validate({"created_at": "2025-08-07T14:30:45.123456"})
 
     def test_valid_polygon_field(self):
         """Test validation of valid polygon fields."""
-        taxonomy = Taxonomy({"fields": [{"field": "geo", "type": "polygon", "label": "Geometry"}]})
+        taxonomy = Taxonomy(
+            {
+                "fields": [
+                    {"field": "geo", "type": "polygon", "label": "Geometry", "level": "project"}
+                ]
+            }
+        )
 
         valid_geojson = [
             {
@@ -113,17 +136,19 @@ class TestTaxonomy(unittest.TestCase):
                 "properties": {},
             }
         ]
-        taxonomy.validate_data({"geo": valid_geojson})
+        taxonomy.validate({"geo": valid_geojson})
 
     def test_invalid_number_field(self):
         """Test validation of invalid number fields."""
-        taxonomy = Taxonomy({"fields": [{"field": "count", "type": "number", "label": "Count"}]})
+        taxonomy = Taxonomy(
+            {"fields": [{"field": "count", "type": "number", "label": "Count", "level": "project"}]}
+        )
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"count": "42"})
+            taxonomy.validate({"count": "42"})
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"count": 3.14})
+            taxonomy.validate({"count": 3.14})
 
     def test_invalid_categorical_field(self):
         """Test validation of invalid categorical fields."""
@@ -138,13 +163,14 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "active", "label": "Active"},
                             {"value": "inactive", "label": "Inactive"},
                         ],
+                        "level": "project",
                     }
                 ]
             }
         )
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"status": "pending"})
+            taxonomy.validate({"status": "pending"})
 
     def test_invalid_multi_categorical_field(self):
         """Test validation of invalid multi-categorical fields."""
@@ -159,49 +185,64 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "urgent", "label": "Urgent"},
                             {"value": "important", "label": "Important"},
                         ],
+                        "level": "project",
                     }
                 ]
             }
         )
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"tags": ["urgent", "invalid"]})
+            taxonomy.validate({"tags": ["urgent", "invalid"]})
 
     def test_invalid_datetime_field(self):
         """Test validation of invalid date-time fields."""
         taxonomy = Taxonomy(
-            {"fields": [{"field": "created_at", "type": "date-time", "label": "Created At"}]}
+            {
+                "fields": [
+                    {
+                        "field": "created_at",
+                        "type": "date-time",
+                        "label": "Created At",
+                        "level": "project",
+                    }
+                ]
+            }
         )
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"created_at": "not-a-date"})
+            taxonomy.validate({"created_at": "not-a-date"})
 
         with self.assertRaises(TaxonomyComplianceError):
-            taxonomy.validate_data({"created_at": "2025-13-45"})
+            taxonomy.validate({"created_at": "2025-13-45"})
 
     def test_missing_optional_fields(self):
         """Test that missing fields are handled correctly."""
         taxonomy = Taxonomy(
             {
                 "fields": [
-                    {"field": "name", "type": "text", "label": "Name"},
-                    {"field": "count", "type": "number", "label": "Count"},
+                    {"field": "name", "type": "text", "label": "Name", "level": "project"},
+                    {"field": "count", "type": "number", "label": "Count", "level": "project"},
                 ]
             }
         )
 
         # Fields not in data should not raise errors (they're optional)
-        taxonomy.validate_data({"name": "Test"})
-        taxonomy.validate_data({"count": 5})
-        taxonomy.validate_data({})
+        taxonomy.validate({"name": "Test"})
+        taxonomy.validate({"count": 5})
+        taxonomy.validate({})
 
     def test_complex_valid_data(self):
         """Test validation of complex valid data structures."""
         taxonomy = Taxonomy(
             {
                 "fields": [
-                    {"field": "project_name", "type": "text", "label": "Project Name"},
-                    {"field": "budget", "type": "number", "label": "Budget"},
+                    {
+                        "field": "project_name",
+                        "type": "text",
+                        "label": "Project Name",
+                        "level": "project",
+                    },
+                    {"field": "budget", "type": "number", "label": "Budget", "level": "project"},
                     {
                         "field": "status",
                         "type": "categorical",
@@ -211,6 +252,7 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "active", "label": "Active"},
                             {"value": "completed", "label": "Completed"},
                         ],
+                        "level": "project",
                     },
                     {
                         "field": "features",
@@ -221,8 +263,14 @@ class TestTaxonomy(unittest.TestCase):
                             {"value": "parking", "label": "Parking"},
                             {"value": "garden", "label": "Garden"},
                         ],
+                        "level": "project",
                     },
-                    {"field": "start_date", "type": "date-time", "label": "Start Date"},
+                    {
+                        "field": "start_date",
+                        "type": "date-time",
+                        "label": "Start Date",
+                        "level": "project",
+                    },
                 ]
             }
         )
@@ -235,7 +283,7 @@ class TestTaxonomy(unittest.TestCase):
             "start_date": "2025-01-15T09:00:00",
         }
 
-        taxonomy.validate_data(valid_data)
+        taxonomy.validate(valid_data)
 
     def test_taxonomy_creation_real_schema(self):
         """Test the creation of a Taxonomy object."""
@@ -250,7 +298,7 @@ class TestTaxonomy(unittest.TestCase):
         taxonomy = Taxonomy(TEST_TAXONOMY)
 
         for item in TEST_PROJECT_DATA_LIST:
-            taxonomy.validate_data(item)
+            taxonomy.validate(item)
 
     def test_taxonomy_json_schema_real_schema(self):
         """Test the JSON schema generation of a Taxonomy object."""
@@ -269,15 +317,6 @@ class TestTaxonomy(unittest.TestCase):
                 "definitions": json_schema.get("definitions", {}),
             },
         )
-
-    def test_taxonomy_invalid_real_schema(self):
-        """Test that invalid data raises errors."""
-        taxonomy = Taxonomy(TEST_TAXONOMY_INVALID, strict=False)
-        _json_schema = taxonomy.__json_schema__
-
-        with self.assertRaises(TaxonomyComplianceError):
-            for item in TEST_PROJECT_DATA_LIST:
-                taxonomy.validate_data(item)
 
 
 if __name__ == "__main__":
