@@ -123,6 +123,8 @@ class TaxonomyField:
         self.values = None
         self.level = field_dict.get("level")
         if "values" in field_dict:
+            if self.type not in ("categorical", "multi_categorical"):
+                raise TypeError("Only categorical and multi_categorical fields can have 'values'.")
             if not isinstance(field_dict["values"], list):
                 raise TypeError("field_dict['values'] must be a list.")
             self.values = [TaxonomyCategoricalValue(v) for v in field_dict["values"]]
