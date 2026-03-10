@@ -124,6 +124,8 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
       - {"path": "field_name"} - extract field from row (supports dot notation and glom paths)
       - {"template": "Text {field}"} - format template with row fields
       - {"expr": "field1 + field2"} - evaluate Python expression
+      - {"remap": {...}} - remap value using mapping dictionary
+      - {"coalesce": ["field1", "field2", "field3"]} - return first non-null, non-empty value
     """
     if source is None:
         return None
@@ -147,6 +149,14 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
         mapping = source["remap"].get("mapping", {})
         result = mapping.get(str(val), source["remap"].get("default", None))
         return result
+
+    if "coalesce" in source:
+        fields = source["coalesce"]
+        for field in fields:
+            val = row.get(field)
+            if val is not None and val != "":
+                return val
+        return None
 
     raise ValueError(f"Unknown source spec: {source}")
 

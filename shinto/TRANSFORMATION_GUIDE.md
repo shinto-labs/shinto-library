@@ -554,6 +554,99 @@ Translate Dutch to English:
 }
 ```
 
+### 6. Coalesce - `coalesce`
+
+Returns the first non-null, non-empty value from a list of fields. This is useful for fallback logic when you want to use the first available value from multiple potential sources.
+
+```json
+{
+  "source": {
+    "coalesce": ["preferred_name", "display_name", "full_name", "name"]
+  }
+}
+```
+
+**Properties:**
+- `coalesce` (required): Array of field names to check in order
+
+**Notes:**
+- Checks each field in the order specified
+- Returns the first value that is both non-null AND non-empty string
+- If no fields have a valid value, returns `None`
+- Empty strings (`""`) are treated as invalid and skipped
+
+**Examples:**
+
+Basic fallback for names:
+```json
+{
+  "action": "add_field",
+  "key": "contact_name",
+  "type": "string",
+  "source": {
+    "coalesce": ["preferred_name", "full_name", "email"]
+  }
+}
+```
+
+Fallback for dates:
+```json
+{
+  "action": "add_field",
+  "key": "effective_date",
+  "type": "string",
+  "source": {
+    "coalesce": ["completion_date", "target_date", "start_date", "creation_date"]
+  }
+}
+```
+
+Multi-language field fallback:
+```json
+{
+  "action": "add_field",
+  "key": "title",
+  "type": "string",
+  "source": {
+    "coalesce": ["title_en", "title_nl", "title_de", "title_original"]
+  }
+}
+```
+
+Status field with defaults:
+```json
+{
+  "action": "set_field",
+  "key": "current_status",
+  "type": "string",
+  "source": {
+    "coalesce": ["stage_status", "project_status", "default_status"]
+  }
+}
+```
+
+**Comparison with `expr`:**
+
+Instead of using a complex expression:
+```json
+{
+  "source": {
+    "expr": "display_name or full_name or name or 'Unknown'"
+  }
+}
+```
+
+Use the clearer `coalesce`:
+```json
+{
+  "source": {
+    "coalesce": ["display_name", "full_name", "name"]
+  }
+}
+```
+
+Note: If you need a default value when all fields are empty, you can still use `expr` or add a constant field as a fallback in your pipeline.
+
 ## Filters
 
 Filters determine which rows pass through to the next step. Rows that don't match the filter criteria are dropped.
