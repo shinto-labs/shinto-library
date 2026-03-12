@@ -9,7 +9,9 @@ __all__ = [
     "Taxonomy",
     "TaxonomyComplianceError",
     "ValidationErrorGroup",
+    "calculate_crc32_for_file",
     "get_json_object_from_query_result",
+    "get_mimetype_for_file",
     "inc_persistant_counter",
     "init_persistant_metrics",
     "load_config_file",
@@ -24,6 +26,7 @@ __all__ = [
 ]
 
 from .config import load_config_file, output_config
+from .general import get_mimetype_for_file, calculate_crc32_for_file
 from .jsonschema import JsonSchemaRegistry, ValidationErrorGroup
 from .logging import setup_logging
 from .metrics import inc_persistant_counter, init_persistant_metrics, push_metric
