@@ -25,6 +25,7 @@ FIELD_TYPE = Literal[
     "date",
     "polygon",
     "object",
+    "boolean",
 ]
 
 type_mapping = {
@@ -37,6 +38,7 @@ type_mapping = {
     "multi_categorical": list,
     "polygon": list,
     "object": dict,
+    "boolean": bool,
 }
 jsonschema_type_mapping = {
     "number": "integer",
@@ -48,6 +50,7 @@ jsonschema_type_mapping = {
     "multi_categorical": "array",
     "polygon": "array",
     "object": "object",
+    "boolean": "boolean",
 }
 
 
@@ -258,7 +261,7 @@ class Taxonomy:
     level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
-    def __init__(self, taxonomy_dict: dict):
+    def __init__(self, taxonomy_dict: dict, skip_unknown_types: bool = False):
         """
         Initialize the Taxonomy from a dictionary.
 
@@ -276,7 +279,26 @@ class Taxonomy:
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
         self.level = taxonomy_dict.get("level")
-        self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
+        if not skip_unknown_types:
+            self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
+        else:
+            self.fields = []
+            for field_dict in taxonomy_dict["fields"]:
+                self.try_add_field(field_dict)
+
+    def try_add_field(self, field_dict: dict):
+        """Try to add a field to the taxonomy, skipping if the type is unrecognized."""
+        try:
+            self.fields.append(TaxonomyField(field_dict))
+        except TypeError as e:
+            field_id = field_dict.get("field", "unknown")
+            field_type = field_dict.get("type", "unknown")
+            logging.warning(
+                "Skipping field '%s' with unrecognized type '%s': %s",
+                field_id,
+                field_type,
+                str(e),
+            )
 
     def validate(self, data: dict):
         """
