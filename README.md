@@ -2,7 +2,7 @@
 
 Library of shared Python modules for use in Shinto projects.
 
-Please refer to the [docs](https://probable-garbanzo-6k3l49r.pages.github.io/) for installation and usage of the library.
+Please refer to the [docs](https://docs.shinto-library.shintolabs.net/) for installation and usage of the library.
 
 ## Prerequisites
 

@@ -26,8 +26,9 @@ def projects_to_stage_data(projects: List[Dict[str, Any]]) -> List[Dict[str, Any
     for project in projects_data:
         for stage in project.get("stages", []):
             stage_info = stage.copy()
+            # Project level data takes precedence over stage level data, but log a warning if there is a conflict, also omit stages key from project data when merging to stage data to avoid confusion
             for project_key, project_value in project.items():
-                if project_key in stage_info and stage_info[project_key] != project_value:
+                if project_key in stage_info and stage_info[project_key] != project_value and project_key != "stages":
                     logging.warning(
                         f"Key {project_key} in project data conflicts with stage data. Project data will take precedence.(stage value: {stage_info[project_key]}, project value: {project_value})")
 
