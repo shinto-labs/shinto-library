@@ -21,7 +21,7 @@ requires-python = ">=3.8,<3.14"
 readme = "README.md"
 
 [tool.setuptools]
-packages = ["shinto", "shinto.pg", "shinto.juno"]
+packages = ["shinto", "shinto.pg", "shinto.juno", "shinto.mimir"]
 
 [tool.setuptools.package-data]
 shinto = ["json_schema/*.json"]

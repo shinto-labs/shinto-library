@@ -10,7 +10,7 @@ import psycopg
 class Connection(psycopg.Connection):
     """Wrapper for a connection to the database."""
 
-    def execute_query(self, query: str, params: None | dict[str:Any] = None) -> list[tuple]:
+    def execute_query(self, query: str, params: None | dict | tuple | list = None) -> list[tuple]:
         """
         Execute a query or command to the database.
 
@@ -34,7 +34,7 @@ class Connection(psycopg.Connection):
             return cur.fetchall()
 
     def execute_command(
-        self, query: str, params: None | dict[str:Any] = None, should_commit: bool = True
+        self, query: str, params: None | dict | tuple | list = None, should_commit: bool = True
     ) -> int:
         """
         Execute a command (INSERT, UPDATE, DELETE) that doesn't return data.
@@ -99,7 +99,7 @@ class Connection(psycopg.Connection):
 class AsyncConnection(psycopg.AsyncConnection):
     """Wrapper for an async connection to the database."""
 
-    async def execute_query(self, query: str, params: None | dict[str:Any] = None) -> list[tuple]:
+    async def execute_query(self, query: str, params: None | dict | tuple | list = None) -> list[tuple]:
         """
         Execute a query or command to the database asynchronously.
 
@@ -125,7 +125,7 @@ class AsyncConnection(psycopg.AsyncConnection):
     async def execute_command(
         self,
         query: str,
-        params: None | dict[str:Any] = None,
+        params: None | dict | tuple | list = None,
         should_commit: bool = True,
     ) -> int:
         """
