@@ -7,41 +7,39 @@ from shinto.general import normalize_timestamp
 
 from shinto.pg.connection import Connection
 
-def get_project_by_id(connection: Connection, project_id: uuid.UUID, timestamp: Optional[Union[datetime, str]] = None) -> dict:
+def get_project_by_id(connection: Connection, action_by: UUID, project_id: uuid.UUID, timestamp: Optional[Union[datetime, str]] = None) -> dict:
     """Get a project by ID. Accepts timestamp as datetime, ISO 8601 string, or None."""
     timestamp = normalize_timestamp(timestamp)
 
     result = connection.execute_query(
-        "SELECT to_json(data.get_project_by_id((base.get_shintolabs_user()).id, %s::uuid, %s::TIMESTAMPTZ))",
-        (project_id, timestamp),
+        "SELECT to_json(data.get_project_by_id(%s::uuid, %s::uuid, %s::TIMESTAMPTZ))",
+        (action_by, project_id, timestamp),
     )
     return result[0][0] if result else {}
 
-def get_project_by_name(connection: Connection, project_name: str, timestamp: Optional[Union[datetime, str]] = None) -> dict:
+def get_project_by_name(connection: Connection, action_by: UUID, project_name: str, timestamp: Optional[Union[datetime, str]] = None) -> dict:
     """Get a project by name. Accepts timestamp as datetime, ISO 8601 string, or None."""
     timestamp = normalize_timestamp(timestamp)
 
     result = connection.execute_query(
-        "SELECT to_json(data.get_project_by_name((base.get_shintolabs_user()).id, %s::text, %s::TIMESTAMPTZ))",
-        (project_name, timestamp),
+        "SELECT to_json(data.get_project_by_name(%s::uuid, %s::text, %s::TIMESTAMPTZ))",
+        (action_by, project_name, timestamp),
     )
     return result[0][0] if result else {}
 
-def get_project_history(connection: Connection, project_id: uuid.UUID) -> list[dict]:
+def get_project_history(connection: Connection, action_by: UUID, project_id: uuid.UUID) -> list[dict]:
     """Get the history of a project."""
     result = connection.execute_query(
         """
         SELECT COALESCE(json_agg(project), '[]'::json)
-        FROM data.get_project_history(
-            (base.get_shintolabs_user()).id, 
-            %s::uuid
+        FROM data.get_project_history(%s::uuid, %s::uuid
         ) AS project
         """,
-        (project_id,)
+        (action_by, project_id,)
     )
     return result[0][0] if result else []
 
-def get_project_list(connection: Connection, timestamp: Optional[Union[datetime, str]] = None, action_by: UUID|None = None ) -> list[dict]:
+def get_project_list(connection: Connection, action_by: UUID, timestamp: Optional[Union[datetime, str]] = None) -> list[dict]:
     """Get a list. Accepts timestamp as datetime, ISO 8601 string, or None."""
     timestamp = normalize_timestamp(timestamp)
 
@@ -49,34 +47,34 @@ def get_project_list(connection: Connection, timestamp: Optional[Union[datetime,
         """
         SELECT COALESCE(json_agg(project), '[]'::json)
         FROM data.get_project_list(
-            (base.get_shintolabs_user()).id, 
+            %s::uuid, 
             %s::TIMESTAMPTZ
         ) AS project
         """,
-        (timestamp,)
+        (action_by, timestamp)
     )
     return result[0][0] if result else []
 
-def create_project(connection: Connection, data: Optional[dict], action_by: UUID|None = None ) -> dict:
+def create_project(connection: Connection, action_by: UUID, data: Optional[dict] ) -> dict:
     """Create a project."""
     result = connection.execute_query(
-        "SELECT to_json(data.create_project((base.get_shintolabs_user()).id, %s::text, %s::jsonb))",
-        (data),
+        "SELECT to_json(data.create_project(%s::uuid, %s::text, %s::jsonb))",
+        (action_by, data),
     )
     return result[0][0] if result else {}
 
-def update_project(connection: Connection, project_id: uuid.UUID, data: Optional[dict] = None, action_by: UUID|None = None) -> dict:
+def update_project(connection: Connection, action_by: UUID, project_id: uuid.UUID, data: Optional[dict] = None) -> dict:
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.update_project((base.get_shintolabs_user()).id, %s::uuid, %s::jsonb))",
-        (project_id, data),
+        "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb))",
+        (action_by, project_id, data),
     )
     return result[0][0] if result else {}
 
-def delete_project(connection: Connection, project_id: uuid.UUID) -> dict:
+def delete_project(connection: Connection, action_by: UUID, project_id: uuid.UUID) -> dict:
     """Delete a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.delete_project(%s::uuid))",
-        (project_id,),
+        "SELECT to_json(data.delete_project(%s::uuid, %s::uuid))",
+        (action_by,project_id,),
     )
     return result[0][0] if result else {}

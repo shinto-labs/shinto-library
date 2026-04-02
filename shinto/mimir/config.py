@@ -5,33 +5,6 @@ from typing import Union, Optional
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
 
-
-def config_id_exists(
-        connection: Connection,
-        action_by: uuid.UUID,
-        config_id: uuid.UUID
-) -> bool:
-    """Check if a config id exists in active set"""
-    result = connection.execute_query(
-        "SELECT data.config_id_exists(%s::uuid, %s::uuid)",
-        (action_by, config_id),
-    )
-    return result[0][0] if result else False
-
-def config_name_exists(
-        connection: Connection,
-        action_by: uuid.UUID,
-        config_name: str
-) -> bool:
-    """Check if a config name exists in active set"""
-    result = connection.execute_query(
-        "SELECT data.config_name_exists(%s::uuid, %s::text, %s::TIMESTAMPTZ)",
-        (action_by, config_name, timestamp),
-    )
-    return result[0][0] if result else False
-
-
-
 def get_config_by_id(
         connection: Connection,
         action_by: uuid.UUID,
