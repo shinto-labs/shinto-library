@@ -1,4 +1,5 @@
 import uuid
+import json
 from datetime import datetime
 from typing import Union, Optional
 from uuid import UUID
@@ -59,7 +60,7 @@ def create_project(connection: Connection, action_by: UUID, data: Optional[dict]
     """Create a project."""
     result = connection.execute_query(
         "SELECT to_json(data.create_project(%s::uuid, %s::text, %s::jsonb))",
-        (action_by, data),
+        (action_by, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
@@ -67,7 +68,7 @@ def update_project(connection: Connection, action_by: UUID, project_id: uuid.UUI
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
         "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb))",
-        (action_by, project_id, data),
+        (action_by, project_id, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
