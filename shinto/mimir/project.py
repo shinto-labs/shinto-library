@@ -80,7 +80,7 @@ def force_create_project(
         taxonomy_timestamp = None
 
     # First disable the trigger that prevents creating a project with a specific ID and timestamp
-    connection.execute_query(
+    connection.execute_command(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
     # then insert the project with the specified ID and timestamp
@@ -95,7 +95,7 @@ def force_create_project(
         (project_id, timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data))
     )
     # Turn the trigger back on
-    connection.execute_query(
+    connection.execute_command(
         "ALTER TABLE data.project ENABLE TRIGGER project_insert_trigger"
     )
 
