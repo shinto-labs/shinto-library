@@ -13,18 +13,8 @@ def get_project_by_id(connection: Connection, action_by: UUID, project_id: uuid.
     timestamp = normalize_timestamp(timestamp)
 
     result = connection.execute_query(
-        "SELECT to_json(data.get_project_by_id(%s::uuid, %s::uuid, %s::TIMESTAMPTZ))",
+        "SELECT to_json(data.get_project(%s::uuid, %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, project_id, timestamp),
-    )
-    return result[0][0] if result else {}
-
-def get_project_by_name(connection: Connection, action_by: UUID, project_name: str, timestamp: Optional[Union[datetime, str]] = None) -> dict:
-    """Get a project by name. Accepts timestamp as datetime, ISO 8601 string, or None."""
-    timestamp = normalize_timestamp(timestamp)
-
-    result = connection.execute_query(
-        "SELECT to_json(data.get_project_by_name(%s::uuid, %s::text, %s::TIMESTAMPTZ))",
-        (action_by, project_name, timestamp),
     )
     return result[0][0] if result else {}
 
