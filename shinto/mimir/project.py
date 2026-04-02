@@ -64,6 +64,45 @@ def create_project(connection: Connection, action_by: UUID, data: Optional[dict]
     )
     return result[0][0] if result else {}
 
+def force_create_project(
+        connection: Connection,
+        action_by: UUID,
+        project_id: UUID,
+        timestamp: Union[datetime, str],
+        data: dict,
+        taxonomy_id: Optional[UUID] = None,
+        taxonomy_timestamp: Optional[Union[datetime, str]] = None ) -> dict:
+    """Force create a project with a specific ID and timestamp."""
+    timestamp = normalize_timestamp(timestamp)
+    if taxonomy_id and taxonomy_timestamp:
+        taxonomy_timestamp = normalize_timestamp(taxonomy_timestamp)
+    else:
+        taxonomy_timestamp = None
+
+    # First disable the trigger that prevents creating a project with a specific ID and timestamp
+    connection.execute_query(
+        "ALTER TABLE data.project DISABLE TRIGGER project_force_create_trigger"
+    )
+    # then insert the project with the specified ID and timestamp
+    result = connection.execute_query(
+        """
+            INSERT INTO data.project 
+                ("id", "timestamp", "action", "action_by", "action_info", taxonomy_id, taxonomy_timestamp, data)
+            VALUES 
+                (%s::uuid, %s::TIMESTAMPTZ, 'created', %s::uuid, '{"force_create": true}', %s::uuid, %s::TIMESTAMPTZ, %s::jsonb)
+            RETURNING to_json(*)
+            """,
+        (project_id, timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data))
+    )
+    # Turn the trigger back on
+    connection.execute_query(
+        "ALTER TABLE data.project ENABLE TRIGGER project_force_create_trigger"
+    )
+
+    return result[0][0] if result else {}
+
+
+
 def update_project(connection: Connection, action_by: UUID, project_id: uuid.UUID, data: Optional[dict] = None) -> dict:
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
