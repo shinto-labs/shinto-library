@@ -81,7 +81,7 @@ def force_create_project(
 
     # First disable the trigger that prevents creating a project with a specific ID and timestamp
     connection.execute_query(
-        "ALTER TABLE data.project DISABLE TRIGGER project_force_create_trigger"
+        "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
     # then insert the project with the specified ID and timestamp
     result = connection.execute_query(
@@ -96,7 +96,7 @@ def force_create_project(
     )
     # Turn the trigger back on
     connection.execute_query(
-        "ALTER TABLE data.project ENABLE TRIGGER project_force_create_trigger"
+        "ALTER TABLE data.project ENABLE TRIGGER project_insert_trigger"
     )
 
     return result[0][0] if result else {}
