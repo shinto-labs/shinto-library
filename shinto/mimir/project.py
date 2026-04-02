@@ -59,7 +59,7 @@ def get_project_list(connection: Connection, action_by: UUID, timestamp: Optiona
 def create_project(connection: Connection, action_by: UUID, data: Optional[dict] ) -> dict:
     """Create a project."""
     result = connection.execute_query(
-        "SELECT to_json(data.create_project(%s::uuid, %s::text, %s::jsonb))",
+        "SELECT to_json(data.create_project(%s::uuid, %s::jsonb))",
         (action_by, json.dumps(data)),
     )
     return result[0][0] if result else {}
