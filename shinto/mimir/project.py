@@ -90,7 +90,7 @@ def force_create_project(
                 ("id", "timestamp", "action", "action_by", "action_info", taxonomy_id, taxonomy_timestamp, data)
             VALUES 
                 (%s::uuid, %s::TIMESTAMPTZ, 'created', %s::uuid, '{"force_create": true}', %s::uuid, %s::TIMESTAMPTZ, %s::jsonb)
-            RETURNING to_json(*)
+            RETURNING (SELECT to_json(data.get_project_by_id(%s::uuid, %s::uuid))
             """,
         (project_id, timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data))
     )
