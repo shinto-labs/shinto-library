@@ -56,7 +56,7 @@ def get_transformation_list(connection: Connection, action_by: uuid.UUID, timest
     )
     return result[0][0] if result else []
 
-def create_transformation(connection: Connection, action_by: uuid.UUID, name: str, data: list) -> dict:
+def create_transformation(connection: Connection, action_by: uuid.UUID, name: str, data: dict) -> dict:
     """Create a transformation."""
     result = connection.execute_query(
         "SELECT to_json(data.create_transformation(%s::uuid, %s::text, %s::jsonb))",
@@ -64,7 +64,7 @@ def create_transformation(connection: Connection, action_by: uuid.UUID, name: st
     )
     return result[0][0] if result else {}
 
-def update_transformation(connection: Connection, action_by: uuid.UUID, transformation_id: uuid.UUID, name: Optional[str] = None, data: list = None) -> dict:
+def update_transformation(connection: Connection, action_by: uuid.UUID, transformation_id: uuid.UUID, name: Optional[str] = None, data: dict = None) -> dict:
     """Update a transformation. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
         "SELECT to_json(data.update_transformation(%s::uuid, %s::uuid, %s::text, %s::jsonb))",
