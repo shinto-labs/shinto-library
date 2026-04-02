@@ -84,22 +84,22 @@ def force_create_project(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
     # then insert the project with the specified ID and timestamp
-    result = connection.execute_query(
+    connection.execute_command(
         """
             INSERT INTO data.project 
                 ("id", "timestamp", "action", "action_by", "action_info", taxonomy_id, taxonomy_timestamp, data)
             VALUES 
                 (%s::uuid, %s::TIMESTAMPTZ, 'created', %s::uuid, '{"force_create": true}'::json, %s::uuid, %s::TIMESTAMPTZ, %s::jsonb)
-            RETURNING (SELECT to_json(data.get_project_by_id("id"))
             """,
         (project_id, timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data))
     )
+
     # Turn the trigger back on
     connection.execute_command(
         "ALTER TABLE data.project ENABLE TRIGGER project_insert_trigger"
     )
 
-    return result[0][0] if result else {}
+    return get_project_by_id(connection, action_by, project_id)
 
 
 
