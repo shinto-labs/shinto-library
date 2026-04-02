@@ -1,4 +1,5 @@
 import uuid
+import json
 from datetime import datetime
 from typing import Union, Optional
 from shinto.general import normalize_timestamp
@@ -59,7 +60,7 @@ def create_transformation(connection: Connection, action_by: uuid.UUID, name: st
     """Create a transformation."""
     result = connection.execute_query(
         "SELECT to_json(data.create_transformation(%s::uuid, %s::text, %s::jsonb))",
-        (action_by, name, data),
+        (action_by, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
@@ -67,7 +68,7 @@ def update_transformation(connection: Connection, action_by: uuid.UUID, transfor
     """Update a transformation. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
         "SELECT to_json(data.update_transformation(%s::uuid, %s::uuid, %s::text, %s::jsonb))",
-        (action_by, transformation_id, name, data),
+        (action_by, transformation_id, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 

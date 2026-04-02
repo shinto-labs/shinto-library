@@ -60,7 +60,7 @@ def create_marker(connection: Connection, action_by: uuid.UUID, name: str, marke
     marked_timestamp = normalize_timestamp(marked_timestamp)
 
     result = connection.execute_query(
-        "SELECT to_json(data.create_marker(%s::uuid %s::text, %s::jsonb))",
+        "SELECT to_json(data.create_marker(%s::uuid %s::text, %s::timestamptz))",
         (action_by, name, marked_timestamp),
     )
     return result[0][0] if result else {}
@@ -70,7 +70,7 @@ def update_marker(connection: Connection, action_by: uuid.UUID, marker_id: uuid.
     marked_timestamp=normalize_timestamp(marked_timestamp)
 
     result = connection.execute_query(
-        "SELECT to_json(data.update_marker(%s::uuid %s::uuid, %s::text, %s::jsonb))",
+        "SELECT to_json(data.update_marker(%s::uuid %s::uuid, %s::text, %s::timestamptz))",
         (action_by, marker_id, name, marked_timestamp),
     )
     return result[0][0] if result else {}

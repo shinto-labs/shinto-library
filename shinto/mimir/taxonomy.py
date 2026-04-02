@@ -1,4 +1,5 @@
 import uuid
+import json
 from datetime import datetime
 from typing import Union, Optional
 from shinto.general import normalize_timestamp
@@ -61,7 +62,7 @@ def create_taxonomy(connection: Connection, action_by: uuid.UUID, name: str, dat
     """Create a taxonomy."""
     result = connection.execute_query(
         "SELECT to_json(data.create_taxonomy(%s::uuid, %s::text, %s::jsonb))",
-        (action_by, name, data),
+        (action_by, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
@@ -69,7 +70,7 @@ def update_taxonomy(connection: Connection, action_by: uuid.UUID, taxonomy_id: u
     """Update a taxonomy. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
         "SELECT to_json(data.update_taxonomy(%s::uuid, %s::uuid, %s::text, %s::jsonb))",
-        (action_by, taxonomy_id, name, data),
+        (action_by, taxonomy_id, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 

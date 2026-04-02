@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 from typing import Union, Optional
@@ -77,12 +78,12 @@ def create_config(
         connection: Connection,
         action_by: uuid.UUID,
         name: str,
-        data: Optional[dict]
+        data: dict
 ) -> dict:
     """Create a config."""
     result = connection.execute_query(
         "SELECT to_json(data.create_config(%s::uuid, %s::text, %s::jsonb))",
-        (action_by, name, data),
+        (action_by, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
@@ -96,7 +97,7 @@ def update_config(
     """Update a config. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
         "SELECT to_json(data.update_config(%s::uuid, %s::uuid, %s::text, %s::jsonb))",
-        (action_by, config_id, name, data),
+        (action_by, config_id, name, json.dumps(data)),
     )
     return result[0][0] if result else {}
 
