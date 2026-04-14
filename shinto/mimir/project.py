@@ -101,6 +101,48 @@ def update_project(connection: Connection, action_by: UUID, project_id: uuid.UUI
     )
     return result[0][0] if result else {}
 
+def force_update_project(
+        connection: Connection,
+        action_by: UUID,
+        project_id: UUID,
+        timestamp: Union[datetime, str],
+        data: dict,
+        taxonomy_id: Optional[UUID] = None,
+        taxonomy_timestamp: Optional[Union[datetime, str]] = None ) -> dict:
+    """Force update a project with a specific timestamp."""
+    timestamp = normalize_timestamp(timestamp)
+    if taxonomy_id and taxonomy_timestamp:
+        taxonomy_timestamp = normalize_timestamp(taxonomy_timestamp)
+    else:
+        taxonomy_timestamp = None
+
+    # First disable the trigger that prevents updating a project with a specific timestamp
+    connection.execute_command(
+        "ALTER TABLE data.project DISABLE TRIGGER project_update_trigger"
+    )
+    # then update the project with the specified timestamp
+    connection.execute_command(
+        """
+            UPDATE data.project 
+            SET 
+                "action_by" = %s::uuid, 
+                "action_info" = '{"force_update": true}'::json, 
+                taxonomy_id = %s::uuid, 
+                taxonomy_timestamp = %s::TIMESTAMPTZ, 
+                data = %s::jsonb
+            WHERE id = %s::uuid, timestamp = %s::TIMESTAMPTZ
+            """,
+        (timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data), project_id)
+    )
+
+    # Turn the trigger back on
+    connection.execute_command(
+        "ALTER TABLE data.project ENABLE TRIGGER project_update_trigger"
+    )
+
+    return get_project_by_id(connection, action_by, project_id)
+
+
 def delete_project(connection: Connection, action_by: UUID, project_id: uuid.UUID) -> dict:
     """Delete a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
