@@ -132,7 +132,7 @@ def force_update_project(
                 data = %s::jsonb
             WHERE id = %s::uuid, timestamp = %s::TIMESTAMPTZ
             """,
-        (timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data), project_id)
+        (action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data), project_id, timestamp)
     )
 
     # Turn the trigger back on
