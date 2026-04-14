@@ -130,7 +130,7 @@ def force_update_project(
                 taxonomy_id = %s::uuid, 
                 taxonomy_timestamp = %s::TIMESTAMPTZ, 
                 data = %s::jsonb
-            WHERE id = %s::uuid, timestamp = %s::TIMESTAMPTZ
+            WHERE id = %s::uuid AND timestamp = %s::TIMESTAMPTZ
             """,
         (action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data), project_id, timestamp)
     )
