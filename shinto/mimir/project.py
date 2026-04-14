@@ -118,7 +118,7 @@ def force_update_project(
 
     # First disable the trigger that prevents updating a project with a specific timestamp
     connection.execute_command(
-        "ALTER TABLE data.project DISABLE TRIGGER project_update_trigger"
+        "ALTER TABLE data.project DISABLE TRIGGER project_change_trigger"
     )
     # then update the project with the specified timestamp
     connection.execute_command(
@@ -137,7 +137,7 @@ def force_update_project(
 
     # Turn the trigger back on
     connection.execute_command(
-        "ALTER TABLE data.project ENABLE TRIGGER project_update_trigger"
+        "ALTER TABLE data.project ENABLE TRIGGER project_change_trigger"
     )
 
     return get_project_by_id(connection, action_by, project_id)
