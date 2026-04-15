@@ -130,7 +130,6 @@ def force_project_record(
                     %s::TIMESTAMPTZ, 
                     %s::jsonb
                 )
-            RETURNING to_json(data.project.*)
             ON CONFLICT ("id", "timestamp") DO UPDATE SET
                 action = EXCLUDED.action,
                 action_by = EXCLUDED.action_by,
@@ -138,6 +137,7 @@ def force_project_record(
                 taxonomy_id = EXCLUDED.taxonomy_id,
                 taxonomy_timestamp = EXCLUDED.taxonomy_timestamp,
                 data = EXCLUDED.data
+            RETURNING to_json(data.project.*)
             """,
         (
             project_id,
