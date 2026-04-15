@@ -83,7 +83,7 @@ def force_project_record(
         project_id: UUID,
         timestamp: Union[datetime, str],
         data: dict,
-        action_info: Optional[dict],
+        action_info: Optional[dict] = None,
         taxonomy_id: Optional[UUID] = None,
         taxonomy_timestamp: Optional[Union[datetime, str]] = None ) -> dict:
     """Force create a project with a specific ID and timestamp."""
@@ -122,7 +122,7 @@ def force_project_record(
                 (
                     %s::uuid, 
                     %s::TIMESTAMPTZ,
-                    %s::text, 
+                    %s::base.record_action, 
                     %s::uuid, 
                     %s::json, 
                     %s::uuid, 
