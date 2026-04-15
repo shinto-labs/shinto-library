@@ -1,15 +1,18 @@
+"""Module for managing configs in Mimir."""
+
 import json
-import uuid
 from datetime import datetime
 from typing import Union, Optional
+from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
 
+
 def get_config_by_id(
         connection: Connection,
-        action_by: uuid.UUID,
-        config_id: uuid.UUID,
+        action_by: UUID,
+        config_id: UUID,
         timestamp: Optional[Union[datetime, str]] = None
 ) -> dict:
     """Get a config by ID. Accepts timestamp as datetime, ISO 8601 string, or None."""
@@ -23,7 +26,7 @@ def get_config_by_id(
 
 def get_config_by_name(
         connection: Connection,
-        action_by: uuid.UUID,
+        action_by: UUID,
         config_name: str,
         timestamp: Optional[Union[datetime, str]] = None
 ) -> dict:
@@ -38,8 +41,8 @@ def get_config_by_name(
 
 def get_config_history(
         connection: Connection,
-        action_by: uuid.UUID,
-        config_id: uuid.UUID
+        action_by: UUID,
+        config_id: UUID
 ) -> list[dict]:
     """Get the history of a config."""
     result = connection.execute_query(
@@ -56,7 +59,7 @@ def get_config_history(
 
 def get_config_list(
         connection: Connection,
-        action_by: uuid.UUID,
+        action_by: UUID,
         timestamp: Optional[Union[datetime, str]] = None
 ) -> list[dict]:
     """Get a list of taxonomies. Accepts timestamp as datetime, ISO 8601 string, or None."""
@@ -76,39 +79,57 @@ def get_config_list(
 
 def create_config(
         connection: Connection,
-        action_by: uuid.UUID,
+        action_by: UUID,
         name: str,
-        data: dict
+        data: dict,
+        action_info: Optional[dict] = None
 ) -> dict:
     """Create a config."""
     result = connection.execute_query(
-        "SELECT to_json(data.create_config(%s::uuid, %s::text, %s::jsonb))",
-        (action_by, name, json.dumps(data)),
+        "SELECT to_json(data.create_config(%s::uuid, %s::text, %s::jsonb, %s::jsonb))",
+        (
+            action_by,
+            name,
+            json.dumps(data) if data else None,
+            json.dumps(action_info) if action_info else None
+        ),
     )
     return result[0][0] if result else {}
 
 def update_config(
         connection: Connection,
-        action_by: uuid.UUID,
-        config_id: uuid.UUID,
+        action_by: UUID,
+        config_id: UUID,
         name: Optional[str] = None,
-        data: Optional[dict] = None
+        data: Optional[dict] = None,
+        action_info: Optional[dict] = None
 ) -> dict:
     """Update a config. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.update_config(%s::uuid, %s::uuid, %s::text, %s::jsonb))",
-        (action_by, config_id, name, json.dumps(data)),
+        "SELECT to_json(data.update_config(%s::uuid, %s::uuid, %s::text, %s::jsonb, %s::jsonb))",
+        (
+            action_by,
+            config_id,
+            name,
+            json.dumps(data) if data else None,
+            json.dumps(action_info) if action_info else None
+        ),
     )
     return result[0][0] if result else {}
 
 def delete_config(
         connection: Connection,
-        action_by: uuid.UUID,
-        config_id: uuid.UUID
+        action_by: UUID,
+        config_id: UUID,
+        action_info: Optional[dict] = None
 ) -> dict:
     """Delete a config. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.delete_config((%s::uuid, %s::uuid))",
-        (action_by, config_id),
+        "SELECT to_json(data.delete_config((%s::uuid, %s::uuid, %s::jsonb)))",
+        (
+            action_by,
+            config_id,
+            json.dumps(action_info) if action_info else None
+        ),
     )
     return result[0][0] if result else {}

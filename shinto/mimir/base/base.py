@@ -1,8 +1,7 @@
-import uuid
-from datetime import datetime
-from typing import Union, Optional
+"""Internal functions for Mimir."""
 
-from shinto.general import normalize_timestamp
+from uuid import UUID
+
 from shinto.pg.connection import Connection
 
 
@@ -17,7 +16,7 @@ def get_default_user(
 
 def get_default_user_id(
         connection: Connection
-) -> uuid.UUID:
+) -> UUID:
     """Get the default user ID."""
     result = connection.execute_query(
         "SELECT (base.get_shintolabs_user()).id"
