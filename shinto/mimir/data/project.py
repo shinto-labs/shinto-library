@@ -1,14 +1,20 @@
-import uuid
+"""Project management functions for Shinto Mimir."""
+
 import json
 from datetime import datetime
 from typing import Union, Optional
 from uuid import UUID
 
 from shinto.general import normalize_timestamp
-
 from shinto.pg.connection import Connection
 
-def get_project_by_id(connection: Connection, action_by: UUID, project_id: uuid.UUID, timestamp: Optional[Union[datetime, str]] = None) -> dict:
+
+def get_project_by_id(
+        connection: Connection,
+        action_by: UUID,
+        project_id: UUID,
+        timestamp: Optional[Union[datetime, str]] = None
+) -> dict:
     """Get a project by ID. Accepts timestamp as datetime, ISO 8601 string, or None."""
     timestamp = normalize_timestamp(timestamp)
 
@@ -18,7 +24,11 @@ def get_project_by_id(connection: Connection, action_by: UUID, project_id: uuid.
     )
     return result[0][0] if result else {}
 
-def get_project_history(connection: Connection, action_by: UUID, project_id: uuid.UUID) -> list[dict]:
+def get_project_history(
+        connection: Connection,
+        action_by: UUID,
+        project_id: UUID
+) -> list[dict]:
     """Get the history of a project."""
     result = connection.execute_query(
         """
@@ -30,7 +40,11 @@ def get_project_history(connection: Connection, action_by: UUID, project_id: uui
     )
     return result[0][0] if result else []
 
-def get_project_list(connection: Connection, action_by: UUID, timestamp: Optional[Union[datetime, str]] = None) -> list[dict]:
+def get_project_list(
+        connection: Connection,
+        action_by: UUID,
+        timestamp: Optional[Union[datetime, str]] = None
+) -> list[dict]:
     """Get a list. Accepts timestamp as datetime, ISO 8601 string, or None."""
     timestamp = normalize_timestamp(timestamp)
 
@@ -46,20 +60,30 @@ def get_project_list(connection: Connection, action_by: UUID, timestamp: Optiona
     )
     return result[0][0] if result else []
 
-def create_project(connection: Connection, action_by: UUID, data: Optional[dict] ) -> dict:
+def create_project(
+        connection: Connection,
+        action_by: UUID,
+        data: Optional[dict],
+        action_info: Optional[dict] = None
+) -> dict:
     """Create a project."""
     result = connection.execute_query(
-        "SELECT to_json(data.create_project(%s::uuid, %s::jsonb))",
-        (action_by, json.dumps(data)),
+        "SELECT to_json(data.create_project(%s::uuid, %s::jsonb, %s::jsonb))",
+        (
+            action_by,
+            json.dumps(data) if data else None,
+            json.dumps(action_info) if action_info else None),
     )
     return result[0][0] if result else {}
 
-def force_create_project(
+def force_project_record(
         connection: Connection,
         action_by: UUID,
+        action: str,
         project_id: UUID,
         timestamp: Union[datetime, str],
         data: dict,
+        action_info: Optional[dict],
         taxonomy_id: Optional[UUID] = None,
         taxonomy_timestamp: Optional[Union[datetime, str]] = None ) -> dict:
     """Force create a project with a specific ID and timestamp."""
@@ -69,6 +93,14 @@ def force_create_project(
     else:
         taxonomy_timestamp = None
 
+    if action not in ['created', 'updated', 'deleted']:
+        raise ValueError("Action must be one of 'created', 'updated', or 'deleted'.")
+
+    if not action_info:
+        action_info = {"forced": True}
+    else:
+        action_info["forced"] = True
+
     # First disable the trigger that prevents creating a project with a specific ID and timestamp
     connection.execute_command(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
@@ -77,11 +109,37 @@ def force_create_project(
     connection.execute_command(
         """
             INSERT INTO data.project 
-                ("id", "timestamp", "action", "action_by", "action_info", taxonomy_id, taxonomy_timestamp, data)
+                (
+                    "id", 
+                    "timestamp", 
+                    "action", 
+                    "action_by", 
+                    "action_info", 
+                    taxonomy_id, 
+                    taxonomy_timestamp, 
+                    data)
             VALUES 
-                (%s::uuid, %s::TIMESTAMPTZ, 'created', %s::uuid, '{"force_create": true}'::json, %s::uuid, %s::TIMESTAMPTZ, %s::jsonb)
+                (
+                    %s::uuid, 
+                    %s::TIMESTAMPTZ,
+                    %s::text, 
+                    %s::uuid, 
+                    %s::json, 
+                    %s::uuid, 
+                    %s::TIMESTAMPTZ, 
+                    %s::jsonb
+                )
             """,
-        (project_id, timestamp, action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data))
+        (
+            project_id,
+            timestamp,
+            action,
+            action_by,
+            taxonomy_id,
+            taxonomy_timestamp,
+            json.dumps(data) if data else None,
+            json.dumps(action_info)
+        )
     )
 
     # Turn the trigger back on
@@ -92,61 +150,38 @@ def force_create_project(
     return get_project_by_id(connection, action_by, project_id)
 
 
-
-def update_project(connection: Connection, action_by: UUID, project_id: uuid.UUID, data: Optional[dict] = None) -> dict:
-    """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
-    result = connection.execute_query(
-        "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb))",
-        (action_by, project_id, json.dumps(data)),
-    )
-    return result[0][0] if result else {}
-
-def force_update_project(
+def update_project(
         connection: Connection,
         action_by: UUID,
         project_id: UUID,
-        timestamp: Union[datetime, str],
-        data: dict,
-        taxonomy_id: Optional[UUID] = None,
-        taxonomy_timestamp: Optional[Union[datetime, str]] = None ) -> dict:
-    """Force update a project with a specific timestamp."""
-    timestamp = normalize_timestamp(timestamp)
-    if taxonomy_id and taxonomy_timestamp:
-        taxonomy_timestamp = normalize_timestamp(taxonomy_timestamp)
-    else:
-        taxonomy_timestamp = None
-
-    # First disable the trigger that prevents updating a project with a specific timestamp
-    connection.execute_command(
-        "ALTER TABLE data.project DISABLE TRIGGER project_change_trigger"
+        data: Optional[dict] = None,
+        action_info: Optional[dict] = None
+) -> dict:
+    """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
+    result = connection.execute_query(
+        "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb, %s::jsonb))",
+        (
+            action_by,
+            project_id,
+            json.dumps(data) if data else None,
+            json.dumps(action_info) if action_info else None
+        ),
     )
-    # then update the project with the specified timestamp
-    connection.execute_command(
-        """
-            UPDATE data.project 
-            SET 
-                "action_by" = %s::uuid, 
-                "action_info" = '{"force_update": true}'::json, 
-                taxonomy_id = %s::uuid, 
-                taxonomy_timestamp = %s::TIMESTAMPTZ, 
-                data = %s::jsonb
-            WHERE id = %s::uuid AND timestamp = %s::TIMESTAMPTZ
-            """,
-        (action_by, taxonomy_id, taxonomy_timestamp, json.dumps(data), project_id, timestamp)
-    )
+    return result[0][0] if result else {}
 
-    # Turn the trigger back on
-    connection.execute_command(
-        "ALTER TABLE data.project ENABLE TRIGGER project_change_trigger"
-    )
-
-    return get_project_by_id(connection, action_by, project_id)
-
-
-def delete_project(connection: Connection, action_by: UUID, project_id: uuid.UUID) -> dict:
+def delete_project(
+        connection: Connection,
+        action_by: UUID,
+        project_id: UUID,
+        action_info: Optional[dict] = None
+) -> dict:
     """Delete a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.delete_project(%s::uuid, %s::uuid))",
-        (action_by,project_id,),
+        "SELECT to_json(data.delete_project(%s::uuid, %s::uuid, %s::jsonb))",
+        (
+            action_by,
+            project_id,
+            json.dumps(action_info) if action_info else None
+        ),
     )
     return result[0][0] if result else {}
