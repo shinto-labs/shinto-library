@@ -135,9 +135,9 @@ def force_project_record(
             timestamp,
             action,
             action_by,
+            json.dumps(data) if data else None,
             taxonomy_id,
             taxonomy_timestamp,
-            json.dumps(data) if data else None,
             json.dumps(action_info)
         )
     )
