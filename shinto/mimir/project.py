@@ -143,16 +143,16 @@ def force_project_record(
                 taxonomy_timestamp = EXCLUDED.taxonomy_timestamp,
                 data = EXCLUDED.data
             RETURNING to_json(data.project.*)
-            """,
+        """,
         (
             project_id,
             timestamp,
             action,
             action_by,
-            json.dumps(data) if data else None,
+            json.dumps(action_info),
             taxonomy_id,
             taxonomy_timestamp,
-            json.dumps(action_info)
+            json.dumps(data) if data else None
         )
     )
 
