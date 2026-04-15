@@ -106,6 +106,11 @@ def force_project_record(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
 
+    # Second, disable the trigger that prevents updating a project with a specific ID and timestamp
+    connection.execute_command(
+        "ALTER TABLE data.project DISABLE TRIGGER project_change_trigger"
+    )
+
     # then insert the project with the specified ID and timestamp
     result = connection.execute_query(
         """
@@ -149,6 +154,11 @@ def force_project_record(
             taxonomy_timestamp,
             json.dumps(action_info)
         )
+    )
+
+    # Finally, turn the triggers back on
+    connection.execute_command(
+        "ALTER TABLE data.project ENABLE TRIGGER project_change_trigger"
     )
 
     # Turn the trigger back on
