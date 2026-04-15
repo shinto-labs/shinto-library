@@ -2,6 +2,7 @@
 
 import mimetypes
 import zlib
+import json
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Union, Optional
@@ -49,3 +50,7 @@ def normalize_timestamp(timestamp: Optional[Union[datetime, str]]) -> Optional[d
         return timestamp
     else:
         raise ValueError("timestamp must be a datetime, ISO 8601 string, or None")
+
+def compare_json(json1: dict, json2: dict) -> bool:
+    """Compare two JSON objects for equality, ignoring key order."""
+    return json.dumps(json1, sort_keys=True) == json.dumps(json2, sort_keys=True)
