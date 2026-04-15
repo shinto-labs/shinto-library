@@ -68,7 +68,7 @@ def create_project(
 ) -> dict:
     """Create a project."""
     result = connection.execute_query(
-        "SELECT to_json(data.create_project(%s::uuid, %s::jsonb, %s::jsonb))",
+        "SELECT to_json(data.create_project(%s::uuid, %s::jsonb, null, null, %s::jsonb))",
         (
             action_by,
             json.dumps(data) if data else None,
@@ -178,7 +178,7 @@ def update_project(
 ) -> dict:
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
     result = connection.execute_query(
-        "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb, %s::jsonb))",
+        "SELECT to_json(data.update_project(%s::uuid, %s::uuid, %s::jsonb, null, null, %s::jsonb))",
         (
             action_by,
             project_id,
