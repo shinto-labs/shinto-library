@@ -106,7 +106,7 @@ def force_project_record(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
     # then insert the project with the specified ID and timestamp
-    connection.execute_command(
+    result = connection.execute_query(
         """
             INSERT INTO data.project 
                 (
@@ -129,6 +129,7 @@ def force_project_record(
                     %s::TIMESTAMPTZ, 
                     %s::jsonb
                 )
+            RETURNING to_json(data.project.*)
             """,
         (
             project_id,
@@ -147,7 +148,7 @@ def force_project_record(
         "ALTER TABLE data.project ENABLE TRIGGER project_insert_trigger"
     )
 
-    return get_project_by_id(connection, action_by, project_id)
+    return result[0][0] if result else {}
 
 
 def update_project(
