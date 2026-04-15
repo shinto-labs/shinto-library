@@ -105,6 +105,7 @@ def force_project_record(
     connection.execute_command(
         "ALTER TABLE data.project DISABLE TRIGGER project_insert_trigger"
     )
+
     # then insert the project with the specified ID and timestamp
     result = connection.execute_query(
         """
@@ -130,6 +131,13 @@ def force_project_record(
                     %s::jsonb
                 )
             RETURNING to_json(data.project.*)
+            ON CONFLICT ("id", "timestamp") DO UPDATE SET
+                action = EXCLUDED.action,
+                action_by = EXCLUDED.action_by,
+                action_info = EXCLUDED.action_info,
+                taxonomy_id = EXCLUDED.taxonomy_id,
+                taxonomy_timestamp = EXCLUDED.taxonomy_timestamp,
+                data = EXCLUDED.data
             """,
         (
             project_id,
