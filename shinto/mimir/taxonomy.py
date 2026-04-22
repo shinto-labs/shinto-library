@@ -50,8 +50,7 @@ def get_taxonomy_history(
                 %s::uuid
             ) AS row
         """,
-        (action_by, taxonomy_id,),
-        fetch_all=True,
+        (action_by, taxonomy_id,)
     )
     return result[0][0] if result else []
 
@@ -71,8 +70,7 @@ def get_taxonomy_list(
                 %s::TIMESTAMPTZ
             ) AS row
         """,
-        (action_by, timestamp,),
-        fetch_all=True,
+        (action_by, timestamp,)
     )
     return result[0][0] if result else []
 
