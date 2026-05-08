@@ -12,7 +12,7 @@ def get_mimir_version(
 ) -> str:
     """Get the Mimir version."""
     result = connection.execute_query(
-        "SELECT base.get_mimir_version()"
+        "SELECT base.mimir_version()"
     )
     return result[0][0] if result else None
 
