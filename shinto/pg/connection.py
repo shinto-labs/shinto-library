@@ -189,23 +189,67 @@ class AsyncConnection(psycopg.AsyncConnection):
             return cur.rowcount
 
 def get_connection(
+        config: dict | None = None,
         host: str = None,
         port: int = None,
         dbname: str = None,
         user: str = None,
         password: str = None
 ) -> Connection:
-    host = host if host else os.getenv("PGHOST", "localhost")
-    port = port if port else os.getenv("PGPORT", "5432")
-    user = user if user else os.getenv("PGUSER", os.getlogin())
-    dbname = dbname if dbname else os.getenv("PGDATABASE", "mimir")
+    """Get a Database Connection object.
+    Config can be passed as a dict or as individual parameters.
+    Individual parameters will override config values.
+    Environment variables will be used as defaults
+    if neither config nor individual parameters are provided.
+    example config dict:
+    {
+        "host": "localhost",
+        "port": 5432,
+        "user": "postgres",
+        "dbname": "postgres"
+    }
+    """
 
-    connect_str = f"host={host} port={port} user={user} dbname={dbname}"
+    # Start with config values if provided
+    params = {
+        "host": None,
+        "port": None,
+        "user": None,
+        "dbname": None,
+        "password": None,
+    }
+    if config:
+        params["host"] = config.get("host")
+        params["port"] = config.get("port")
+        params["user"] = config.get("user")
+        params["dbname"] = config.get("dbname")
+        params["password"] = config.get("password")
 
+    # Override with explicit arguments if provided
+    if host is not None:
+        params["host"] = host
+    if port is not None:
+        params["port"] = port
+    if user is not None:
+        params["user"] = user
+    if dbname is not None:
+        params["dbname"] = dbname
+    if password is not None:
+        params["password"] = password
+
+    # Fallback to environment variables or sensible defaults
+    params["host"] = params["host"] or os.getenv("PGHOST", "localhost")
+    params["port"] = params["port"] or os.getenv("PGPORT", "5432")
+    params["user"] = params["user"] or os.getenv("PGUSER", os.getlogin())
+    params["dbname"] = params["dbname"] or os.getenv("PGDATABASE", "mimir")
+    params["password"] = params["password"] or os.getenv("PGPASSWORD", None)
+
+    # Build connection string (excluding password for logging)
+    connect_str = f"host={params['host']} port={params['port']} user={params['user']} dbname={params['dbname']}"
     logging.debug(f"Connecting to {connect_str}")
 
-    password = password if password else os.getenv("PGPASSWORD", None)
-    if password:
-        connect_str += f" password={password}"
+    # Add password if present (We do this because we want the option to make use of a .pgpass file.
+    if params["password"]:
+        connect_str += f" password={params['password']}"
 
     return Connection.connect(connect_str)
