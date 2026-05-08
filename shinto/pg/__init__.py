@@ -9,9 +9,10 @@ __all__ = [
     "InvalidJsonError",
     "MultipleObjectsReturnedError",
     "parse_json_from_query_result",
+    "get_connection"
 ]
 
-from .connection import AsyncConnection, Connection
+from .connection import AsyncConnection, Connection, get_connection
 from .pool import AsyncConnectionPool, ConnectionPool
 from .utils import (
     EmptyQueryResultError,

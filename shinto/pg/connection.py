@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import psycopg
-
+import logging
+import os
 
 class Connection(psycopg.Connection):
     """Wrapper for a connection to the database."""
@@ -186,3 +187,25 @@ class AsyncConnection(psycopg.AsyncConnection):
             finally:
                 await cur.execute("DEALLOCATE ALL")
             return cur.rowcount
+
+def get_connection(
+        host: str = None,
+        port: int = None,
+        dbname: str = None,
+        user: str = None,
+        password: str = None
+) -> Connection:
+    host = host if host else os.getenv("PGHOST", "localhost")
+    port = port if port else os.getenv("PGPORT", "5432")
+    user = user if user else os.getenv("PGUSER", os.getlogin())
+    dbname = dbname if dbname else os.getenv("PGDATABASE", "mimir")
+
+    connect_str = f"host={host} port={port} user={user} dbname={dbname}"
+
+    logging.debug(f"Connecting to {connect_str}")
+
+    password = password if password else os.getenv("PGPASSWORD", None)
+    if password:
+        connect_str += f" password={password}"
+
+    return Connection.connect(connect_str)
