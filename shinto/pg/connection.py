@@ -245,11 +245,8 @@ def get_connection(
     params["password"] = params["password"] or os.getenv("PGPASSWORD", None)
 
     # Build connection string (excluding password for logging)
-    connect_str = f"host={params['host']} port={params['port']} user={params['user']} dbname={params['dbname']}"
-    logging.debug(f"Connecting to {connect_str}")
+    connect_str = " "
+    for key, value in params.items():
+        connect_str += f"{key}={value} "
 
-    # Add password if present (We do this because we want the option to make use of a .pgpass file.
-    if params["password"]:
-        connect_str += f" password={params['password']}"
-
-    return Connection.connect(connect_str)
+    return Connection.connect(connect_str.strip())
