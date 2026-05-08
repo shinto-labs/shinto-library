@@ -247,6 +247,7 @@ def get_connection(
     # Build connection string (excluding password for logging)
     connect_str = " "
     for key, value in params.items():
-        connect_str += f"{key}={value} "
+        if value is not None:
+            connect_str += f"{key}={value} "
 
     return Connection.connect(connect_str.strip())
