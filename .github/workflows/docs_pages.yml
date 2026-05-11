@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Start time
-        uses: shinto-labs/send-log-to-loki@v1.0.3
+        uses: shinto-labs/send-log-to-loki@v1.0.4
         with:
           measurement: start
 
@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Send Logs to Loki
-        uses: shinto-labs/send-log-to-loki@v1.0.3
+        uses: shinto-labs/send-log-to-loki@v1.0.4
         with:
           loki_address: "https://loki.shintolabs.net"
           loki_username: ${{ secrets.LOKI_USERNAME }}
