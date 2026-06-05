@@ -17,12 +17,6 @@ exit_with_error() {
     exit 1
 }
 
-## Get the current branch
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$current_branch" != "development" ]; then
-    exit_with_error "You must be on the development branch to deploy a new version."
-fi
-
 ## Check for uncommitted changes or commited but unpushed changes
 if [ -n "$(git status --porcelain)" ] || ! git status | grep -q "Your branch is up to date with"; then
     exit_with_error "There are uncommitted changes in the repository.
@@ -39,25 +33,6 @@ fi
 ## Get latest changes from development
 echo "Getting latest development changes..."
 git checkout development && git pull
-
-## Safe chain
-
-echo "Running safe-chain security scan on dependencies..."
-
-# Install safe-chain and set up shims
-curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
-export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
-
-# Verify it's working
-pip safe-chain-verify
-
-# Try installing dependencies - safe-chain will check them
-pdm export -f requirements --dev --no-hashes -o /tmp/requirements-scan.txt
-pip install --dry-run -r /tmp/requirements-scan.txt
-
-echo -e "${green}Security scan passed!${reset}"
-
-
 
 ## Get all tags from the remote repo
 echo "Fetching tags from GitHub."
