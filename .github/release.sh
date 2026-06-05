@@ -44,34 +44,17 @@ git checkout development && git pull
 
 echo "Running safe-chain security scan on dependencies..."
 
-# Install safe-chain if not present
-if ! command -v safe-chain &> /dev/null; then
-    echo "Installing safe-chain..."
-    curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s --
-    export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
-fi
+# Install safe-chain and set up shims
+curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
 
-# Export requirements from pdm.lock
-pdm export -f requirements --no-hashes -o /tmp/requirements-scan.txt
+# Verify it's working
+pip safe-chain-verify
 
-# Scan for malicious packages and new packages
-echo "Checking for malicious packages..."
-if ! safe-chain scan /tmp/requirements-scan.txt; then
-    exit_with_error "Safe-chain detected security issues in dependencies!"
-fi
+# Try installing dependencies - safe-chain will check them
+pdm export -f requirements --dev --no-hashes -o /tmp/requirements-scan.txt
+pip install --dry-run -r /tmp/requirements-scan.txt
 
-# Check for packages newer than 2 days (configurable)
-echo "Checking for very new packages (< 2 days old)..."
-if ! safe-chain check-age /tmp/requirements-scan.txt --max-age 2d --warn-only; then
-    echo -e "${yellow}Warning: Some packages are very new. Review carefully.${reset}"
-    echo -n "Continue with release? (y/n) "
-    read -r continue_response
-    if [ "$continue_response" != "y" ]; then
-        exit_with_error "Release cancelled due to new packages."
-    fi
-fi
-
-rm /tmp/requirements-scan.txt
 echo -e "${green}Security scan passed!${reset}"
 
 
