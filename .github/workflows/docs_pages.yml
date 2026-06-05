@@ -18,16 +18,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v3
         with:
-          python-version: "3.x"
+          python-version: "3.12"
+
+      - name: Install safe-chain
+        run: |
+          curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+          export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
+          pip safe-chain-verify
 
       - name: Install dependencies
-        run: make install
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_READ_ALL_INTERNAL_REPOS }}
+          SAFE_CHAIN_LOGGING: verbose
+        run: |
+          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          pdm export -f requirements --dev --no-hashes -o requirements.txt
+          pip install --no-cache-dir -r requirements.txt
 
       - name: Generate docs
-        run: make generate_docs
+        run: sphinx-apidoc -f -o docs/modules shinto && cd docs && make html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

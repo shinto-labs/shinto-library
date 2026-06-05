@@ -38,6 +38,12 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install safe-chain
+        run: |
+          curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
+          export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
+          pip safe-chain-verify
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
