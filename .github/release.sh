@@ -40,6 +40,42 @@ fi
 echo "Getting latest development changes..."
 git checkout development && git pull
 
+## Safe chain
+
+echo "Running safe-chain security scan on dependencies..."
+
+# Install safe-chain if not present
+if ! command -v safe-chain &> /dev/null; then
+    echo "Installing safe-chain..."
+    curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s --
+    export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
+fi
+
+# Export requirements from pdm.lock
+pdm export -f requirements --no-hashes -o /tmp/requirements-scan.txt
+
+# Scan for malicious packages and new packages
+echo "Checking for malicious packages..."
+if ! safe-chain scan /tmp/requirements-scan.txt; then
+    exit_with_error "Safe-chain detected security issues in dependencies!"
+fi
+
+# Check for packages newer than 2 days (configurable)
+echo "Checking for very new packages (< 2 days old)..."
+if ! safe-chain check-age /tmp/requirements-scan.txt --max-age 2d --warn-only; then
+    echo -e "${yellow}Warning: Some packages are very new. Review carefully.${reset}"
+    echo -n "Continue with release? (y/n) "
+    read -r continue_response
+    if [ "$continue_response" != "y" ]; then
+        exit_with_error "Release cancelled due to new packages."
+    fi
+fi
+
+rm /tmp/requirements-scan.txt
+echo -e "${green}Security scan passed!${reset}"
+
+
+
 ## Get all tags from the remote repo
 echo "Fetching tags from GitHub."
 git tag -l | xargs git tag -d >/dev/null 2>&1
@@ -101,40 +137,6 @@ if [ "$matching_tag" ] || [ "$response" != "y" ]; then
     version_number=$new_version
 fi
 tag="v$version_number"
-
-## Safe chain
-
-echo "Running safe-chain security scan on dependencies..."
-
-# Install safe-chain if not present
-if ! command -v safe-chain &> /dev/null; then
-    echo "Installing safe-chain..."
-    curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s --
-    export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
-fi
-
-# Export requirements from pdm.lock
-pdm export -f requirements --no-hashes -o /tmp/requirements-scan.txt
-
-# Scan for malicious packages and new packages
-echo "Checking for malicious packages..."
-if ! safe-chain scan /tmp/requirements-scan.txt; then
-    exit_with_error "Safe-chain detected security issues in dependencies!"
-fi
-
-# Check for packages newer than 2 days (configurable)
-echo "Checking for very new packages (< 2 days old)..."
-if ! safe-chain check-age /tmp/requirements-scan.txt --max-age 2d --warn-only; then
-    echo -e "${yellow}Warning: Some packages are very new. Review carefully.${reset}"
-    echo -n "Continue with release? (y/n) "
-    read -r continue_response
-    if [ "$continue_response" != "y" ]; then
-        exit_with_error "Release cancelled due to new packages."
-    fi
-fi
-
-rm /tmp/requirements-scan.txt
-echo -e "${green}Security scan passed!${reset}"
 
 ## Change branch to main
 echo "Changing branch to main..."
