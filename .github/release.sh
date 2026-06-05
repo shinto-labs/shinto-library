@@ -17,12 +17,6 @@ exit_with_error() {
     exit 1
 }
 
-## Get the current branch
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$current_branch" != "development" ]; then
-    exit_with_error "You must be on the development branch to deploy a new version."
-fi
-
 ## Check for uncommitted changes or commited but unpushed changes
 if [ -n "$(git status --porcelain)" ] || ! git status | grep -q "Your branch is up to date with"; then
     exit_with_error "There are uncommitted changes in the repository.
