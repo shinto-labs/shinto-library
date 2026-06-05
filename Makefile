@@ -1,16 +1,26 @@
 PDM_RUN=pdm run
 
 install:
-	./scripts/install.sh
+	pdm install
 
 update:
-	./scripts/update.sh
+	pdm lock --refresh
+	pdm update
 
 clean:
-	./scripts/clean.sh
+	pdm cache clear
+	find . -name "__pycache__" | xargs rm -rf
+	find . -name "build" | xargs rm -rf
+	find . -name ".coverage" | xargs rm -rf
+	find . -name "*,cover" | xargs rm -rf
+	find . -name "htmlcov" | xargs rm -rf
+	find . -name ".ruff_cache" | xargs rm -rf
+	find . -name "*.egg-info" | xargs rm -rf
+	find . -name ".venv" | xargs rm -rf
+	find . -name ".pdm-python" | xargs rm -rf
 
 release:
-	./scripts/release.sh
+	./.github/release.sh
 
 test:
 	$(PDM_RUN) nose2 -v -s tests
