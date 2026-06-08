@@ -1,7 +1,7 @@
 PDM_RUN=pdm run
 
 install:
-	pdm install
+	pdm sync
 
 update:
 	pdm lock --refresh
