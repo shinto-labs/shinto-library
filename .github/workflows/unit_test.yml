@@ -5,11 +5,9 @@ on:
   push:
     branches:
       - main
-      - development
     paths:
       - "**/*.py"
       - ".github/workflows/unit_test.yml"
-      - "scripts/send_to_loki.sh"
       - "pyproject.toml"
       - "pdm.lock"
   pull_request:
@@ -18,7 +16,6 @@ on:
     paths:
       - "*.py"
       - ".github/workflows/unit_test.yml"
-      - "scripts/send_to_loki.sh"
       - "pyproject.toml"
       - "pdm.lock"
 
@@ -44,22 +41,19 @@ jobs:
         run: |
           curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
           export PATH="$HOME/.safe-chain/shims:$HOME/.safe-chain/bin:${PATH}"
-          pip safe-chain-verify
+          pdm safe-chain-verify
 
       - name: Install dependencies
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT_READ_ALL_INTERNAL_REPOS }}
           SAFE_CHAIN_LOGGING: verbose
         run: |
-          git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-          pdm export -f requirements --dev --no-hashes -o requirements.txt
-          pip install --no-cache-dir -r requirements.txt
+          pdm sync --dev
 
       - name: Run tests
         id: test
         run: |
           set +e
-          test_output=$(make test_coverage 2>&1)
+          test_output=$(pdm run -v nose2 -s tests -C --coverage=app.shinto_backend --coverage=shinto_backend --coverage-report=term --coverage-report=term-missing 2>&1)
           exit_code=$?
           set -e
           echo "$test_output"

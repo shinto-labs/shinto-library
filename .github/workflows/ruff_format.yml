@@ -9,7 +9,6 @@ on:
     paths:
       - "**/*.py"
       - ".github/workflows/ruff_format.yml"
-      - "scripts/send_to_loki.sh"
       - "ruff.toml"
   pull_request:
     branches:
@@ -17,7 +16,6 @@ on:
     paths:
       - "*.py"
       - ".github/workflows/ruff_format.yml"
-      - "scripts/send_to_loki.sh"
       - "ruff.toml"
 
 jobs:
@@ -36,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install safe-chain
         run: |
@@ -45,6 +43,8 @@ jobs:
           pip safe-chain-verify
 
       - name: Install dependencies
+        env:
+          SAFE_CHAIN_LOGGING: verbose
         run: |
           python -m pip install --upgrade pip
           pip install ruff
