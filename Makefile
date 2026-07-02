@@ -20,7 +20,7 @@ clean:
 	find . -name ".pdm-python" | xargs rm -rf
 
 release:
-	./.github/release.sh
+	bash .github/release.sh
 
 test:
 	$(PDM_RUN) nose2 -v -s tests
