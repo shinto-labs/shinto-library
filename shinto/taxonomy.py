@@ -265,7 +265,7 @@ class TaxonomyField:
             ) from e
         if self.type == "string":
             data[self.key] = output_format.format(sequence_value)
-        elif self.type == "integer":
+        elif self.type == "number":
             data[self.key] = int(output_format.format(sequence_value))
         else:
             raise ValueError(
