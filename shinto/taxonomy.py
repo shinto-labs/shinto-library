@@ -201,7 +201,15 @@ class TaxonomyField:
         trigger: PROJECT_UPDATE_TRIGGER,
         is_stage_level: bool = False,  # TODO: remove when stages get their own entity
     ) -> None:
-        """Update a field in the target data based on the readonly property and trigger."""
+        """
+        Update a value in the target data based on the readonly field definition and trigger.
+
+        Args:
+            data: The target data dictionary to update. (project or stage data)
+            previous_data: The previous data dictionary to reference for existing values.
+            trigger: The trigger event that caused the update (e.g., "created", "updated").
+            is_stage_level: Whether the data is at the stage level (default: False).
+        """
         if not self.readonly:
             return
 
@@ -219,7 +227,15 @@ class TaxonomyField:
         trigger: PROJECT_UPDATE_TRIGGER,
         connection: Connection,
     ) -> None:
-        """Update a field in the target data based on the computed field definition and trigger."""
+        """
+        Update a value in the target data based on the computed field definition and trigger.
+
+        Args:
+            data: The target data dictionary to update. (project or stage data)
+            previous_data: The previous data dictionary to reference for existing values.
+            trigger: The trigger event that caused the update (e.g., "created", "updated").
+            connection: The database connection to use for fetching computed values.
+        """
         if not (computed := self.computed):
             return
         field_triggers = computed.get("triggers", [])
