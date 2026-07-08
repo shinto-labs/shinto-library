@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import json
 import logging
+import uuid
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -31,6 +32,7 @@ FIELD_TYPE = Literal[
     "polygon",
     "object",
     "boolean",
+    "uuid",
 ]
 
 type_mapping = {
@@ -44,18 +46,28 @@ type_mapping = {
     "polygon": list,
     "object": dict,
     "boolean": bool,
+    "uuid": str,
 }
 jsonschema_type_mapping = {
-    "number": "integer",
-    "text": "string",
-    "string": "string",
-    "date-time": "string",
-    "date": "string",
-    "categorical": "string",
-    "multi_categorical": "array",
-    "polygon": "array",
-    "object": "object",
-    "boolean": "boolean",
+    "number": {"type": "integer"},
+    "text": {"type": "string"},
+    "string": {"type": "string"},
+    "date-time": {"type": "string", "format": "date-time"},
+    "date": {"type": "string", "format": "date-time"},
+    "categorical": {"type": "string"},
+    "multi_categorical": {"type": "array"},
+    "object": {"type": "object"},
+    "boolean": {"type": "boolean"},
+    "uuid": {"type": "string", "format": "uuid"},
+    "polygon": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {"geometry": {"$ref": "#/definitions/geojson_geometry"}},
+            "required": ["geometry"],
+        },
+        "description": "A list of GeoJSON features representing polygons.",
+    },
 }
 
 
@@ -133,6 +145,7 @@ class TaxonomyField:
         self.values = None
         self.level = field_dict.get("level")
         self.readonly = field_dict.get("readonly", False)
+        self.computed = field_dict.get("computed")
         if "values" in field_dict:
             if self.type not in ("categorical", "multi_categorical"):
                 raise TypeError("Only categorical and multi_categorical fields can have 'values'.")
@@ -152,41 +165,112 @@ class TaxonomyField:
     @property
     def __json_schema__(self) -> dict:
         """Build the JSON schema definition for this field."""
-        field_schema: dict = {"title": self.label, "type": None}
+        field_schema: dict = {"title": self.label, **(jsonschema_type_mapping[self.type])}
 
+        if self.readonly:
+            field_schema["readOnly"] = True
+
+        description_parts: list[str] = []
+        if self.computed:
+            description_parts.append("Computed field.")
         if self.description:
-            field_schema["description"] = self.description
+            description_parts.append(self.description)
+        if description_parts:
+            field_schema["description"] = " ".join(description_parts)
 
-        field_schema["type"] = jsonschema_type_mapping[self.type]
-
-        if self.type in ("date-time", "date"):
-            field_schema["format"] = "date-time"
-        elif self.type in ("categorical", "multi_categorical"):
-            if self.values:
-                categorical_options = [
-                    {
-                        "const": val.value,
-                        "title": val.label or val.value,
-                        **({"description": val.description} if val.description else {}),
-                    }
-                    for val in self.values
-                ]
-                if self.type == "categorical":
-                    field_schema["oneOf"] = categorical_options
-                else:
-                    field_schema["items"] = {"type": "string", "oneOf": categorical_options}
-        elif self.type == "polygon":
-            field_schema = {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {"geometry": {"$ref": "#/definitions/geojson_geometry"}},
-                    "required": ["geometry"],
-                },
-                "description": "A list of GeoJSON features representing polygons.",
-            }
+        elif self.type in ("categorical", "multi_categorical") and self.values:
+            categorical_options = [
+                {
+                    "const": val.value,
+                    "title": val.label or val.value,
+                    **({"description": val.description} if val.description else {}),
+                }
+                for val in self.values
+            ]
+            if self.type == "categorical":
+                field_schema["oneOf"] = categorical_options
+            else:
+                field_schema["items"] = {"type": "string", "oneOf": categorical_options}
 
         return field_schema
+
+    def set_field_readonly_value(
+        self,
+        data: dict[str, Any],
+        previous_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        is_stage_level: bool = False,  # TODO: remove when stages get their own entity
+    ) -> None:
+        """
+        Update a value in the target data based on the readonly field definition and trigger.
+
+        Args:
+            data: The target data dictionary to update. (project or stage data)
+            previous_data: The previous data dictionary to reference for existing values.
+            trigger: The trigger event that caused the update (e.g., "created", "updated").
+            is_stage_level: Whether the data is at the stage level (default: False).
+
+        """
+        if not self.readonly:
+            return
+
+        if trigger == "created":
+            data[self.key] = None
+            return
+
+        stage_field_value = data.get(self.key) if is_stage_level else None
+        data[self.key] = (previous_data or {}).get(self.key, stage_field_value)
+
+    def set_field_computed_value(
+        self,
+        data: dict[str, Any],
+        previous_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: Connection,
+    ) -> None:
+        """
+        Update a value in the target data based on the computed field definition and trigger.
+
+        Args:
+            data: The target data dictionary to update. (project or stage data)
+            previous_data: The previous data dictionary to reference for existing values.
+            trigger: The trigger event that caused the update (e.g., "created", "updated").
+            connection: The database connection to use for fetching computed values.
+
+        """
+        if not (computed := self.computed):
+            return
+        field_triggers = computed.get("triggers", [])
+        sequence_name = computed["params"]["sequence_name"]
+        output_format = computed["params"].get("format", "{}")
+
+        # If current trigger is not in the field's trigger list, preserve existing value or skip
+        if trigger not in field_triggers:
+            if trigger != "created" and previous_data and self.key in previous_data:
+                data[self.key] = previous_data[self.key]
+            return
+
+        if computed.get("function") != "sequence":
+            raise ValueError(
+                f"Unsupported function '{computed.get('function')}' for field '{self.key}'."
+            )
+        try:
+            sequence_value = connection.execute_query(
+                "SELECT data.get_next_sequence_value(%s)", (sequence_name,)
+            )[0][0]
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to get next sequence value for '{sequence_name}' "
+                f"for computed field '{self.key}': {e}"
+            ) from e
+        if self.type == "string":
+            data[self.key] = output_format.format(sequence_value)
+        elif self.type == "number":
+            data[self.key] = int(output_format.format(sequence_value))
+        else:
+            raise ValueError(
+                f"Unsupported field type '{self.type}' for computed field '{self.key}'"
+            )
 
     def validate(self, value: Any):  # noqa: ANN401
         """
@@ -216,9 +300,10 @@ class TaxonomyField:
             self._validate_categorical(value)
         elif self.type in ("date-time", "date"):
             self._validate_date_time(value)
-
-        if self.type == "polygon":
+        elif self.type == "polygon":
             self._validate_polygon(value)
+        elif self.type == "uuid":
+            self._validate_uuid(value)
 
     def _validate_multi_categorical(self, value: Any):  # noqa: ANN401
         """Validate multi_categorical field value."""
@@ -260,6 +345,15 @@ class TaxonomyField:
         except ValidationError as e:
             raise TaxonomyComplianceError(
                 f"Field '{self.key}' contains invalid GeoJSON polygon: {value}"
+            ) from e
+
+    def _validate_uuid(self, value: Any):  # noqa: ANN401
+        """Validate uuid field value."""
+        try:
+            uuid.UUID(value)
+        except ValueError as e:
+            raise TaxonomyComplianceError(
+                f"Field '{self.key}' expects a valid UUID, got: {value}"
             ) from e
 
 
@@ -351,86 +445,22 @@ class Taxonomy:
                 )
             field_level = field.level or "project"
             if field_level == "project":
-                self._set_field_readonly_value(project_data, previous_project_data, field, trigger)
-                self._set_field_computed_value(
-                    project_data, previous_project_data, field, trigger, connection
+                field.set_field_readonly_value(project_data, previous_project_data, trigger)
+                field.set_field_computed_value(
+                    project_data, previous_project_data, trigger, connection
                 )
             elif field_level == "stage":
                 # TODO: known issue - not possible to get existing values for stage level fields
                 # solve when stages get their own entity
                 for stage_data in project_data.get("stages", []):
-                    self._set_field_readonly_value(
-                        stage_data, None, field, trigger, is_stage_level=True
-                    )
-                    self._set_field_computed_value(stage_data, None, field, trigger, connection)
+                    field.set_field_readonly_value(stage_data, None, trigger, is_stage_level=True)
+                    field.set_field_computed_value(stage_data, None, trigger, connection)
             else:
                 raise ValueError(
                     f"Unsupported field level '{field_level}' for field '{field.key}'."
                 )
 
         return project_data
-
-    def _set_field_readonly_value(
-        self,
-        target: dict[str, Any],
-        previous_data: dict[str, Any] | None,
-        field: TaxonomyField,
-        trigger: PROJECT_UPDATE_TRIGGER,
-        is_stage_level: bool = False,  # TODO: remove when stages get their own entity
-    ) -> None:
-        """Update a field in the target data based on the readonly property and trigger."""
-        if not field.readonly:
-            return
-
-        if trigger == "created":
-            target[field.key] = None
-            return
-
-        stage_field_value = target.get(field.key) if is_stage_level else None
-        target[field.key] = (previous_data or {}).get(field.key, stage_field_value)
-
-    def _set_field_computed_value(
-        self,
-        data: dict[str, Any],
-        previous_data: dict[str, Any] | None,
-        field: TaxonomyField,
-        trigger: PROJECT_UPDATE_TRIGGER,
-        connection: Connection,
-    ) -> None:
-        """Update a field in the target data based on the computed field definition and trigger."""
-        if not (computed := field.computed):
-            return
-        field_triggers = computed.get("triggers", [])
-        sequence_name = computed["params"]["sequence_name"]
-        output_format = computed["params"].get("format", "{}")
-
-        # If current trigger is not in the field's trigger list, preserve existing value or skip
-        if trigger not in field_triggers:
-            if trigger != "created" and previous_data and field.key in previous_data:
-                data[field.key] = previous_data[field.key]
-            return
-
-        if computed.get("function") != "sequence":
-            raise ValueError(
-                f"Unsupported function '{computed.get('function')}' for field '{field.key}'."
-            )
-        try:
-            sequence_value = connection.execute_query(
-                "SELECT data.get_next_sequence_value(%s)", (sequence_name,)
-            )[0][0]
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to get next sequence value for '{sequence_name}' "
-                f"for computed field '{field.key}': {e}"
-            ) from e
-        if field.type == "string":
-            data[field.key] = output_format.format(sequence_value)
-        elif field.type == "integer":
-            data[field.key] = int(output_format.format(sequence_value))
-        else:
-            raise ValueError(
-                f"Unsupported field type '{field.type}' for computed field '{field.key}'"
-            )
 
     @property
     def __json_schema__(self) -> dict:
