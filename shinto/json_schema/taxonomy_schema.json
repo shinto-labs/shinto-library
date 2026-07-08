@@ -44,7 +44,7 @@
           "readonly": { "type": "boolean" },
           "computed": {
             "type": "object",
-            "required": ["triggers", "params"],
+            "required": ["triggers", "params", "function"],
             "properties": {
               "triggers": {
                 "type": "array",
@@ -52,7 +52,8 @@
               },
               "params": {
                 "type": "object"
-              }
+              },
+              "function": { "type": "string" }
             }
           }
         }
