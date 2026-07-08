@@ -23,6 +23,7 @@ PROJECT_UPDATE_TRIGGER = Literal["created", "updated"]
 
 FIELD_TYPE = Literal[
     "number",
+    "integer",
     "categorical",
     "text",
     "string",
@@ -36,7 +37,8 @@ FIELD_TYPE = Literal[
 ]
 
 type_mapping = {
-    "number": int,
+    "number": float,
+    "integer": int,
     "text": str,
     "string": str,
     "date-time": str,
@@ -49,7 +51,8 @@ type_mapping = {
     "uuid": str,
 }
 jsonschema_type_mapping = {
-    "number": {"type": "integer"},
+    "number": {"type": "number"},
+    "integer": {"type": "integer"},
     "text": {"type": "string"},
     "string": {"type": "string"},
     "date-time": {"type": "string", "format": "date-time"},
@@ -265,8 +268,10 @@ class TaxonomyField:
             ) from e
         if self.type == "string":
             data[self.key] = output_format.format(sequence_value)
-        elif self.type == "number":
+        elif self.type == "integer":
             data[self.key] = int(output_format.format(sequence_value))
+        elif self.type == "number":
+            data[self.key] = float(output_format.format(sequence_value))
         else:
             raise ValueError(
                 f"Unsupported field type '{self.type}' for computed field '{self.key}'"
