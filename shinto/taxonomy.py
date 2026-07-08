@@ -209,6 +209,7 @@ class TaxonomyField:
             previous_data: The previous data dictionary to reference for existing values.
             trigger: The trigger event that caused the update (e.g., "created", "updated").
             is_stage_level: Whether the data is at the stage level (default: False).
+
         """
         if not self.readonly:
             return
@@ -235,6 +236,7 @@ class TaxonomyField:
             previous_data: The previous data dictionary to reference for existing values.
             trigger: The trigger event that caused the update (e.g., "created", "updated").
             connection: The database connection to use for fetching computed values.
+
         """
         if not (computed := self.computed):
             return
