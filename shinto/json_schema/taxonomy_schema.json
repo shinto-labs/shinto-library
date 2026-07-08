@@ -27,10 +27,7 @@
           "description": { "type": "string" },
           "level": {
             "type": "string",
-            "enum": [
-              "project",
-              "stage"
-            ]
+            "enum": ["project", "stage"]
           },
           "values": {
             "type": "array",
@@ -41,6 +38,20 @@
                 "value": { "type": ["string", "number"] },
                 "label": { "type": "string" },
                 "rank": { "type": "integer" }
+              }
+            }
+          },
+          "readonly": { "type": "boolean" },
+          "computed": {
+            "type": "object",
+            "required": ["triggers", "params"],
+            "properties": {
+              "triggers": {
+                "type": "array",
+                "items": { "type": "string", "enum": ["created", "updated"] }
+              },
+              "params": {
+                "type": "object"
               }
             }
           }

@@ -255,8 +255,8 @@ class TestTaxonomy(unittest.TestCase):
 
             # Should have 2 valid fields (name and count), unknown_field should be skipped
             self.assertEqual(len(taxonomy.fields), 2)
-            self.assertEqual(taxonomy.fields[0].field_id, "name")
-            self.assertEqual(taxonomy.fields[1].field_id, "count")
+            self.assertEqual(taxonomy.fields[0].key, "name")
+            self.assertEqual(taxonomy.fields[1].key, "count")
 
             # Check that a warning was logged
             self.assertTrue(

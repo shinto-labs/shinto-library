@@ -7,13 +7,18 @@ import json
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing_extensions import Literal
 
+if TYPE_CHECKING:
+    from shinto.pg.connection import Connection
+
 TAXONOMY_LEVEL = Literal["stage_plus"]
+
+PROJECT_UPDATE_TRIGGER = Literal["created", "updated"]
 
 FIELD_TYPE = Literal[
     "number",
@@ -87,13 +92,15 @@ class TaxonomyCategoricalValue:
 class TaxonomyField:
     """Class representing a field in a taxonomy."""
 
-    field_id: str
+    key: str
     type: FIELD_TYPE
     label: str
     values: list[TaxonomyCategoricalValue] | None
     description: str | None
     tags: list[str] | None
     level: str | None
+    readonly: bool
+    computed: dict | None
 
     def __init__(self, field_dict: dict):
         """
@@ -113,18 +120,19 @@ class TaxonomyField:
                 f"Unrecognized field type: {field_dict['type']}."
                 f"Must be one of {FIELD_TYPE.__args__}."
             )
-        self.field_id = field_dict["field"]
+        self.key = field_dict["field"]
         self.type = field_dict["type"]
         # TODO: Converting "info_from_point" to "object" type for now
         # This is a hack until it is fixed in the taxonomy
         # https://shintolabs.atlassian.net/browse/DOT-755
-        if self.field_id == "info_from_point":
+        if self.key == "info_from_point":
             self.type = "object"
         self.label = field_dict["label"]
         self.description = field_dict.get("description")
         self.tags = field_dict.get("tags")
         self.values = None
         self.level = field_dict.get("level")
+        self.readonly = field_dict.get("readonly", False)
         if "values" in field_dict:
             if self.type not in ("categorical", "multi_categorical"):
                 raise TypeError("Only categorical and multi_categorical fields can have 'values'.")
@@ -138,7 +146,7 @@ class TaxonomyField:
             self.type = "string"
             logging.warning(
                 "Field '%s' is categorical but has no values. Downgrading to string type.",
-                self.field_id,
+                self.key,
             )
 
     @property
@@ -194,11 +202,11 @@ class TaxonomyField:
         # TODO: Should we enforce required fields?
         # https://shintolabs.atlassian.net/browse/DOT-755
         if value is None:
-            raise TaxonomyComplianceError(f"Field '{self.field_id}' is required but missing.")
+            raise TaxonomyComplianceError(f"Field '{self.key}' is required but missing.")
 
         if not isinstance(value, type_mapping[self.type]):
             raise TaxonomyComplianceError(
-                f"Field '{self.field_id}' expects type {type_mapping[self.type].__name__}, "
+                f"Field '{self.key}' expects type {type_mapping[self.type].__name__}, "
                 f"got {type(value).__name__}: {value}"
             )
 
@@ -217,7 +225,7 @@ class TaxonomyField:
         for v in value:
             if v not in [val.value for val in self.values]:
                 raise TaxonomyComplianceError(
-                    f"Field '{self.field_id}' has invalid value '{v}'. "
+                    f"Field '{self.key}' has invalid value '{v}'. "
                     f"Allowed values are {[val.value for val in self.values]}"
                 )
 
@@ -225,7 +233,7 @@ class TaxonomyField:
         """Validate categorical field value."""
         if value not in [val.value for val in self.values]:
             raise TaxonomyComplianceError(
-                f"Field '{self.field_id}' has invalid value '{value}'. "
+                f"Field '{self.key}' has invalid value '{value}'. "
                 f"Allowed values are {[val.value for val in self.values]}"
             )
 
@@ -235,7 +243,7 @@ class TaxonomyField:
             datetime.datetime.fromisoformat(value)
         except ValueError as e:
             raise TaxonomyComplianceError(
-                f"Field '{self.field_id}' expects a date-time in ISO 8601 format, got: {value}"
+                f"Field '{self.key}' expects a date-time in ISO 8601 format, got: {value}"
             ) from e
 
     def _validate_polygon(self, value: Any):  # noqa: ANN401
@@ -246,12 +254,12 @@ class TaxonomyField:
             for item in value:
                 if "geometry" not in item:
                     raise TaxonomyComplianceError(
-                        f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
+                        f"Field '{self.key}' contains invalid GeoJSON polygon: {value}"
                     )
                 validate(item["geometry"], _get_geojson_geometry_schema())
         except ValidationError as e:
             raise TaxonomyComplianceError(
-                f"Field '{self.field_id}' contains invalid GeoJSON polygon: {value}"
+                f"Field '{self.key}' contains invalid GeoJSON polygon: {value}"
             ) from e
 
 
@@ -316,17 +324,113 @@ class Taxonomy:
             # Also are additional fields allowed in the data that are not defined in the taxonomy?
             # https://shintolabs.atlassian.net/browse/DOT-755
             if field.level == "project":
-                if field.field_id in data:
-                    field.validate(data[field.field_id])
+                if field.key in data:
+                    field.validate(data[field.key])
             else:
                 for idx, stage in enumerate(data.get("stages", [])):
-                    if field.field_id in stage:
+                    if field.key in stage:
                         try:
-                            field.validate(stage[field.field_id])
+                            field.validate(stage[field.key])
                         except TaxonomyComplianceError as e:
                             raise TaxonomyComplianceError(
-                                f"Failed to validate field '{field.field_id}' in stage {idx} "
+                                f"Failed to validate field '{field.key}' in stage {idx} "
                             ) from e
+
+    def set_readonly_computed_values(
+        self,
+        project_data: dict[str, Any],
+        previous_project_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: Connection,
+    ) -> dict[str, Any]:
+        """Update project data with computed values from the taxonomy."""
+        for field in self.fields:
+            if not field.level:
+                logging.warning(
+                    "Field '%s' is missing 'level'. Defaulting to 'project'.", field.key
+                )
+            field_level = field.level or "project"
+            if field_level == "project":
+                self._set_field_readonly_value(project_data, previous_project_data, field, trigger)
+                self._set_field_computed_value(
+                    project_data, previous_project_data, field, trigger, connection
+                )
+            elif field_level == "stage":
+                # TODO: known issue - not possible to get existing values for stage level fields
+                # solve when stages get their own entity
+                for stage_data in project_data.get("stages", []):
+                    self._set_field_readonly_value(
+                        stage_data, None, field, trigger, is_stage_level=True
+                    )
+                    self._set_field_computed_value(stage_data, None, field, trigger, connection)
+            else:
+                raise ValueError(
+                    f"Unsupported field level '{field_level}' for field '{field.key}'."
+                )
+
+        return project_data
+
+    def _set_field_readonly_value(
+        self,
+        target: dict[str, Any],
+        previous_data: dict[str, Any] | None,
+        field: TaxonomyField,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        is_stage_level: bool = False,  # TODO: remove when stages get their own entity
+    ) -> None:
+        """Update a field in the target data based on the readonly property and trigger."""
+        if not field.readonly:
+            return
+
+        if trigger == "created":
+            target[field.key] = None
+            return
+
+        stage_field_value = target.get(field.key) if is_stage_level else None
+        target[field.key] = (previous_data or {}).get(field.key, stage_field_value)
+
+    def _set_field_computed_value(
+        self,
+        data: dict[str, Any],
+        previous_data: dict[str, Any] | None,
+        field: TaxonomyField,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: Connection,
+    ) -> None:
+        """Update a field in the target data based on the computed field definition and trigger."""
+        if not (computed := field.computed):
+            return
+        field_triggers = computed.get("triggers", [])
+        sequence_name = computed["params"]["sequence_name"]
+        output_format = computed["params"].get("format", "{}")
+
+        # If current trigger is not in the field's trigger list, preserve existing value or skip
+        if trigger not in field_triggers:
+            if trigger != "created" and previous_data and field.key in previous_data:
+                data[field.key] = previous_data[field.key]
+            return
+
+        if computed.get("function") != "sequence":
+            raise ValueError(
+                f"Unsupported function '{computed.get('function')}' for field '{field.key}'."
+            )
+        try:
+            sequence_value = connection.execute_query(
+                "SELECT data.get_next_sequence_value(%s)", (sequence_name,)
+            )[0][0]
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to get next sequence value for '{sequence_name}' "
+                f"for computed field '{field.key}': {e}"
+            ) from e
+        if field.type == "string":
+            data[field.key] = output_format.format(sequence_value)
+        elif field.type == "integer":
+            data[field.key] = int(output_format.format(sequence_value))
+        else:
+            raise ValueError(
+                f"Unsupported field type '{field.type}' for computed field '{field.key}'"
+            )
 
     @property
     def __json_schema__(self) -> dict:
@@ -344,7 +448,7 @@ class Taxonomy:
             "type": "object",
             "properties": {
                 **{
-                    field.field_id: field.__json_schema__
+                    field.key: field.__json_schema__
                     for field in self.fields
                     if field.level == "project"
                 },
@@ -354,7 +458,7 @@ class Taxonomy:
                     "items": {
                         "type": "object",
                         "properties": {
-                            field.field_id: field.__json_schema__
+                            field.key: field.__json_schema__
                             for field in self.fields
                             if not field.level or field.level != "project"
                         },
