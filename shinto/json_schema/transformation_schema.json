@@ -59,7 +59,20 @@
         },
         "type": {
           "type": "string",
-          "enum": ["string", "str", "text", "int", "integer", "float", "number", "bool", "boolean", "json", "object", "dict"],
+          "enum": [
+            "string",
+            "str",
+            "text",
+            "int",
+            "integer",
+            "float",
+            "number",
+            "bool",
+            "boolean",
+            "json",
+            "object",
+            "dict"
+          ],
           "description": "Data type for casting the value"
         },
         "level": {
@@ -87,7 +100,20 @@
         },
         "type": {
           "type": "string",
-          "enum": ["string", "str", "text", "int", "integer", "float", "number", "bool", "boolean", "json", "object", "dict"],
+          "enum": [
+            "string",
+            "str",
+            "text",
+            "int",
+            "integer",
+            "float",
+            "number",
+            "bool",
+            "boolean",
+            "json",
+            "object",
+            "dict"
+          ],
           "description": "Data type for casting the value"
         },
         "level": {
