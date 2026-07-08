@@ -443,18 +443,16 @@ class Taxonomy:
                 )
             field_level = field.level or "project"
             if field_level == "project":
-                field.set_field_readonly_value(project_data, previous_project_data, field, trigger)
+                field.set_field_readonly_value(project_data, previous_project_data, trigger)
                 field.set_field_computed_value(
-                    project_data, previous_project_data, field, trigger, connection
+                    project_data, previous_project_data, trigger, connection
                 )
             elif field_level == "stage":
                 # TODO: known issue - not possible to get existing values for stage level fields
                 # solve when stages get their own entity
                 for stage_data in project_data.get("stages", []):
-                    field.set_field_readonly_value(
-                        stage_data, None, field, trigger, is_stage_level=True
-                    )
-                    field.set_field_computed_value(stage_data, None, field, trigger, connection)
+                    field.set_field_readonly_value(stage_data, None, trigger, is_stage_level=True)
+                    field.set_field_computed_value(stage_data, None, trigger, connection)
             else:
                 raise ValueError(
                     f"Unsupported field level '{field_level}' for field '{field.key}'."
