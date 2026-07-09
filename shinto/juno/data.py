@@ -1,45 +1,54 @@
-"""
-Transforms between projects_data and stage_data structures.
-"""
+"""Transforms between projects_data and stage_data structures."""
+
+from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 
+def projects_to_stage_data(projects: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Transform projects_data to stage_data.
 
-def projects_to_stage_data(projects: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """ transform projects_data to stage_data.
-    stage_data is a list of stages, each stage is a dict with stage info
-    and a list of projects in that stage."""
+    Stage_data is a list of stages,each stage is a dict with stage info
+    and a list of projects in that stage.
+    """
     projects_data = []
     for project in projects:
         # add id and timestamp to project data
         project_data = project.get("data", {})
-        for key,value in project.items():
-            if key not in ["data"]:
-                if "_metadata" not in project_data:
-                    project_data["_metadata"] = {}
-                project_data["_metadata"][key] = value
+        project_data["_metadata"] = {k: v for k, v in project.items() if k != "data"}
         projects_data.append(project_data)
 
     stage_data = []
     for project in projects_data:
         for stage in project.get("stages", []):
             stage_info = stage.copy()
-            # Project level data takes precedence over stage level data, but log a warning if there is a conflict, also omit stages key from project data when merging to stage data to avoid confusion
+            # Project level data takes precedence over stage level data, but log a warning
+            # if there is a conflict, also omit stages key from project data when merging
+            # to stage data to avoid confusion
             for project_key, project_value in project.items():
-                if project_key in stage_info and stage_info[project_key] != project_value and project_key != "stages":
+                if project_key == "stages":
+                    continue
+                if project_key in stage_info and stage_info[project_key] != project_value:
                     logging.warning(
-                        f"Key {project_key} in project data conflicts with stage data. Project data will take precedence.(stage value: {stage_info[project_key]}, project value: {project_value})")
+                        f"Key {project_key} in project data conflicts with stage data. Project data will take precedence.(stage value: {stage_info[project_key]}, project value: {project_value})"
+                    )
 
                 stage_info[project_key] = project_value
             stage_data.append(stage_info)
     return stage_data
 
-def stage_data_to_projects(stage_data: List[Dict[str, Any]], taxonomy: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """ stage_data_to_projects takes stage_data and taxonomy as input
-    and reconstructs the original projects_data structure."""
 
+def stage_data_to_projects(
+    stage_data: list[dict[str, Any]], taxonomy: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """
+    Transform stage_data back to projects_data.
+
+    stage_data_to_projects takes stage_data and taxonomy as input
+    and reconstructs the original projects_data structure.
+    """
     # Build field level mapping from taxonomy
     field_level_map = {}
     if taxonomy and "fields" in taxonomy:
@@ -59,7 +68,7 @@ def stage_data_to_projects(stage_data: List[Dict[str, Any]], taxonomy: Dict[str,
             projects_dict[project_id] = {
                 "id": project_id,
                 "timestamp": metadata.get("timestamp"),
-                "data": {}
+                "data": {},
             }
             # Copy other metadata fields to the project level
             for meta_key, meta_value in metadata.items():
@@ -85,7 +94,8 @@ def stage_data_to_projects(stage_data: List[Dict[str, Any]], taxonomy: Dict[str,
                         project_data[key] = value
                     elif project_data[key] != value:
                         logging.warning(
-                            f"Conflict for project-level field {key} in project {project_id}. Using first occurrence.")
+                            f"Conflict for project-level field {key} in project {project_id}. Using first occurrence."
+                        )
 
         # Add the stage to the stages array (only if there are stage fields)
         if stage_dict:
