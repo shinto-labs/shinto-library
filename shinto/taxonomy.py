@@ -30,8 +30,10 @@ FIELD_TYPE = Literal[
     "multi_categorical",
     "date-time",
     "date",
+    "geometry",
     "polygon",
     "object",
+    "list",
     "boolean",
     "uuid",
 ]
@@ -45,8 +47,10 @@ type_mapping = {
     "date": str,
     "categorical": str,
     "multi_categorical": list,
+    "geometry": list,
     "polygon": list,
     "object": dict,
+    "list": list,
     "boolean": bool,
     "uuid": str,
 }
@@ -60,8 +64,18 @@ jsonschema_type_mapping = {
     "categorical": {"type": "string"},
     "multi_categorical": {"type": "array"},
     "object": {"type": "object"},
+    "list": {"type": "array"},
     "boolean": {"type": "boolean"},
     "uuid": {"type": "string", "format": "uuid"},
+    "geometry": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {"geometry": {"$ref": "#/definitions/geojson_geometry"}},
+            "required": ["geometry"],
+        },
+        "description": "A list of GeoJSON features representing polygons.",
+    },
     "polygon": {
         "type": "array",
         "items": {
@@ -129,11 +143,13 @@ class TaxonomyField:
         if not isinstance(field_dict, dict):
             raise TypeError("field_dict must be a dictionary.")
         if "field" not in field_dict or "type" not in field_dict or "label" not in field_dict:
-            raise TypeError("field_dict must contain 'field', 'type', and 'label' keys.")
+            raise TypeError(
+                f"field_dict must contain 'field', 'type', and 'label' keys. Got: {field_dict}"
+            )
         if field_dict["type"] not in FIELD_TYPE.__args__:
             raise TypeError(
-                f"Unrecognized field type: {field_dict['type']}."
-                f"Must be one of {FIELD_TYPE.__args__}."
+                f"Unrecognized field type: {field_dict['type']} on field '{field_dict['field']}'."
+                f" Must be one of {FIELD_TYPE.__args__}."
             )
         self.key = field_dict["field"]
         self.type = field_dict["type"]
@@ -305,7 +321,7 @@ class TaxonomyField:
             self._validate_categorical(value)
         elif self.type in ("date-time", "date"):
             self._validate_date_time(value)
-        elif self.type == "polygon":
+        elif self.type in ("polygon", "geometry"):
             self._validate_polygon(value)
         elif self.type == "uuid":
             self._validate_uuid(value)
@@ -475,7 +491,7 @@ class Taxonomy:
         # https://shintolabs.atlassian.net/browse/DOT-755
         definitions = {}
 
-        if any(field.type == "polygon" for field in self.fields):
+        if any(field.type in ("polygon", "geometry") for field in self.fields):
             definitions["geojson_geometry"] = _get_geojson_geometry_schema()
 
         return {
