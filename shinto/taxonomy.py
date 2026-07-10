@@ -122,7 +122,7 @@ class TaxonomyField:
     """Class representing a field in a taxonomy."""
 
     key: str
-    type: FIELD_TYPE
+    type: FIELD_TYPE | None
     label: str
     values: list[TaxonomyCategoricalValue] | None
     description: str | None
@@ -142,23 +142,28 @@ class TaxonomyField:
         """
         if not isinstance(field_dict, dict):
             raise TypeError("field_dict must be a dictionary.")
-        if "field" not in field_dict or "type" not in field_dict or "label" not in field_dict:
+        # TODO: we should also enforce type and label presence,
+        # but for now we only enforce field presence
+        # or "type" not in field_dict or "label" not in field_dict
+        if "field" not in field_dict:
             raise TypeError(
                 f"field_dict must contain 'field', 'type', and 'label' keys. Got: {field_dict}"
             )
-        if field_dict["type"] not in FIELD_TYPE.__args__:
-            raise TypeError(
-                f"Unrecognized field type: {field_dict['type']} on field '{field_dict['field']}'."
-                f" Must be one of {FIELD_TYPE.__args__}."
-            )
         self.key = field_dict["field"]
-        self.type = field_dict["type"]
+        # TODO: We should enforce this. And set "type" to non nullable
+        # Currently the Taxonomy is not strictly enforced, so we allow unknown types to pass through
+        # if field_dict.get("type") not in FIELD_TYPE.__args__:
+        #     raise TypeError(
+        #         f"Unrecognized field type: {field_dict.get('type')} on field '{field_dict['field']}'."
+        #         f" Must be one of {FIELD_TYPE.__args__}."
+        #     )
+        self.type = field_dict.get("type")
         # TODO: Converting "info_from_point" to "object" type for now
         # This is a hack until it is fixed in the taxonomy
         # https://shintolabs.atlassian.net/browse/DOT-755
         if self.key == "info_from_point":
             self.type = "object"
-        self.label = field_dict["label"]
+        self.label = field_dict.get("label", "")
         self.description = field_dict.get("description")
         self.tags = field_dict.get("tags")
         self.values = None
