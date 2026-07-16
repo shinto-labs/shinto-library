@@ -7,6 +7,7 @@ from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
+from shinto.mimir.exception import MimirEntityNotFoundException
 
 
 def get_marker_by_id(
@@ -22,7 +23,9 @@ def get_marker_by_id(
         "SELECT to_json(data.get_marker_by_id(%s::uuid %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, marker_id, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not found by ID: {marker_id}")
+    return result[0][0]
 
 def get_marker_by_name(
         connection: Connection,
@@ -37,7 +40,9 @@ def get_marker_by_name(
         "SELECT to_json(data.get_marker_by_name(%s::uuid %s::text, %s::TIMESTAMPTZ))",
         (action_by, marker_name, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not found by name: {marker_name}")
+    return result[0][0]
 
 def get_marker_history(
         connection: Connection,
@@ -49,13 +54,15 @@ def get_marker_history(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_marker_history(
-                %s::uuid 
+                %s::uuid
                 %s::uuid
             ) AS row
         """,
         (action_by, marker_id,),
     )
-    return result[0][0] if result else []
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not found: %s", marker_id)
+    return result[0][0]
 
 def get_marker_list(
         connection: Connection,
@@ -69,7 +76,7 @@ def get_marker_list(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_marker_list(
-                %s::uuid 
+                %s::uuid
                 %s::TIMESTAMPTZ
             ) AS row
         """,
@@ -96,7 +103,9 @@ def create_marker(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not created: %s", marker_id)
+    return result[0][0]
 
 def update_marker(
         connection: Connection,
@@ -113,7 +122,9 @@ def update_marker(
         "SELECT to_json(data.update_marker(%s::uuid %s::uuid, %s::text, %s::timestamptz), %s::jsonb))",
         (action_by, marker_id, name, marked_timestamp, json.dumps(action_info) if action_info else None),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not updated: %s", marker_id)
+    return result[0][0]
 
 def delete_marker(
         connection: Connection,
@@ -130,4 +141,6 @@ def delete_marker(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Marker not deleted: %s", marker_id)
+    return result[0][0]

@@ -5,6 +5,8 @@ from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
+from shinto.mimir.exception import MimirEntityNotFoundException
+
 
 def get_taxonomy_by_id(
         connection: Connection,
@@ -19,6 +21,8 @@ def get_taxonomy_by_id(
         "SELECT to_json(data.get_taxonomy_by_id(%s::uuid, %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, taxonomy_id, timestamp),
     )
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Taxonomy not found: %s", taxonomy_id)
     return result[0][0] if result else {}
 
 def get_taxonomy_by_name(
@@ -46,7 +50,7 @@ def get_taxonomy_history(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_taxonomy_history(
-                %s::uuid, 
+                %s::uuid,
                 %s::uuid
             ) AS row
         """,
@@ -66,7 +70,7 @@ def get_taxonomy_list(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_taxonomy_list(
-                %s::uuid, 
+                %s::uuid,
                 %s::TIMESTAMPTZ
             ) AS row
         """,

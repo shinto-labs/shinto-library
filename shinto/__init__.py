@@ -9,6 +9,8 @@ __all__ = [
     "Taxonomy",
     "TaxonomyComplianceError",
     "ValidationErrorGroup",
+    "ShintoException",
+    "ShintoWarning",
     "calculate_crc32_for_file",
     "get_json_object_from_query_result",
     "get_mimetype_for_file",
@@ -34,3 +36,4 @@ from .rabbitmq import QueueError, QueueHandler
 from .retry_wrapper import retry, retry_call
 from .taxonomy import Taxonomy, TaxonomyComplianceError
 from .transform import transform_data
+from .exceptions import ShintoException, ShintoWarning

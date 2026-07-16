@@ -39,3 +39,9 @@ ruff_format:
 
 generate_docs:
 	$(PDM_RUN) sphinx-apidoc -f -o docs/modules shinto && cd docs && make html
+
+docker_clean:
+	docker compose down
+
+docker_all:
+	docker compose -f docker-compose.yml up --build --force-recreate --remove-orphans --abort-on-container-failure

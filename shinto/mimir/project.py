@@ -7,7 +7,7 @@ from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
-
+from shinto.mimir.exception import MimirEntityNotFoundException
 
 def get_project_by_id(
         connection: Connection,
@@ -22,7 +22,9 @@ def get_project_by_id(
         "SELECT to_json(data.get_project(%s::uuid, %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, project_id, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Project not found: %s", project_id)
+    return result[0][0]
 
 def get_project_history(
         connection: Connection,
@@ -38,7 +40,9 @@ def get_project_history(
         """,
         (action_by, project_id,)
     )
-    return result[0][0] if result else []
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Project history not found: %s", project_id)
+    return result[0][0]
 
 def get_project_list(
         connection: Connection,
@@ -52,7 +56,7 @@ def get_project_list(
         """
         SELECT COALESCE(json_agg(project), '[]'::json)
         FROM data.get_project_list(
-            %s::uuid, 
+            %s::uuid,
             %s::TIMESTAMPTZ
         ) AS project
         """,
@@ -74,7 +78,9 @@ def create_project(
             json.dumps(data) if data else None,
             json.dumps(action_info) if action_info else None),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Project not created: %s", project_id)
+    return result[0][0]
 
 def force_project_record(
         connection: Connection,
@@ -114,25 +120,25 @@ def force_project_record(
     # then insert the project with the specified ID and timestamp
     result = connection.execute_query(
         """
-            INSERT INTO data.project 
+            INSERT INTO data.project
                 (
-                    "id", 
-                    "timestamp", 
-                    "action", 
-                    "action_by", 
-                    "action_info", 
-                    taxonomy_id, 
-                    taxonomy_timestamp, 
+                    "id",
+                    "timestamp",
+                    "action",
+                    "action_by",
+                    "action_info",
+                    taxonomy_id,
+                    taxonomy_timestamp,
                     data)
-            VALUES 
+            VALUES
                 (
-                    %s::uuid, 
+                    %s::uuid,
                     %s::TIMESTAMPTZ,
-                    %s::base.record_action, 
-                    %s::uuid, 
-                    %s::json, 
-                    %s::uuid, 
-                    %s::TIMESTAMPTZ, 
+                    %s::base.record_action,
+                    %s::uuid,
+                    %s::json,
+                    %s::uuid,
+                    %s::TIMESTAMPTZ,
                     %s::jsonb
                 )
             ON CONFLICT ("id", "timestamp") DO UPDATE SET
@@ -186,7 +192,9 @@ def update_project(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Project not updated: %s", project_id)
+    return result[0][0]
 
 def delete_project(
         connection: Connection,
@@ -203,4 +211,6 @@ def delete_project(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Project not deleted: %s", project_id)
+    return result[0][0]

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
-
+from shinto.mimir.exception import MimirEntityNotFoundException
 
 def get_user_by_id(
         connection: Connection,
@@ -22,7 +22,9 @@ def get_user_by_id(
         "SELECT to_json(data.get_user_by_id(%s, %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, user_id, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User not found: %s", user_id)
+    return result[0][0]
 
 def get_user_by_name(
         connection: Connection,
@@ -37,7 +39,9 @@ def get_user_by_name(
         "SELECT to_json(data.get_user_by_name(%s::uuid, %s::text, %s::TIMESTAMPTZ))",
         (action_by, user_name, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User history not found: %s", user_id)
+    return result[0][0]
 
 def get_user_history(
         connection: Connection,
@@ -49,13 +53,15 @@ def get_user_history(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_user_history(
-                %s::uuid, 
+                %s::uuid,
                 %s::uuid
             ) AS row
         """,
         (action_by, user_id,)
     )
-    return result[0][0] if result else []
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User history not found: %s", user_id)
+    return result[0][0]
 
 def get_user_list(
         connection: Connection,
@@ -69,7 +75,7 @@ def get_user_list(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_user_list(
-                %s::uuid, 
+                %s::uuid,
                 %s::TIMESTAMPTZ
             ) AS row
         """,
@@ -94,7 +100,9 @@ def create_user(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User not updated: %s", user_id)
+    return result[0][0]
 
 def update_user(
         connection: Connection,
@@ -115,7 +123,9 @@ def update_user(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User not updated: %s", user_id)
+    return result[0][0]
 
 def delete_user(
         connection: Connection,
@@ -132,4 +142,6 @@ def delete_user(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("User not deleted: %s", user_id)
+    return result[0][0]

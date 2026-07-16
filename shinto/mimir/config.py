@@ -7,6 +7,7 @@ from uuid import UUID
 
 from shinto.general import normalize_timestamp
 from shinto.pg.connection import Connection
+from shinto.mimir.exception import MimirEntityNotFoundException
 
 
 def get_config_by_id(
@@ -22,7 +23,9 @@ def get_config_by_id(
         "SELECT to_json(data.get_config_by_id(%s, %s::uuid, %s::TIMESTAMPTZ))",
         (action_by, config_id, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not found by ID: {config_id}")
+    return result[0][0]
 
 def get_config_by_name(
         connection: Connection,
@@ -37,7 +40,9 @@ def get_config_by_name(
         "SELECT to_json(data.get_config_by_name(%s::uuid, %s::text, %s::TIMESTAMPTZ))",
         (action_by, config_name, timestamp),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not found by name: {config_name}")
+    return result[0][0]
 
 def get_config_history(
         connection: Connection,
@@ -49,13 +54,15 @@ def get_config_history(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_config_history(
-                %s::uuid, 
+                %s::uuid,
                 %s::uuid
             ) AS row
         """,
         (action_by, config_id,)
     )
-    return result[0][0] if result else []
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not found by ID: {config_id}")
+    return result[0][0]
 
 def get_config_list(
         connection: Connection,
@@ -69,7 +76,7 @@ def get_config_list(
         """
             SELECT COALESCE(json_agg(row), '[]'::json)
             FROM data.get_config_list(
-                %s::uuid, 
+                %s::uuid,
                 %s::TIMESTAMPTZ
             ) AS row
         """,
@@ -94,7 +101,9 @@ def create_config(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not created")
+    return result[0][0]
 
 def update_config(
         connection: Connection,
@@ -115,7 +124,9 @@ def update_config(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not updated")
+    return result[0][0]
 
 def delete_config(
         connection: Connection,
@@ -132,4 +143,6 @@ def delete_config(
             json.dumps(action_info) if action_info else None
         ),
     )
-    return result[0][0] if result else {}
+    if not result or not result[0][0]:
+        raise MimirEntityNotFoundException("Config not deleted")
+    return result[0][0]
