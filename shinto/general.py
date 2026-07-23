@@ -1,11 +1,15 @@
 """Provides functions to handle configuration settings for the application."""
 
+from __future__ import annotations
+
+import json
 import mimetypes
 import zlib
-import json
-from pathlib import Path
 from datetime import datetime, timezone
-from typing import Union, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 try:
     from dateutil.parser import parse as parse_datetime
@@ -14,22 +18,26 @@ except ImportError:
 
 CHUNK_SIZE = 65536  # Default chunk size for CRC32 calculation
 
+
 def calculate_crc32_for_file(filename: Path, chunk_size: int = CHUNK_SIZE) -> int:
     """Calculate the CRC32 checksum for a file."""
     crc = 0
     with filename.open("rb") as f:
         while chunk := f.read(chunk_size):
             crc = zlib.crc32(chunk, crc)
-    return crc & 0xffffffff
+    return crc & 0xFFFFFFFF
+
 
 def get_mimetype_for_file(file_path: str) -> str:
     """Get MIME type from file path using built-in mimetypes module."""
     mime_type, _ = mimetypes.guess_type(file_path)
     return mime_type or "application/octet-stream"
 
-def normalize_timestamp(timestamp: Optional[Union[datetime, str]]) -> Optional[datetime]:
+
+def normalize_timestamp(timestamp: datetime | str | None) -> datetime | None:
     """
     Normalize a timestamp argument to a timezone-aware datetime object.
+
     Accepts a datetime, ISO 8601 string, or None. If no timezone is present, assumes UTC.
     Returns None if input is None.
     Raises ValueError for invalid input.
@@ -50,6 +58,7 @@ def normalize_timestamp(timestamp: Optional[Union[datetime, str]]) -> Optional[d
         return timestamp
     else:
         raise ValueError("timestamp must be a datetime, ISO 8601 string, or None")
+
 
 def compare_json(json1: dict, json2: dict) -> bool:
     """Compare two JSON objects for equality, ignoring key order."""

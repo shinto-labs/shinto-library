@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+import os
 
 import psycopg
-import logging
-import os
+
 
 class Connection(psycopg.Connection):
     """Wrapper for a connection to the database."""
@@ -100,7 +99,9 @@ class Connection(psycopg.Connection):
 class AsyncConnection(psycopg.AsyncConnection):
     """Wrapper for an async connection to the database."""
 
-    async def execute_query(self, query: str, params: None | dict | tuple | list = None) -> list[tuple]:
+    async def execute_query(
+        self, query: str, params: None | dict | tuple | list = None
+    ) -> list[tuple]:
         """
         Execute a query or command to the database asynchronously.
 
@@ -188,15 +189,18 @@ class AsyncConnection(psycopg.AsyncConnection):
                 await cur.execute("DEALLOCATE ALL")
             return cur.rowcount
 
+
 def get_connection(
-        config: dict | None = None,
-        host: str = None,
-        port: int = None,
-        dbname: str = None,
-        user: str = None,
-        password: str = None
+    config: dict | None = None,
+    host: str | None = None,
+    port: int | None = None,
+    dbname: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
 ) -> Connection:
-    """Get a Database Connection object.
+    """
+    Get a Database Connection object.
+
     Config can be passed as a dict or as individual parameters.
     Individual parameters will override config values.
     Environment variables will be used as defaults
@@ -209,7 +213,6 @@ def get_connection(
         "dbname": "postgres"
     }
     """
-
     # Start with config values if provided
     params = {
         "host": None,
