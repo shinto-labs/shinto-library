@@ -412,9 +412,9 @@ def get_basisset20_flatdata(
     connection: AsyncConnection, action_by: UUID, timestamp: datetime | str | None
 ) -> dict:
     """Transform data using a project and transformation dictionary."""
-    transformation = get_transformation_by_name(connection, action_by, "bassiset20", timestamp)
+    transformation = get_transformation_by_name(connection, action_by, "basisset20", timestamp)
 
-    taxonomy = get_taxonomy_by_name(connection, action_by, "bassiset20", timestamp)
+    taxonomy = get_taxonomy_by_name(connection, action_by, "basisset20", timestamp)
 
     projects = get_project_list(connection, action_by, timestamp)
 
@@ -430,10 +430,10 @@ async def get_basisset20_flatdata_async(
 ) -> dict:
     """Transform data using a project and transformation dictionary."""
     transformation = await get_transformation_by_name_async(
-        connection, action_by, "bassiset20", timestamp
+        connection, action_by, "basisset20", timestamp
     )
 
-    taxonomy = await get_taxonomy_by_name_async(connection, action_by, "bassiset20", timestamp)
+    taxonomy = await get_taxonomy_by_name_async(connection, action_by, "basisset20", timestamp)
 
     projects = await get_project_list_async(connection, action_by, timestamp)
 

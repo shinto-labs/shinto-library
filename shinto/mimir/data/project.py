@@ -399,7 +399,7 @@ def _apply_taxonomy_field_logic(
 
     from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
 
-    taxonomy_obj = Taxonomy(taxonomy)
+    taxonomy_obj = Taxonomy(taxonomy["data"])
 
     taxonomy_obj.apply_taxonomy_field_logic(data, existing_data, trigger, connection)
 
@@ -436,7 +436,7 @@ async def _apply_taxonomy_field_logic_async(
 
     from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
 
-    taxonomy_obj = Taxonomy(taxonomy)
+    taxonomy_obj = Taxonomy(taxonomy["data"])
 
     await taxonomy_obj.apply_taxonomy_field_logic_async(data, existing_data, trigger, connection)
 
