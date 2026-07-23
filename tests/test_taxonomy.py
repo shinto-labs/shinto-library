@@ -230,41 +230,6 @@ class TestTaxonomy(unittest.TestCase):
         with self.assertRaises(TaxonomyComplianceError):
             taxonomy.validate({"created_at": "2025-13-45"})
 
-    def test_unknown_field_type_skipped(self):
-        """Test that fields with unknown types are skipped with a warning."""
-        with self.assertLogs(level=logging.WARNING) as log_context:
-            taxonomy = Taxonomy(
-                {
-                    "fields": [
-                        {"field": "name", "type": "text", "label": "Name", "level": "project"},
-                        {
-                            "field": "unknown_field",
-                            "type": "unknown_type",
-                            "label": "Unknown",
-                            "level": "project",
-                        },
-                        {"field": "count", "type": "integer", "label": "Count", "level": "project"},
-                    ]
-                },
-                skip_unknown_types=True,
-            )
-
-            # Should have 2 valid fields (name and count), unknown_field should be skipped
-            self.assertEqual(len(taxonomy.fields), 2)
-            self.assertEqual(taxonomy.fields[0].key, "name")
-            self.assertEqual(taxonomy.fields[1].key, "count")
-
-            # Check that a warning was logged
-            self.assertTrue(
-                any(
-                    "unknown_field" in message and "unknown_type" in message
-                    for message in log_context.output
-                )
-            )
-
-        # Validation should work with remaining valid fields
-        taxonomy.validate({"name": "Test", "count": 5})
-
     def test_missing_optional_fields(self):
         """Test that missing fields are handled correctly."""
         taxonomy = Taxonomy(

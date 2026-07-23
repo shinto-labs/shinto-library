@@ -15,7 +15,6 @@ from shinto.mimir.data.taxonomy import (
 )
 from shinto.mimir.exception import MimirEntityNotFoundException
 from shinto.mimir.query_execution_handler import execute_query, execute_query_async
-from shinto.taxonomy import Taxonomy
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -398,6 +397,8 @@ def _apply_taxonomy_field_logic(
         result = get_project_by_id(connection, action_by, project_id)
         existing_data = result["data"]
 
+    from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
+
     taxonomy_obj = Taxonomy(taxonomy)
 
     taxonomy_obj.apply_taxonomy_field_logic(data, existing_data, trigger, connection)
@@ -432,6 +433,8 @@ async def _apply_taxonomy_field_logic_async(
     if trigger == "updated":
         result = await get_project_by_id_async(connection, action_by, project_id)
         existing_data = result["data"]
+
+    from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
 
     taxonomy_obj = Taxonomy(taxonomy)
 
