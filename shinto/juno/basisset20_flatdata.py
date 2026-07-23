@@ -10,12 +10,8 @@ from shinto.juno import projects_to_stage_data, stage_data_to_projects
 from shinto.mimir.data import (
     get_project_list,
     get_project_list_async,
-    get_taxonomy_by_id,
-    get_taxonomy_by_id_async,
     get_taxonomy_by_name,
     get_taxonomy_by_name_async,
-    get_transformation_by_id,
-    get_transformation_by_id_async,
     get_transformation_by_name,
     get_transformation_by_name_async,
 )
@@ -413,34 +409,12 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
 
 
 def get_basisset20_flatdata(
-    connection: AsyncConnection,
-    action_by: UUID,
-    timestamp: datetime | str | None,
-    transformation_name: str | None,
-    transformation_id: str | None,
-    taxonomy_name: str | None,
-    taxonomy_id: str | None,
+    connection: AsyncConnection, action_by: UUID, timestamp: datetime | str | None
 ) -> dict:
     """Transform data using a project and transformation dictionary."""
-    if not transformation_name and not transformation_id:
-        raise ValueError("Either transformation_name or transformation_id must be provided.")
-    if not taxonomy_name and not taxonomy_id:
-        raise ValueError("Either taxonomy_name or taxonomy_id must be provided.")
+    transformation = get_transformation_by_name(connection, action_by, "bassiset20", timestamp)
 
-    transformation = None
-    if transformation_name:
-        transformation = get_transformation_by_name(
-            connection, action_by, transformation_name, timestamp
-        )
-    if transformation_id:
-        transformation = get_transformation_by_id(
-            connection, action_by, transformation_id, timestamp
-        )
-    taxonomy = None
-    if taxonomy_name:
-        taxonomy = get_taxonomy_by_name(connection, action_by, taxonomy_name, timestamp)
-    if taxonomy_id:
-        taxonomy = get_taxonomy_by_id(connection, action_by, taxonomy_id, timestamp)
+    taxonomy = get_taxonomy_by_name(connection, action_by, "bassiset20", timestamp)
 
     projects = get_project_list(connection, action_by, timestamp)
 
@@ -452,34 +426,14 @@ def get_basisset20_flatdata(
 
 
 async def get_basisset20_flatdata_async(
-    connection: AsyncConnection,
-    action_by: UUID,
-    timestamp: datetime | str | None,
-    transformation_name: str | None,
-    transformation_id: str | None,
-    taxonomy_name: str | None,
-    taxonomy_id: str | None,
+    connection: AsyncConnection, action_by: UUID, timestamp: datetime | str | None
 ) -> dict:
     """Transform data using a project and transformation dictionary."""
-    if not transformation_name and not transformation_id:
-        raise ValueError("Either transformation_name or transformation_id must be provided.")
-    if not taxonomy_name and not taxonomy_id:
-        raise ValueError("Either taxonomy_name or taxonomy_id must be provided.")
+    transformation = await get_transformation_by_name_async(
+        connection, action_by, "bassiset20", timestamp
+    )
 
-    transformation = None
-    if transformation_name:
-        transformation = await get_transformation_by_name_async(
-            connection, action_by, transformation_name, timestamp
-        )
-    if transformation_id:
-        transformation = await get_transformation_by_id_async(
-            connection, action_by, transformation_id, timestamp
-        )
-    taxonomy = None
-    if taxonomy_name:
-        taxonomy = await get_taxonomy_by_name_async(connection, action_by, taxonomy_name, timestamp)
-    if taxonomy_id:
-        taxonomy = await get_taxonomy_by_id_async(connection, action_by, taxonomy_id, timestamp)
+    taxonomy = await get_taxonomy_by_name_async(connection, action_by, "bassiset20", timestamp)
 
     projects = await get_project_list_async(connection, action_by, timestamp)
 
