@@ -3,16 +3,27 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+import logging
+from typing import TYPE_CHECKING, Literal
 
 from shinto.general import normalize_timestamp
+from shinto.mimir.data.taxonomy import (
+    get_taxonomy_by_id,
+    get_taxonomy_by_id_async,
+    get_taxonomy_by_name,
+    get_taxonomy_by_name_async,
+)
+from shinto.mimir.exception import MimirEntityNotFoundException
 from shinto.mimir.query_execution_handler import execute_query, execute_query_async
+from shinto.taxonomy import Taxonomy
 
 if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
     from shinto.pg.connection import AsyncConnection, Connection
+
+PROJECT_UPDATE_TRIGGER = Literal["created", "updated"]
 
 
 GET_PROJECT_BY_ID_QUERY = """
@@ -30,12 +41,21 @@ FROM data.get_project_list(%(action_by)s::uuid, %(timestamp)s::TIMESTAMPTZ) AS p
 """
 CREATE_PROJECT_QUERY = """
 SELECT to_json(data.create_project(
-    %(action_by)s::uuid, %(data)s::jsonb, null, null, %(action_info)s::jsonb
+    %(action_by)s::uuid,
+    %(data)s::jsonb,
+    %(taxonomy_id)s::uuid,
+    %(taxonomy_timestamp)s::TIMESTAMPTZ,
+    %(action_info)s::jsonb
 ))
 """
 UPDATE_PROJECT_QUERY = """
 SELECT to_json(data.update_project(
-    %(action_by)s::uuid, %(project_id)s::uuid, %(data)s::jsonb, null, null, %(action_info)s::jsonb
+    %(action_by)s::uuid,
+    %(project_id)s::uuid,
+    %(data)s::jsonb,
+    %(taxonomy_id)s::uuid,
+    %(taxonomy_timestamp)s::TIMESTAMPTZ,
+    %(action_info)s::jsonb
 ))
 """
 DELETE_PROJECT_QUERY = """
@@ -150,12 +170,22 @@ def create_project(
     connection: Connection,
     action_by: UUID,
     data: dict | None,
+    taxonomy_id: UUID | None = None,
+    taxonomy_timestamp: datetime | str | None = None,
     action_info: dict | None = None,
+    apply_taxonomy_field_logic: bool = True,
 ) -> dict:
     """Create a project."""
+    if apply_taxonomy_field_logic:
+        data = _apply_taxonomy_field_logic(
+            connection, action_by, "created", data, None, taxonomy_id, taxonomy_timestamp
+        )
+
     params = {
         "action_by": action_by,
         "data": json.dumps(data) if data else None,
+        "taxonomy_id": taxonomy_id,
+        "taxonomy_timestamp": normalize_timestamp(taxonomy_timestamp),
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return execute_query(connection, CREATE_PROJECT_QUERY, **params)
@@ -165,12 +195,22 @@ async def create_project_async(
     connection: AsyncConnection,
     action_by: UUID,
     data: dict | None,
+    taxonomy_id: UUID | None = None,
+    taxonomy_timestamp: datetime | str | None = None,
     action_info: dict | None = None,
+    apply_taxonomy_field_logic: bool = True,
 ) -> dict:
     """Create a project."""
+    if apply_taxonomy_field_logic:
+        data = await _apply_taxonomy_field_logic_async(
+            connection, action_by, "created", data, None, taxonomy_id, taxonomy_timestamp
+        )
+
     params = {
         "action_by": action_by,
         "data": json.dumps(data) if data else None,
+        "taxonomy_id": taxonomy_id,
+        "taxonomy_timestamp": normalize_timestamp(taxonomy_timestamp),
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return await execute_query_async(connection, CREATE_PROJECT_QUERY, **params)
@@ -181,13 +221,23 @@ def update_project(
     action_by: UUID,
     project_id: UUID,
     data: dict | None = None,
+    taxonomy_id: UUID | None = None,
+    taxonomy_timestamp: datetime | str | None = None,
     action_info: dict | None = None,
+    apply_taxonomy_field_logic: bool = True,
 ) -> dict:
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
+    if apply_taxonomy_field_logic:
+        data = _apply_taxonomy_field_logic(
+            connection, action_by, "updated", data, project_id, taxonomy_id, taxonomy_timestamp
+        )
+
     params = {
         "action_by": action_by,
         "project_id": project_id,
         "data": json.dumps(data) if data else None,
+        "taxonomy_id": taxonomy_id,
+        "taxonomy_timestamp": normalize_timestamp(taxonomy_timestamp),
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return execute_query(connection, UPDATE_PROJECT_QUERY, **params)
@@ -198,13 +248,23 @@ async def update_project_async(
     action_by: UUID,
     project_id: UUID,
     data: dict | None = None,
+    taxonomy_id: UUID | None = None,
+    taxonomy_timestamp: datetime | str | None = None,
     action_info: dict | None = None,
+    apply_taxonomy_field_logic: bool = True,
 ) -> dict:
     """Update a project. Accepts timestamp as datetime, ISO 8601 string, or None."""
+    if apply_taxonomy_field_logic:
+        data = await _apply_taxonomy_field_logic_async(
+            connection, action_by, "updated", data, project_id, taxonomy_id, taxonomy_timestamp
+        )
+
     params = {
         "action_by": action_by,
         "project_id": project_id,
         "data": json.dumps(data) if data else None,
+        "taxonomy_id": taxonomy_id,
+        "taxonomy_timestamp": normalize_timestamp(taxonomy_timestamp),
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return await execute_query_async(connection, UPDATE_PROJECT_QUERY, **params)
@@ -310,3 +370,71 @@ def force_project_record(
     connection.execute_command(ENABLE_PROJECT_INSERT_TRIGGER)
 
     return result[0][0] if result else {}
+
+
+def _apply_taxonomy_field_logic(
+    connection: AsyncConnection,
+    action_by: UUID,
+    trigger: PROJECT_UPDATE_TRIGGER,
+    data: dict,
+    project_id: UUID | None = None,
+    taxonomy_id: str | None = None,
+    taxonomy_timestamp: str | None = None,
+) -> dict:
+    try:
+        if taxonomy_id:
+            taxonomy = get_taxonomy_by_id(connection, action_by, taxonomy_id, taxonomy_timestamp)
+        else:
+            taxonomy = get_taxonomy_by_name(connection, action_by, "project_data")
+    except MimirEntityNotFoundException:
+        logging.warning(
+            "Taxonomy with ID '%s' not found. Skipping application of taxonomy field logic.",
+            taxonomy_id,
+        )
+        return data
+
+    existing_data = None
+    if trigger == "updated":
+        result = get_project_by_id(connection, action_by, project_id)
+        existing_data = result["data"]
+
+    taxonomy_obj = Taxonomy(taxonomy)
+
+    taxonomy_obj.apply_taxonomy_field_logic(data, existing_data, trigger, connection)
+
+    return data
+
+
+async def _apply_taxonomy_field_logic_async(
+    connection: AsyncConnection,
+    action_by: UUID,
+    trigger: PROJECT_UPDATE_TRIGGER,
+    data: dict,
+    project_id: UUID | None = None,
+    taxonomy_id: str | None = None,
+    taxonomy_timestamp: str | None = None,
+) -> dict:
+    try:
+        if taxonomy_id:
+            taxonomy = await get_taxonomy_by_id_async(
+                connection, action_by, taxonomy_id, taxonomy_timestamp
+            )
+        else:
+            taxonomy = await get_taxonomy_by_name_async(connection, action_by, "project_data")
+    except MimirEntityNotFoundException:
+        logging.warning(
+            "Taxonomy with ID '%s' not found. Skipping application of taxonomy field logic.",
+            taxonomy_id,
+        )
+        return data
+
+    existing_data = None
+    if trigger == "updated":
+        result = await get_project_by_id_async(connection, action_by, project_id)
+        existing_data = result["data"]
+
+    taxonomy_obj = Taxonomy(taxonomy)
+
+    await taxonomy_obj.apply_taxonomy_field_logic_async(data, existing_data, trigger, connection)
+
+    return data
