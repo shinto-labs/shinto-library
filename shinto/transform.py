@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
+"""Transform stage data using a transformation pipeline."""
 
-import json
+from __future__ import annotations
+
 import copy
-from typing import Any, Dict, List, Optional
-from glom import glom, PathAccessError
+import json
 import logging
+from typing import Any
 
+from glom import PathAccessError, glom
 
 TRUE_SET = {"true", "1", "yes", "y", "ja", "j", "waar", "t"}
 FALSE_SET = {"false", "0", "no", "n", "nee", "onwaar", "f"}
 
-def to_bool(v: Any) -> Optional[bool]:
+
+def to_bool(v: Any) -> bool | None:
     """Convert various values to boolean."""
     if v is None:
         return None
@@ -27,7 +31,7 @@ def to_bool(v: Any) -> Optional[bool]:
     return bool(v)
 
 
-def cast_value(value: Any, typ: Optional[str]) -> Any:
+def cast_value(value: Any, typ: str | None) -> Any:
     """Cast value to specified type."""
     if typ is None:
         return value
@@ -75,7 +79,8 @@ SAFE_BUILTINS = {
 
 
 class SafeContext(dict):
-    """Dict that returns None for missing keys instead of raising KeyError."""
+    """dict that returns None for missing keys instead of raising KeyError."""
+
     def __missing__(self, key):
         # Don't intercept builtin lookups - let them fall through
         raise KeyError(key)
@@ -89,10 +94,12 @@ class SafeContext(dict):
             return None
 
 
-def eval_expr(expr: str, ctx: Dict[str, Any]) -> Any:
-    """Evaluate a Python expression using row fields as variables.
+def eval_expr(expr: str, ctx: dict[str, Any]) -> Any:
+    """
+    Evaluate a Python expression using row fields as variables.
 
     Returns None if the expression fails (e.g., missing fields in comparisons).
+
     """
     try:
         safe_ctx = SafeContext(ctx)
@@ -109,13 +116,14 @@ def eval_expr(expr: str, ctx: Dict[str, Any]) -> Any:
     # return simple_eval(expr, names=ctx, functions=SAFE_BUILTINS)
 
 
-class DefaultingDict(dict):
-    """Dict that returns empty string for missing keys."""
+class Defaultingdict(dict):
+    """dict that returns empty string for missing keys."""
+
     def __missing__(self, key):
         return ""
 
 
-def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any:
+def resolve_source(row: dict[str, Any], source: dict[str, Any] | None) -> Any:
     """
     Resolve source specification to a value.
 
@@ -140,7 +148,7 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
     if "template" in source:
         tmpl = source["template"]
         safe_map = {k: ("" if v is None else v) for k, v in row.items()}
-        return tmpl.format_map(DefaultingDict(safe_map))
+        return tmpl.format_map(Defaultingdict(safe_map))
     if "expr" in source:
         return eval_expr(source["expr"], row)
 
@@ -161,7 +169,7 @@ def resolve_source(row: Dict[str, Any], source: Optional[Dict[str, Any]]) -> Any
     raise ValueError(f"Unknown source spec: {source}")
 
 
-def passes_filter(row: Dict[str, Any], flt: Optional[Dict[str, Any]]) -> bool:
+def passes_filter(row: dict[str, Any], flt: dict[str, Any] | None) -> bool:
     """
     Check if row passes filter.
 
@@ -210,7 +218,7 @@ def passes_filter(row: Dict[str, Any], flt: Optional[Dict[str, Any]]) -> bool:
     raise ValueError(f"Unknown filter spec: {flt}")
 
 
-def apply_action(out_row: Dict[str, Any], in_row: Dict[str, Any], action: Dict[str, Any]) -> None:
+def apply_action(out_row: dict[str, Any], in_row: dict[str, Any], action: dict[str, Any]) -> None:
     """
     Apply a single transformation action.
 
@@ -260,16 +268,19 @@ def apply_action(out_row: Dict[str, Any], in_row: Dict[str, Any], action: Dict[s
     raise ValueError(f"Unknown action: {kind}")
 
 
-def transform_data(data: List[Dict[str, Any]], transformation: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def transform_data(
+    data: list[dict[str, Any]], transformation: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """
     Apply transformation pipeline to stage data.
 
     Args:
-        data: List of stage dictionaries
+        data: list of stage dictionaries
         transformation: Pipeline configuration (list of transformation steps)
 
     Returns:
         Transformed stage data
+
     """
     cur = data
 
@@ -278,7 +289,7 @@ def transform_data(data: List[Dict[str, Any]], transformation: List[Dict[str, An
         actions = step.get("transformations", [])
         flt = step.get("filter")
 
-        nxt: List[Dict[str, Any]] = []
+        nxt: list[dict[str, Any]] = []
         for r in cur:
             # Initialize output row
             base = copy.deepcopy(r) if init == "copy" else {"_metadata": r.get("_metadata", {})}
@@ -297,5 +308,3 @@ def transform_data(data: List[Dict[str, Any]], transformation: List[Dict[str, An
         cur = nxt
 
     return cur
-
-
