@@ -14,8 +14,10 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing_extensions import Literal
 
+from shinto.mimir.sequence import get_next_sequence_value, get_next_sequence_value_async
+
 if TYPE_CHECKING:
-    from shinto.pg.connection import Connection
+    from shinto.pg.connection import AsyncConnection, Connection
 
 TAXONOMY_LEVEL = Literal["stage_plus"]
 
@@ -127,7 +129,7 @@ class TaxonomyField:
     values: list[TaxonomyCategoricalValue] | None
     description: str | None
     tags: list[str] | None
-    level: str | None
+    level: str
     readonly: bool
     computed: dict | None
 
@@ -143,6 +145,8 @@ class TaxonomyField:
         if not isinstance(field_dict, dict):
             raise TypeError("field_dict must be a dictionary.")
         # TODO: we should also enforce type and label presence,
+        # This is a hack until it is fixed in the taxonomy
+        # https://shintolabs.atlassian.net/browse/DOT-755
         # but for now we only enforce field presence
         # or "type" not in field_dict or "label" not in field_dict
         if "field" not in field_dict:
@@ -151,6 +155,8 @@ class TaxonomyField:
             )
         self.key = field_dict["field"]
         # TODO: We should enforce this. And set "type" to non nullable
+        # This is a hack until it is fixed in the taxonomy
+        # https://shintolabs.atlassian.net/browse/DOT-755
         # Currently the Taxonomy is not strictly enforced, so we allow unknown types to pass through
         # if field_dict.get("type") not in FIELD_TYPE.__args__:
         #     raise TypeError(
@@ -163,11 +169,18 @@ class TaxonomyField:
         # https://shintolabs.atlassian.net/browse/DOT-755
         if self.key == "info_from_point":
             self.type = "object"
-        self.label = field_dict.get("label", "")
+        self.label = field_dict.get("label", self.key.capitalize())
         self.description = field_dict.get("description")
         self.tags = field_dict.get("tags")
         self.values = None
-        self.level = field_dict.get("level")
+        if not field_dict.get("level"):
+            logging.warning("Field '%s' is missing 'level'. Defaulting to 'project'.", self.key)
+        self.level = field_dict.get("level", "project")
+        if self.level not in ("project", "stage"):
+            raise TypeError(
+                f"Unrecognized field level: {self.level} on field '{self.key}'."
+                f" Must be one of ['project', 'stage']."
+            )
         self.readonly = field_dict.get("readonly", False)
         self.computed = field_dict.get("computed")
         if "values" in field_dict:
@@ -189,7 +202,8 @@ class TaxonomyField:
     @property
     def __json_schema__(self) -> dict:
         """Build the JSON schema definition for this field."""
-        field_schema: dict = {"title": self.label, **(jsonschema_type_mapping[self.type])}
+        jsonschema_type = jsonschema_type_mapping.get(self.type, {})
+        field_schema: dict = {"title": self.label, **jsonschema_type}
 
         if self.readonly:
             field_schema["readOnly"] = True
@@ -218,7 +232,7 @@ class TaxonomyField:
 
         return field_schema
 
-    def set_field_readonly_value(
+    def set_readonly_value(
         self,
         data: dict[str, Any],
         previous_data: dict[str, Any] | None,
@@ -245,58 +259,49 @@ class TaxonomyField:
         stage_field_value = data.get(self.key) if is_stage_level else None
         data[self.key] = (previous_data or {}).get(self.key, stage_field_value)
 
-    def set_field_computed_value(
+    async def set_computed_value_async(
         self,
         data: dict[str, Any],
-        previous_data: dict[str, Any] | None,
         trigger: PROJECT_UPDATE_TRIGGER,
-        connection: Connection,
+        connection: AsyncConnection,
     ) -> None:
-        """
-        Update a value in the target data based on the computed field definition and trigger.
-
-        Args:
-            data: The target data dictionary to update. (project or stage data)
-            previous_data: The previous data dictionary to reference for existing values.
-            trigger: The trigger event that caused the update (e.g., "created", "updated").
-            connection: The database connection to use for fetching computed values.
-
-        """
-        if not (computed := self.computed):
+        """Update a value in the target data based on the computed field definition and trigger."""
+        if not self.computed:
             return
-        field_triggers = computed.get("triggers", [])
-        sequence_name = computed["params"]["sequence_name"]
-        output_format = computed["params"].get("format", "{}")
-
-        # If current trigger is not in the field's trigger list, preserve existing value or skip
-        if trigger not in field_triggers:
-            if trigger != "created" and previous_data and self.key in previous_data:
-                data[self.key] = previous_data[self.key]
+        if trigger not in self.computed.get("triggers", []):
             return
+        sequence_name = self.computed["params"]["sequence_name"]
+        output_format: str = self.computed["params"].get("format", "{}")
 
-        if computed.get("function") != "sequence":
-            raise ValueError(
-                f"Unsupported function '{computed.get('function')}' for field '{self.key}'."
-            )
-        try:
-            sequence_value = connection.execute_query(
-                "SELECT data.get_next_sequence_value(%s)", (sequence_name,)
-            )[0][0]
-        except Exception as e:
-            raise RuntimeError(
-                f"Failed to get next sequence value for '{sequence_name}' "
-                f"for computed field '{self.key}': {e}"
-            ) from e
-        if self.type == "string":
-            data[self.key] = output_format.format(sequence_value)
-        elif self.type == "integer":
+        sequence_value = await get_next_sequence_value_async(connection, sequence_name)
+        if self.type == "integer":
             data[self.key] = int(output_format.format(sequence_value))
         elif self.type == "number":
             data[self.key] = float(output_format.format(sequence_value))
         else:
-            raise ValueError(
-                f"Unsupported field type '{self.type}' for computed field '{self.key}'"
-            )
+            data[self.key] = output_format.format(sequence_value)
+
+    def set_computed_value(
+        self,
+        data: dict[str, Any],
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: Connection,
+    ) -> None:
+        """Update a value in the target data based on the computed field definition and trigger."""
+        if not self.computed:
+            return
+        if trigger not in self.computed.get("triggers", []):
+            return
+        sequence_name = self.computed["params"]["sequence_name"]
+        output_format: str = self.computed["params"].get("format", "{}")
+
+        sequence_value = get_next_sequence_value(connection, sequence_name)
+        if self.type == "integer":
+            data[self.key] = int(output_format.format(sequence_value))
+        elif self.type == "number":
+            data[self.key] = float(output_format.format(sequence_value))
+        else:
+            data[self.key] = output_format.format(sequence_value)
 
     def validate(self, value: Any):  # noqa: ANN401
         """
@@ -389,7 +394,7 @@ class Taxonomy:
     level: TAXONOMY_LEVEL | None
     fields: list[TaxonomyField]
 
-    def __init__(self, taxonomy_dict: dict, skip_unknown_types: bool = False):
+    def __init__(self, taxonomy_dict: dict):
         """
         Initialize the Taxonomy from a dictionary.
 
@@ -407,86 +412,7 @@ class Taxonomy:
         if len(taxonomy_dict["fields"]) == 0:
             raise ValueError("taxonomy_dict['fields'] must contain at least one field.")
         self.level = taxonomy_dict.get("level")
-        if not skip_unknown_types:
-            self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
-        else:
-            self.fields = []
-            for field_dict in taxonomy_dict["fields"]:
-                self.try_add_field(field_dict)
-
-    def try_add_field(self, field_dict: dict):
-        """Try to add a field to the taxonomy, skipping if the type is unrecognized."""
-        try:
-            self.fields.append(TaxonomyField(field_dict))
-        except TypeError as e:
-            field_id = field_dict.get("field", "unknown")
-            field_type = field_dict.get("type", "unknown")
-            logging.warning(
-                "Skipping field '%s' with unrecognized type '%s': %s",
-                field_id,
-                field_type,
-                str(e),
-            )
-
-    def validate(self, data: dict):
-        """
-        Validate data against the taxonomy.
-
-        Args:
-            data: Project data dictionary (with potential 'stages' array)
-
-        Raises:
-            TaxonomyComplianceError: If value doesn't comply
-
-        """
-        for field in self.fields:
-            # TODO: Or are fields always required?
-            # Also are additional fields allowed in the data that are not defined in the taxonomy?
-            # https://shintolabs.atlassian.net/browse/DOT-755
-            if field.level == "project":
-                if field.key in data:
-                    field.validate(data[field.key])
-            else:
-                for idx, stage in enumerate(data.get("stages", [])):
-                    if field.key in stage:
-                        try:
-                            field.validate(stage[field.key])
-                        except TaxonomyComplianceError as e:
-                            raise TaxonomyComplianceError(
-                                f"Failed to validate field '{field.key}' in stage {idx} "
-                            ) from e
-
-    def set_readonly_computed_values(
-        self,
-        project_data: dict[str, Any],
-        previous_project_data: dict[str, Any] | None,
-        trigger: PROJECT_UPDATE_TRIGGER,
-        connection: Connection,
-    ) -> dict[str, Any]:
-        """Update project data with computed values from the taxonomy."""
-        for field in self.fields:
-            if not field.level:
-                logging.warning(
-                    "Field '%s' is missing 'level'. Defaulting to 'project'.", field.key
-                )
-            field_level = field.level or "project"
-            if field_level == "project":
-                field.set_field_readonly_value(project_data, previous_project_data, trigger)
-                field.set_field_computed_value(
-                    project_data, previous_project_data, trigger, connection
-                )
-            elif field_level == "stage":
-                # TODO: known issue - not possible to get existing values for stage level fields
-                # solve when stages get their own entity
-                for stage_data in project_data.get("stages", []):
-                    field.set_field_readonly_value(stage_data, None, trigger, is_stage_level=True)
-                    field.set_field_computed_value(stage_data, None, trigger, connection)
-            else:
-                raise ValueError(
-                    f"Unsupported field level '{field_level}' for field '{field.key}'."
-                )
-
-        return project_data
+        self.fields = [TaxonomyField(field_dict) for field_dict in taxonomy_dict["fields"]]
 
     @property
     def __json_schema__(self) -> dict:
@@ -523,3 +449,73 @@ class Taxonomy:
             },
             **({"definitions": definitions} if definitions else {}),
         }
+
+    def validate(self, data: dict):
+        """
+        Validate data against the taxonomy.
+
+        Args:
+            data: Project data dictionary (with potential 'stages' array)
+
+        Raises:
+            TaxonomyComplianceError: If value doesn't comply
+
+        """
+        for field in self.fields:
+            # TODO: Or are fields always required?
+            # Also are additional fields allowed in the data that are not defined in the taxonomy?
+            # https://shintolabs.atlassian.net/browse/DOT-755
+            if field.level == "project":
+                if field.key in data:
+                    field.validate(data[field.key])
+            else:
+                for idx, stage in enumerate(data.get("stages", [])):
+                    if field.key in stage:
+                        try:
+                            field.validate(stage[field.key])
+                        except TaxonomyComplianceError as e:
+                            raise TaxonomyComplianceError(
+                                f"Failed to validate field '{field.key}' in stage {idx} "
+                            ) from e
+
+    async def apply_taxonomy_field_logic_async(
+        self,
+        project_data: dict[str, Any],
+        previous_project_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: AsyncConnection,
+    ) -> dict[str, Any]:
+        """Update project data with computed and readonly rules from the taxonomy."""
+        for field in self.fields:
+            if field.level == "project":
+                field.set_readonly_value(project_data, previous_project_data, trigger)
+                await field.set_computed_value_async(project_data, trigger, connection)
+            elif field.level == "stage":
+                for stage_data in project_data.get("stages", []):
+                    # TODO: known issue - not possible to get existing values for stage level fields
+                    # solve when stages get their own entity
+                    field.set_readonly_value(stage_data, None, trigger, is_stage_level=True)
+                    await field.set_computed_value_async(stage_data, trigger, connection)
+
+        return project_data
+
+    def apply_taxonomy_field_logic(
+        self,
+        project_data: dict[str, Any],
+        previous_project_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: Connection,
+    ) -> dict[str, Any]:
+        """Update project data with computed and readonly rules from the taxonomy."""
+        for field in self.fields:
+            if field.level == "project":
+                field.set_readonly_value(project_data, previous_project_data, trigger)
+                field.set_computed_value(project_data, trigger, connection)
+            elif field.level == "stage":
+                for stage_data in project_data.get("stages", []):
+                    # TODO: known issue - not possible to get existing values for stage level fields
+                    # solve when stages get their own entity
+                    field.set_readonly_value(stage_data, None, trigger, is_stage_level=True)
+                    field.set_computed_value(stage_data, trigger, connection)
+
+        return project_data
