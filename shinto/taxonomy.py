@@ -14,7 +14,7 @@ from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from typing_extensions import Literal
 
-from shinto.mimir.sequence import get_next_sequence_value, get_next_sequence_value_async
+from shinto.mimir.data import get_next_sequence_value, get_next_sequence_value_async
 
 if TYPE_CHECKING:
     from shinto.pg.connection import AsyncConnection, Connection
