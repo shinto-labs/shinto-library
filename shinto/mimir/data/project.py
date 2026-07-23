@@ -45,7 +45,7 @@ SELECT to_json(data.delete_project(
 """
 BULK_UPDATE_PROJECTS_QUERY = """
 SELECT COALESCE(json_agg(row), '[]'::json)
-FROM data.bulk_update_projects(%(action_by)s::uuid, %(projects_data)s::jsonb) AS row
+FROM data.bulk_update_projects(%(action_by)s::uuid, %(operations)s::jsonb) AS row
 """
 
 # Force update queries
@@ -235,23 +235,23 @@ async def delete_project_async(
 
 
 def bulk_update_projects(
-    connection: Connection, action_by: UUID, projects_data: list[dict]
+    connection: Connection, action_by: UUID, operations: list[dict]
 ) -> list[dict]:
     """Bulk update projects."""
     params = {
         "action_by": action_by,
-        "projects_data": json.dumps(projects_data),
+        "operations": json.dumps(operations),
     }
     return execute_query(connection, BULK_UPDATE_PROJECTS_QUERY, **params)
 
 
 async def bulk_update_projects_async(
-    connection: AsyncConnection, action_by: UUID, projects_data: list[dict]
+    connection: AsyncConnection, action_by: UUID, operations: list[dict]
 ) -> list[dict]:
     """Bulk update projects."""
     params = {
         "action_by": action_by,
-        "projects_data": json.dumps(projects_data),
+        "operations": json.dumps(operations),
     }
     return await execute_query_async(connection, BULK_UPDATE_PROJECTS_QUERY, **params)
 
