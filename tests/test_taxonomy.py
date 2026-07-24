@@ -1,6 +1,5 @@
 """Tests for the taxonomy module."""
 
-import logging
 import unittest
 
 from shinto.taxonomy import Taxonomy, TaxonomyComplianceError

@@ -259,21 +259,28 @@ class TaxonomyField:
         stage_field_value = data.get(self.key) if is_stage_level else None
         data[self.key] = (previous_data or {}).get(self.key, stage_field_value)
 
-    async def set_computed_value_async(
+    def set_computed_value(
         self,
         data: dict[str, Any],
         trigger: PROJECT_UPDATE_TRIGGER,
-        connection: AsyncConnection,
+        connection: Connection,
+        previous_data: dict[str, Any] | None = None,
     ) -> None:
         """Update a value in the target data based on the computed field definition and trigger."""
         if not self.computed:
             return
         if trigger not in self.computed.get("triggers", []):
+            if (
+                previous_data
+                and previous_data.get(self.key) is not None
+                and data.get(self.key) is None
+            ):
+                data[self.key] = previous_data[self.key]
             return
         sequence_name = self.computed["params"]["sequence_name"]
         output_format: str = self.computed["params"].get("format", "{}")
 
-        sequence_value = await get_next_sequence_value_async(connection, sequence_name)
+        sequence_value = get_next_sequence_value(connection, sequence_name)
         if self.type == "integer":
             data[self.key] = int(output_format.format(sequence_value))
         elif self.type == "number":
@@ -281,21 +288,28 @@ class TaxonomyField:
         else:
             data[self.key] = output_format.format(sequence_value)
 
-    def set_computed_value(
+    async def set_computed_value_async(
         self,
         data: dict[str, Any],
         trigger: PROJECT_UPDATE_TRIGGER,
-        connection: Connection,
+        connection: AsyncConnection,
+        previous_data: dict[str, Any] | None = None,
     ) -> None:
         """Update a value in the target data based on the computed field definition and trigger."""
         if not self.computed:
             return
         if trigger not in self.computed.get("triggers", []):
+            if (
+                previous_data
+                and previous_data.get(self.key) is not None
+                and data.get(self.key) is None
+            ):
+                data[self.key] = previous_data[self.key]
             return
         sequence_name = self.computed["params"]["sequence_name"]
         output_format: str = self.computed["params"].get("format", "{}")
 
-        sequence_value = get_next_sequence_value(connection, sequence_name)
+        sequence_value = await get_next_sequence_value_async(connection, sequence_name)
         if self.type == "integer":
             data[self.key] = int(output_format.format(sequence_value))
         elif self.type == "number":
@@ -405,6 +419,8 @@ class Taxonomy:
         """
         if not isinstance(taxonomy_dict, dict):
             raise TypeError("taxonomy_dict must be a dictionary.")
+        if "data" in taxonomy_dict:
+            taxonomy_dict = taxonomy_dict["data"]
         if "fields" not in taxonomy_dict:
             raise TypeError("taxonomy_dict must contain a 'fields' key.")
         if not isinstance(taxonomy_dict["fields"], list):
@@ -478,27 +494,6 @@ class Taxonomy:
                                 f"Failed to validate field '{field.key}' in stage {idx} "
                             ) from e
 
-    async def apply_taxonomy_field_logic_async(
-        self,
-        project_data: dict[str, Any],
-        previous_project_data: dict[str, Any] | None,
-        trigger: PROJECT_UPDATE_TRIGGER,
-        connection: AsyncConnection,
-    ) -> dict[str, Any]:
-        """Update project data with computed and readonly rules from the taxonomy."""
-        for field in self.fields:
-            if field.level == "project":
-                field.set_readonly_value(project_data, previous_project_data, trigger)
-                await field.set_computed_value_async(project_data, trigger, connection)
-            elif field.level == "stage":
-                for stage_data in project_data.get("stages", []):
-                    # TODO: known issue - not possible to get existing values for stage level fields
-                    # solve when stages get their own entity
-                    field.set_readonly_value(stage_data, None, trigger, is_stage_level=True)
-                    await field.set_computed_value_async(stage_data, trigger, connection)
-
-        return project_data
-
     def apply_taxonomy_field_logic(
         self,
         project_data: dict[str, Any],
@@ -510,12 +505,35 @@ class Taxonomy:
         for field in self.fields:
             if field.level == "project":
                 field.set_readonly_value(project_data, previous_project_data, trigger)
-                field.set_computed_value(project_data, trigger, connection)
+                field.set_computed_value(project_data, trigger, connection, previous_project_data)
             elif field.level == "stage":
                 for stage_data in project_data.get("stages", []):
                     # TODO: known issue - not possible to get existing values for stage level fields
                     # solve when stages get their own entity
                     field.set_readonly_value(stage_data, None, trigger, is_stage_level=True)
-                    field.set_computed_value(stage_data, trigger, connection)
+                    field.set_computed_value(stage_data, trigger, connection, None)
+
+        return project_data
+
+    async def apply_taxonomy_field_logic_async(
+        self,
+        project_data: dict[str, Any],
+        previous_project_data: dict[str, Any] | None,
+        trigger: PROJECT_UPDATE_TRIGGER,
+        connection: AsyncConnection,
+    ) -> dict[str, Any]:
+        """Update project data with computed and readonly rules from the taxonomy."""
+        for field in self.fields:
+            if field.level == "project":
+                field.set_readonly_value(project_data, previous_project_data, trigger)
+                await field.set_computed_value_async(
+                    project_data, trigger, connection, previous_project_data
+                )
+            elif field.level == "stage":
+                for stage_data in project_data.get("stages", []):
+                    # TODO: known issue - not possible to get existing values for stage level fields
+                    # solve when stages get their own entity
+                    field.set_readonly_value(stage_data, None, trigger, is_stage_level=True)
+                    await field.set_computed_value_async(stage_data, trigger, connection, None)
 
         return project_data

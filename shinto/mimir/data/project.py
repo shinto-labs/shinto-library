@@ -387,8 +387,9 @@ def _apply_taxonomy_field_logic(
             taxonomy = get_taxonomy_by_name(connection, action_by, "project_data")
     except MimirEntityNotFoundException:
         logging.warning(
-            "Taxonomy with ID '%s' not found. Skipping application of taxonomy field logic.",
+            "Taxonomy with ID '%s' or name '%s' not found. Skipping taxonomy computed field logic.",
             taxonomy_id,
+            "project_data",
         )
         return data
 
@@ -399,7 +400,7 @@ def _apply_taxonomy_field_logic(
 
     from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
 
-    taxonomy_obj = Taxonomy(taxonomy["data"])
+    taxonomy_obj = Taxonomy(taxonomy)
 
     taxonomy_obj.apply_taxonomy_field_logic(data, existing_data, trigger, connection)
 
@@ -424,8 +425,9 @@ async def _apply_taxonomy_field_logic_async(
             taxonomy = await get_taxonomy_by_name_async(connection, action_by, "project_data")
     except MimirEntityNotFoundException:
         logging.warning(
-            "Taxonomy with ID '%s' not found. Skipping application of taxonomy field logic.",
+            "Taxonomy with ID '%s' or name '%s' not found. Skipping taxonomy computed field logic.",
             taxonomy_id,
+            "project_data",
         )
         return data
 
@@ -436,7 +438,7 @@ async def _apply_taxonomy_field_logic_async(
 
     from shinto.taxonomy import Taxonomy  # noqa: PLC0415 # Fix for circular import :/
 
-    taxonomy_obj = Taxonomy(taxonomy["data"])
+    taxonomy_obj = Taxonomy(taxonomy)
 
     await taxonomy_obj.apply_taxonomy_field_logic_async(data, existing_data, trigger, connection)
 
