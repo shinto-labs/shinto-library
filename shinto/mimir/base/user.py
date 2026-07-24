@@ -26,33 +26,30 @@ GET_USER_LIST_QUERY = """SELECT COALESCE(json_agg(row), '[]'::json)
 FROM base.get_user_list(%(action_by)s::uuid, %(timestamp)s::TIMESTAMPTZ) AS row"""
 CREATE_USER_QUERY = """SELECT to_json(base.create_user(
     %(action_by)s::uuid,
-    %(username)s::text,
+    %(unique_id)s::text,
     %(data)s::jsonb,
     %(roles)s::text[],
-    %(password_hash)s::text,
-    %(verified)s::boolean,
-    %(action_info)s::jsonb
+    %(email)s::text,
+    %(enabled)s::boolean,
+    %(action_info)s::jsonb,
+    %(shintolabs_user)s::boolean
 ))"""
 UPDATE_USER_QUERY = """SELECT to_json(base.update_user(
     %(action_by)s::uuid,
     %(user_id)s::uuid,
     %(data)s::jsonb,
     %(roles)s::text[],
-    %(password_hash)s::text,
-    %(verified)s::boolean,
+    %(email)s::text,
+    %(enabled)s::boolean,
     %(action_info)s::jsonb,
-    %(force_update)s::boolean
+    %(shintolabs_user)s::boolean
 ))"""
 DELETE_USER_QUERY = """
 SELECT to_json(base.delete_user(
     %(action_by)s::uuid, %(user_id)s::uuid, %(action_info)s::jsonb
 ))
 """
-AUTHENTICATE_USER_QUERY = """
-SELECT to_json(base.authenticate_user(
-    %(username)s::text, %(password_hash)s::text
-))
-"""
+AUTHENTICATE_USER_QUERY = "SELECT to_json(base.authenticate_user(%(unique_id)s, %(email)s))"
 
 
 def get_user(
@@ -118,22 +115,24 @@ async def get_user_list_async(
 def create_user(
     connection: Connection,
     action_by: UUID,
-    username: str,
+    unique_id: str,
     data: dict | None = None,
     roles: list[str] | None = None,
-    password_hash: str | None = None,
-    verified: bool = False,
+    email: str | None = None,
+    enabled: bool = False,
     action_info: dict | None = None,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Create a user."""
     params = {
         "action_by": action_by,
-        "username": username,
+        "unique_id": unique_id,
         "data": json.dumps(data) if data else None,
         "roles": roles,
-        "password_hash": password_hash,
-        "verified": verified,
+        "email": email,
+        "enabled": enabled,
         "action_info": json.dumps(action_info) if action_info else None,
+        "shintolabs_user": shintolabs_user,
     }
     return execute_query(connection, CREATE_USER_QUERY, **params)
 
@@ -141,22 +140,24 @@ def create_user(
 async def create_user_async(
     connection: AsyncConnection,
     action_by: UUID,
-    username: str,
+    unique_id: str,
     data: dict | None = None,
     roles: list[str] | None = None,
-    password_hash: str | None = None,
-    verified: bool = False,
+    email: str | None = None,
+    enabled: bool = False,
     action_info: dict | None = None,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Create a user."""
     params = {
         "action_by": action_by,
-        "username": username,
+        "unique_id": unique_id,
         "data": json.dumps(data) if data else None,
         "roles": roles,
-        "password_hash": password_hash,
-        "verified": verified,
+        "email": email,
+        "enabled": enabled,
         "action_info": json.dumps(action_info) if action_info else None,
+        "shintolabs_user": shintolabs_user,
     }
     return await execute_query_async(connection, CREATE_USER_QUERY, **params)
 
@@ -167,10 +168,10 @@ def update_user(
     user_id: UUID,
     data: dict | None = None,
     roles: list[str] | None = None,
-    password_hash: str | None = None,
-    verified: bool | None = None,
+    email: str | None = None,
+    enabled: bool | None = None,
     action_info: dict | None = None,
-    force_update: bool = False,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Update a user. NULL parameters preserve existing values."""
     params = {
@@ -178,10 +179,10 @@ def update_user(
         "user_id": user_id,
         "data": json.dumps(data) if data else None,
         "roles": roles,
-        "password_hash": password_hash,
-        "verified": verified,
+        "email": email,
+        "enabled": enabled,
         "action_info": json.dumps(action_info) if action_info else None,
-        "force_update": force_update,
+        "shintolabs_user": shintolabs_user,
     }
     return execute_query(connection, UPDATE_USER_QUERY, **params)
 
@@ -192,10 +193,10 @@ async def update_user_async(
     user_id: UUID,
     data: dict | None = None,
     roles: list[str] | None = None,
-    password_hash: str | None = None,
-    verified: bool | None = None,
+    email: str | None = None,
+    enabled: bool | None = None,
     action_info: dict | None = None,
-    force_update: bool = False,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Update a user. NULL parameters preserve existing values."""
     params = {
@@ -203,10 +204,10 @@ async def update_user_async(
         "user_id": user_id,
         "data": json.dumps(data) if data else None,
         "roles": roles,
-        "password_hash": password_hash,
-        "verified": verified,
+        "email": email,
+        "enabled": enabled,
         "action_info": json.dumps(action_info) if action_info else None,
-        "force_update": force_update,
+        "shintolabs_user": shintolabs_user,
     }
     return await execute_query_async(connection, UPDATE_USER_QUERY, **params)
 
@@ -235,15 +236,13 @@ async def delete_user_async(
     return await execute_query_async(connection, DELETE_USER_QUERY, **params)
 
 
-def authenticate_user(connection: Connection, username: str, password_hash: str) -> dict:
-    """Authenticate a user by username and password hash."""
-    params = {"username": username, "password_hash": password_hash}
+def authenticate_user(connection: Connection, unique_id: str, email: str) -> dict:
+    """Authenticate a user by unique_id and email."""
+    params = {"unique_id": unique_id, "email": email}
     return execute_query(connection, AUTHENTICATE_USER_QUERY, **params)
 
 
-async def authenticate_user_async(
-    connection: AsyncConnection, username: str, password_hash: str
-) -> dict:
-    """Authenticate a user by username and password hash."""
-    params = {"username": username, "password_hash": password_hash}
+async def authenticate_user_async(connection: AsyncConnection, unique_id: str, email: str) -> dict:
+    """Authenticate a user by unique_id and email."""
+    params = {"unique_id": unique_id, "email": email}
     return await execute_query_async(connection, AUTHENTICATE_USER_QUERY, **params)

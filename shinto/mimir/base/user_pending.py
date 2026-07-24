@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 CREATE_USER_PENDING_QUERY = """SELECT to_json(base.create_user_pending(
     %(action_by)s::uuid,
     %(email)s::text,
-    %(expires)s::TIMESTAMPTZ,
+    %(expires_at)s::TIMESTAMPTZ,
     %(data)s::jsonb,
     %(roles)s::text[],
     %(action_info)s::jsonb,
-    %(verified)s::boolean
+    %(shintolabs_user)s::boolean
 ))"""
 GET_USER_PENDING_QUERY = """
 SELECT to_json(base.get_user_pending(
@@ -37,14 +37,14 @@ UPDATE_USER_PENDING_QUERY = """SELECT to_json(base.update_user_pending(
     %(action_by)s::uuid,
     %(user_pending_id)s::uuid,
     %(email)s::text,
-    %(expires)s::TIMESTAMPTZ,
+    %(expires_at)s::TIMESTAMPTZ,
     %(data)s::jsonb,
     %(roles)s::text[],
     %(action_info)s::jsonb,
-    %(verified)s::boolean
+    %(shintolabs_user)s::boolean
 ))"""
 DELETE_USER_PENDING_QUERY = """SELECT to_json(base.delete_user_pending(
-%(action_by)s::uuid, %(user_pending_id)s::uuid, %(user_id)s::uuid, %(action_info)s::jsonb
+%(action_by)s::uuid, %(user_pending_id)s::uuid, %(resulting_user_id)s::uuid, %(action_info)s::jsonb
 ))"""
 
 
@@ -52,21 +52,21 @@ def create_user_pending(
     connection: Connection,
     action_by: UUID,
     email: str,
-    expires: datetime | str,
+    expires_at: datetime | str,
     data: dict | None = None,
     roles: list[str] | None = None,
     action_info: dict | None = None,
-    verified: bool = False,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Create a pending user."""
     params = {
         "action_by": action_by,
         "email": email,
-        "expires": normalize_timestamp(expires),
+        "expires_at": normalize_timestamp(expires_at),
         "data": json.dumps(data) if data else None,
         "roles": roles or [],
         "action_info": json.dumps(action_info) if action_info else None,
-        "verified": verified,
+        "shintolabs_user": shintolabs_user,
     }
     return execute_query(connection, CREATE_USER_PENDING_QUERY, **params)
 
@@ -75,21 +75,21 @@ async def create_user_pending_async(
     connection: AsyncConnection,
     action_by: UUID,
     email: str,
-    expires: datetime | str,
+    expires_at: datetime | str,
     data: dict | None = None,
     roles: list[str] | None = None,
     action_info: dict | None = None,
-    verified: bool = False,
+    shintolabs_user: bool = False,
 ) -> dict:
     """Create a pending user."""
     params = {
         "action_by": action_by,
         "email": email,
-        "expires": normalize_timestamp(expires),
+        "expires_at": normalize_timestamp(expires_at),
         "data": json.dumps(data) if data else None,
         "roles": roles or [],
         "action_info": json.dumps(action_info) if action_info else None,
-        "verified": verified,
+        "shintolabs_user": shintolabs_user,
     }
     return await execute_query_async(connection, CREATE_USER_PENDING_QUERY, **params)
 
@@ -161,22 +161,22 @@ def update_user_pending(
     action_by: UUID,
     user_pending_id: UUID,
     email: str | None = None,
-    expires: datetime | str | None = None,
+    expires_at: datetime | str | None = None,
     data: dict | None = None,
     roles: list[str] | None = None,
     action_info: dict | None = None,
-    verified: bool | None = None,
+    shintolabs_user: bool | None = None,
 ) -> dict:
     """Update a pending user."""
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
         "email": email,
-        "expires": normalize_timestamp(expires) if expires else None,
+        "expires_at": normalize_timestamp(expires_at) if expires_at else None,
         "data": json.dumps(data) if data else None,
         "roles": roles,
         "action_info": json.dumps(action_info) if action_info else None,
-        "verified": verified,
+        "shintolabs_user": shintolabs_user,
     }
     return execute_query(connection, UPDATE_USER_PENDING_QUERY, **params)
 
@@ -186,22 +186,22 @@ async def update_user_pending_async(
     action_by: UUID,
     user_pending_id: UUID,
     email: str | None = None,
-    expires: datetime | str | None = None,
+    expires_at: datetime | str | None = None,
     data: dict | None = None,
     roles: list[str] | None = None,
     action_info: dict | None = None,
-    verified: bool | None = None,
+    shintolabs_user: bool | None = None,
 ) -> dict:
     """Update a pending user."""
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
         "email": email,
-        "expires": normalize_timestamp(expires) if expires else None,
+        "expires_at": normalize_timestamp(expires_at) if expires_at else None,
         "data": json.dumps(data) if data else None,
         "roles": roles,
         "action_info": json.dumps(action_info) if action_info else None,
-        "verified": verified,
+        "shintolabs_user": shintolabs_user,
     }
     return await execute_query_async(connection, UPDATE_USER_PENDING_QUERY, **params)
 
@@ -210,14 +210,14 @@ def delete_user_pending(
     connection: Connection,
     action_by: UUID,
     user_pending_id: UUID,
-    user_id: UUID,
+    resulting_user_id: UUID,
     action_info: dict | None = None,
 ) -> dict:
     """Delete a pending user."""
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
-        "user_id": user_id,
+        "resulting_user_id": resulting_user_id,
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return execute_query(connection, DELETE_USER_PENDING_QUERY, **params)
@@ -227,14 +227,14 @@ async def delete_user_pending_async(
     connection: AsyncConnection,
     action_by: UUID,
     user_pending_id: UUID,
-    user_id: UUID,
+    resulting_user_id: UUID,
     action_info: dict | None = None,
 ) -> dict:
     """Delete a pending user."""
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
-        "user_id": user_id,
+        "resulting_user_id": resulting_user_id,
         "action_info": json.dumps(action_info) if action_info else None,
     }
     return await execute_query_async(connection, DELETE_USER_PENDING_QUERY, **params)
