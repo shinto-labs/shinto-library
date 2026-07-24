@@ -19,7 +19,7 @@ CREATE_SETTING_QUERY = """SELECT to_json(data.create_setting(
     %(action_by)s::uuid,
     %(setting_type)s::base.setting_type,
     %(name)s::text,
-    %(project_id)s::uuid,
+    %(linked_id)s::uuid,
     %(data)s::jsonb,
     %(action_info)s::jsonb
 ))"""
@@ -54,7 +54,7 @@ def create_setting(
     action_by: UUID,
     setting_type: str,
     name: str,
-    project_id: UUID,
+    linked_id: UUID,
     data: dict | None = None,
     action_info: dict | None = None,
 ) -> dict:
@@ -63,7 +63,7 @@ def create_setting(
         "action_by": action_by,
         "setting_type": setting_type,
         "name": name,
-        "project_id": project_id,
+        "linked_id": linked_id,
         "data": json.dumps(data) if data else None,
         "action_info": json.dumps(action_info) if action_info else None,
     }
@@ -75,7 +75,7 @@ async def create_setting_async(
     action_by: UUID,
     setting_type: str,
     name: str,
-    project_id: UUID,
+    linked_id: UUID,
     data: dict | None = None,
     action_info: dict | None = None,
 ) -> dict:
@@ -84,7 +84,7 @@ async def create_setting_async(
         "action_by": action_by,
         "setting_type": setting_type,
         "name": name,
-        "project_id": project_id,
+        "linked_id": linked_id,
         "data": json.dumps(data) if data else None,
         "action_info": json.dumps(action_info) if action_info else None,
     }
