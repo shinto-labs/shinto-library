@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from psycopg.errors import RaiseException
 
 from shinto.mimir.exception import (
+    MimirAccessDeniedException,
     MimirEntityAlreadyExistsException,
     MimirEntityException,
     MimirEntityNotFoundException,
@@ -66,7 +67,7 @@ async def execute_query_async(
         logging.debug("Query: %s failed with params: %s", query, params)
         msg = e.diag.message_primary
         if "does not have access" in msg:
-            raise MimirEntityException(
+            raise MimirAccessDeniedException(
                 f"User does not have access: {params.get('action_by')}"
             ) from e
         if "already in use" in msg:
