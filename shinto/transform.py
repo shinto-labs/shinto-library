@@ -282,6 +282,8 @@ def transform_data(
         Transformed stage data
 
     """
+    if isinstance(transformation, dict) and "data" in transformation:
+        transformation = transformation["data"]
     cur = data
 
     for step in transformation:

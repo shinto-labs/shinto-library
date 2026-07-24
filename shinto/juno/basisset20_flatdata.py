@@ -133,6 +133,8 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
     data: list[dict[str, Any]], taxonomy: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Generate flat data for the 'basisset20' Excel export."""
+    if "data" in taxonomy:
+        taxonomy = taxonomy["data"]
     value_to_label = load_taxonomy_value_to_label_mapping(taxonomy)
 
     # Aggregate 'Samengevoegde plannen' projects

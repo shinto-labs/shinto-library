@@ -49,6 +49,8 @@ def stage_data_to_projects(
     stage_data_to_projects takes stage_data and taxonomy as input
     and reconstructs the original projects_data structure.
     """
+    if "data" in taxonomy:
+        taxonomy = taxonomy["data"]
     # Build field level mapping from taxonomy
     field_level_map = {}
     if taxonomy and "fields" in taxonomy:
