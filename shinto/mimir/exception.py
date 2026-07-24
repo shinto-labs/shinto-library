@@ -11,6 +11,10 @@ class MimirWarning(ShintoWarning):
     """Warning for Mimir."""
 
 
+class MimirAccessDeniedException(MimirException):
+    """Exception for access denied."""
+
+
 class MimirEntityException(MimirException):
     """Exception for entity operations."""
 
