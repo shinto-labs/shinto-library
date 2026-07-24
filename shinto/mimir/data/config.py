@@ -45,7 +45,7 @@ SELECT to_json(data.update_config(
 """
 DELETE_CONFIG_QUERY = """
 SELECT to_json(data.delete_config(
-    (%(action_by)s::uuid, %(config_id)s::uuid, %(action_info)s::jsonb)
+    %(action_by)s::uuid, %(config_id)s::uuid, %(action_info)s::jsonb
 ))
 """
 CONFIG_EXISTS_QUERY = "SELECT data.config_exists(%(config_id)s::uuid, %(timestamp)s::TIMESTAMPTZ)"
