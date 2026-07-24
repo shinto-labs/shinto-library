@@ -61,7 +61,7 @@ def create_user_pending(
     """Create a pending user."""
     params = {
         "action_by": action_by,
-        "email": email,
+        "email": email.lower(),
         "expires_at": normalize_timestamp(expires_at),
         "data": json.dumps(data) if data else None,
         "roles": roles or [],
@@ -84,7 +84,7 @@ async def create_user_pending_async(
     """Create a pending user."""
     params = {
         "action_by": action_by,
-        "email": email,
+        "email": email.lower(),
         "expires_at": normalize_timestamp(expires_at),
         "data": json.dumps(data) if data else None,
         "roles": roles or [],
@@ -171,7 +171,7 @@ def update_user_pending(
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
-        "email": email,
+        "email": email.lower() if email else None,
         "expires_at": normalize_timestamp(expires_at) if expires_at else None,
         "data": json.dumps(data) if data else None,
         "roles": roles,
@@ -196,7 +196,7 @@ async def update_user_pending_async(
     params = {
         "action_by": action_by,
         "user_pending_id": user_pending_id,
-        "email": email,
+        "email": email.lower() if email else None,
         "expires_at": normalize_timestamp(expires_at) if expires_at else None,
         "data": json.dumps(data) if data else None,
         "roles": roles,
@@ -210,7 +210,7 @@ def delete_user_pending(
     connection: Connection,
     action_by: UUID,
     user_pending_id: UUID,
-    resulting_user_id: UUID,
+    resulting_user_id: UUID | None = None,
     action_info: dict | None = None,
 ) -> dict:
     """Delete a pending user."""
@@ -227,7 +227,7 @@ async def delete_user_pending_async(
     connection: AsyncConnection,
     action_by: UUID,
     user_pending_id: UUID,
-    resulting_user_id: UUID,
+    resulting_user_id: UUID | None = None,
     action_info: dict | None = None,
 ) -> dict:
     """Delete a pending user."""
