@@ -49,7 +49,7 @@ def execute_query(
     if not return_result:
         return None
 
-    if not result or not result[0] or not result[0][0]:
+    if not result or not result[0] or result[0][0] is None:
         logging.debug("Query: %s failed with params: %s", query, params)
         identifier = _get_identifier_from_params(params)
         raise MimirEntityNotFoundException(f"Entity not found with: {identifier}")
@@ -80,7 +80,7 @@ async def execute_query_async(
     if not return_result:
         return None
 
-    if not result or not result[0] or not result[0][0]:
+    if not result or not result[0] or result[0][0] is None:
         logging.debug("Query: %s failed with params: %s", query, params)
         identifier = _get_identifier_from_params(params)
         raise MimirEntityNotFoundException(f"Entity not found with: {identifier}")
