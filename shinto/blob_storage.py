@@ -13,6 +13,8 @@ from azure.identity.aio import ClientSecretCredential
 from azure.storage.blob import ContentSettings
 from azure.storage.blob.aio import ContainerClient
 
+from shinto.exceptions import ShintoException
+
 
 class UploadFileLike(Protocol):
     """Protocol for uploaded file objects used by upload_file."""
@@ -41,13 +43,14 @@ async def upload_file(
     blob_container_client: ContainerClient,
     file: UploadFileLike,
     file_metadata: dict[str, Any] | str | None = None,
+    file_id: str | None = None,
     file_type_regex: str | None = None,
 ) -> dict[str, Any]:
     """Upload a file to Azure Blob Storage."""
     if file_type_regex and not match(file_type_regex, file.content_type):
         raise ValueError(f"File type {file.content_type} does not match regex {file_type_regex}")
     metadata = file_metadata or {}
-    logging.info("Uploading file %s with metadata %s", file.filename, metadata)
+    logging.debug("Uploading file %s with metadata %s", file.filename, metadata)
     if isinstance(metadata, str):
         try:
             metadata = json.loads(metadata)
@@ -58,7 +61,7 @@ async def upload_file(
             "Metadata must be a valid dictionary or a JSON string representing a dictionary"
         )
 
-    blob_id = str(uuid.uuid4())
+    blob_id = file_id or str(uuid.uuid4())
     async with blob_container_client.get_blob_client(blob_id) as blob_client:
         await blob_client.upload_blob(
             file.file,
@@ -92,9 +95,9 @@ async def delete_file(blob_container_client: ContainerClient, blob_id: str) -> N
                 await blob_client.delete_blob()
             except ResourceExistsError as e:
                 if "immutable" in str(e):
-                    logging.debug("Blob %s is immutable, cannot delete", blob_id)
-    except ResourceNotFoundError:
-        logging.warning("Blob %s not found, skipping deletion", blob_id)
+                    raise ShintoException(f"Blob {blob_id} is immutable, cannot delete") from e
+    except ResourceNotFoundError as e:
+        raise ShintoException(f"Blob {blob_id} not found, cannot delete") from e
 
 
 async def download_file(
@@ -108,7 +111,7 @@ async def download_file(
             blob_download_stream = await blob_client.download_blob()
             blob_content = await blob_download_stream.readall()
     except ResourceNotFoundError as e:
-        raise ValueError(f"Blob {blob_id} not found") from e
+        raise ShintoException(f"Blob {blob_id} not found") from e
 
     filename = blob_properties.metadata.get("original_filename", blob_id)
     return {
