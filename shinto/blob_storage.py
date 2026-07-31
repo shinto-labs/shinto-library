@@ -5,23 +5,17 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from pathlib import Path
 from re import match
-from typing import Any, BinaryIO, Protocol
+from typing import Any, BinaryIO
 
+import anyio
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.identity.aio import ClientSecretCredential
 from azure.storage.blob import ContentSettings
 from azure.storage.blob.aio import ContainerClient
 
 from shinto.exceptions import ShintoException
-
-
-class UploadFileLike(Protocol):
-    """Protocol for uploaded file objects used by upload_file."""
-
-    filename: str
-    content_type: str
-    file: BinaryIO
 
 
 def setup_blob_container_client(
@@ -41,16 +35,30 @@ def setup_blob_container_client(
 
 async def upload_file(
     blob_container_client: ContainerClient,
-    file: UploadFileLike,
-    file_metadata: dict[str, Any] | str | None = None,
+    file: BinaryIO | bytes | Path | str,
     file_id: str | None = None,
-    file_type_regex: str | None = None,
+    metadata: dict[str, Any] | str | None = None,
+    name: str | None = None,
+    content_type: str | None = None,
+    content_type_regex: str | None = None,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Upload a file to Azure Blob Storage."""
-    if file_type_regex and not match(file_type_regex, file.content_type):
-        raise ValueError(f"File type {file.content_type} does not match regex {file_type_regex}")
-    metadata = file_metadata or {}
-    logging.debug("Uploading file %s with metadata %s", file.filename, metadata)
+    if isinstance(file, (str)):
+        file = Path(file)
+    if isinstance(file, Path):
+        if not file.exists():
+            raise ValueError(f"File {file} does not exist")
+        name = name or file.name
+
+        async with await anyio.open_file(file, "rb") as f:
+            file = await f.read()
+
+    if content_type_regex and not match(content_type_regex, content_type):
+        raise ValueError(f"File type {content_type} does not match regex {content_type_regex}")
+
+    metadata = metadata or {}
+    logging.debug("Uploading file %s with metadata %s", name, metadata)
     if isinstance(metadata, str):
         try:
             metadata = json.loads(metadata)
@@ -64,58 +72,51 @@ async def upload_file(
     blob_id = file_id or str(uuid.uuid4())
     async with blob_container_client.get_blob_client(blob_id) as blob_client:
         await blob_client.upload_blob(
-            file.file,
+            file,
             metadata={
-                "original_filename": file.filename,
+                "name": name,
                 **metadata,
             },
-            overwrite=False,
-            content_settings=ContentSettings(content_type=file.content_type),
+            overwrite=overwrite,
+            content_settings=ContentSettings(content_type=content_type),
         )
-        logging.info("File uploaded successfully")
+        logging.debug("File uploaded successfully")
         blob_properties = await blob_client.get_blob_properties()
-        blob_size = blob_properties.size
 
     return {
         "id": blob_id,
         "metadata": {
-            "name": file.filename,
-            "size": blob_size,
-            "type": file.content_type,
+            "name": name,
+            "type": content_type,
+            "size": blob_properties.size,
             **metadata,
         },
     }
 
 
-async def delete_file(blob_container_client: ContainerClient, blob_id: str) -> None:
+async def delete_file(blob_container_client: ContainerClient, file_id: str) -> None:
     """Delete a file from Azure Blob Storage."""
     try:
-        async with blob_container_client.get_blob_client(blob_id) as blob_client:
+        async with blob_container_client.get_blob_client(file_id) as blob_client:
             try:
                 await blob_client.delete_blob()
             except ResourceExistsError as e:
                 if "immutable" in str(e):
-                    raise ShintoException(f"Blob {blob_id} is immutable, cannot delete") from e
+                    raise ShintoException(f"File {file_id} is immutable, cannot delete") from e
     except ResourceNotFoundError as e:
-        raise ShintoException(f"Blob {blob_id} not found, cannot delete") from e
+        raise ShintoException(f"File {file_id} not found, cannot delete") from e
 
 
 async def download_file(
     blob_container_client: ContainerClient,
-    blob_id: str,
+    file_id: str,
 ) -> dict[str, Any]:
     """Download and return file from Azure Blob Storage."""
     try:
-        async with blob_container_client.get_blob_client(blob_id) as blob_client:
-            blob_properties = await blob_client.get_blob_properties()
+        async with blob_container_client.get_blob_client(file_id) as blob_client:
             blob_download_stream = await blob_client.download_blob()
             blob_content = await blob_download_stream.readall()
     except ResourceNotFoundError as e:
-        raise ShintoException(f"Blob {blob_id} not found") from e
+        raise ShintoException(f"File {file_id} not found") from e
 
-    filename = blob_properties.metadata.get("original_filename", blob_id)
-    return {
-        "blob_content": blob_content,
-        "content_type": blob_properties.content_settings.content_type,
-        "filename": filename,
-    }
+    return blob_content
