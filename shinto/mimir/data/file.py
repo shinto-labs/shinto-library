@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 CREATE_FILE_QUERY = """
 SELECT to_json(data.create_file(
-    %(action_by)s::uuid, %(project_id)s::uuid, %(data)s::jsonb, %(action_info)s::jsonb
+    %(action_by)s::uuid, %(file_id)s::uuid, %(data)s::jsonb, %(action_info)s::jsonb
 ))
 """
 GET_FILE_QUERY = """
@@ -39,14 +39,14 @@ SELECT to_json(data.delete_file(
 def create_file(
     connection: Connection,
     action_by: UUID,
-    project_id: UUID,
+    file_id: UUID,
     data: dict,
     action_info: dict | None = None,
 ) -> dict:
     """Create a file."""
     params = {
         "action_by": action_by,
-        "project_id": project_id,
+        "file_id": file_id,
         "data": json.dumps(data) if data else None,
         "action_info": json.dumps(action_info) if action_info else None,
     }
@@ -56,14 +56,14 @@ def create_file(
 async def create_file_async(
     connection: AsyncConnection,
     action_by: UUID,
-    project_id: UUID,
+    file_id: UUID,
     data: dict,
     action_info: dict | None = None,
 ) -> dict:
     """Create a file."""
     params = {
         "action_by": action_by,
-        "project_id": project_id,
+        "file_id": file_id,
         "data": json.dumps(data) if data else None,
         "action_info": json.dumps(action_info) if action_info else None,
     }

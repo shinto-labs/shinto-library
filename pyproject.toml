@@ -16,6 +16,8 @@ dependencies = [
     "deprecated>=1.2.18",
     "glom>=23.5.0",
     "simpleeval>=0.9.13",
+    "azure-storage-blob>=12.30.0",
+    "azure-identity>=1.25.3",
 ]
 requires-python = "==3.14.*"
 readme = "README.md"
