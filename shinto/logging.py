@@ -81,6 +81,12 @@ def setup_logging(
 
     root_logger = logging.root
     root_logger.setLevel(loglevel)
+    logging.getLogger("psycopg.pool").setLevel(
+        logging.WARNING if loglevel > logging.DEBUG else logging.DEBUG
+    )
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+        logging.WARNING if loglevel > logging.DEBUG else logging.DEBUG
+    )
 
     formatter = _ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
 
