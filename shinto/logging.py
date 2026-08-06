@@ -78,14 +78,20 @@ def setup_logging(
     """
     if not application_name:
         application_name = sys.argv[0]
+    loglevel_number = (
+        loglevel
+        if isinstance(loglevel, int)
+        else getattr(logging, loglevel.upper(), logging.WARNING)
+    )
+    loglevel = logging.getLevelName(loglevel) if not isinstance(loglevel, str) else loglevel
 
     root_logger = logging.root
-    root_logger.setLevel(loglevel)
+    root_logger.setLevel(loglevel_number)
     logging.getLogger("psycopg.pool").setLevel(
-        logging.WARNING if loglevel > logging.DEBUG else logging.DEBUG
+        logging.WARNING if loglevel_number > logging.DEBUG else logging.DEBUG
     )
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-        logging.WARNING if loglevel > logging.DEBUG else logging.DEBUG
+        logging.WARNING if loglevel_number > logging.DEBUG else logging.DEBUG
     )
 
     formatter = _ShintoFormatter(SHINTO_LOG_FORMAT, datefmt=SHINTO_LOG_DATEFMT)
@@ -137,7 +143,6 @@ def setup_logging(
     if setup_uvicorn_logging:
         # Custom uvicorn logging config with propagate set to True.
         # Default uvicorn log config: from uvicorn.config import LOGGING_CONFIG
-        loglevel = logging.getLevelName(loglevel) if not isinstance(loglevel, str) else loglevel
         uvicorn_logging_config = {
             "version": 1,
             "disable_existing_loggers": False,
