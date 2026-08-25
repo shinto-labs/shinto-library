@@ -10,13 +10,12 @@ from psycopg.errors import RaiseException
 from shinto.mimir.exception import (
     MimirAccessDeniedException,
     MimirEntityAlreadyExistsException,
-    MimirEntityException,
     MimirEntityNotFoundException,
     MimirException,
 )
 
 if TYPE_CHECKING:
-    from shinto.pg.connection import AsyncConnection, Connection
+    from psycopg import AsyncConnection, Connection
 
 
 def _get_identifier_from_params(params: dict) -> str:
@@ -31,12 +30,14 @@ def execute_query(
 ) -> Any:  # noqa: ANN401
     """Execute a database query with Mimir Exception handling."""
     try:
-        result = connection.execute_query(query, params)
+        with connection.cursor() as cur:
+            cur.execute(query, params)
+            result = cur.fetchall()
     except RaiseException as e:
         logging.debug("Query: %s failed with params: %s", query, params)
         msg = e.diag.message_primary
         if "does not have access" in msg:
-            raise MimirEntityException(
+            raise MimirAccessDeniedException(
                 f"User does not have access: {params.get('action_by')}"
             ) from e
         if "already in use" in msg:
@@ -62,7 +63,9 @@ async def execute_query_async(
 ) -> Any:  # noqa: ANN401
     """Execute a database query asynchronously."""
     try:
-        result = await connection.execute_query(query, params)
+        async with connection.cursor() as cur:
+            await cur.execute(query, params)
+            result = await cur.fetchall()
     except RaiseException as e:
         logging.debug("Query: %s failed with params: %s", query, params)
         msg = e.diag.message_primary
