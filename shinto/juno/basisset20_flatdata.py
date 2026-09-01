@@ -58,7 +58,9 @@ def sum_bruto_aantalwoningen(
 ) -> int:
     """Sum the bruto_aantalwoningen for stages where colname is in colvalue."""
     return sum(
-        stage.get("bruto_aantalwoningen", 0) for stage in stages if stage.get(colname) in colvalue
+        (stage.get("bruto_aantalwoningen") or 0)
+        for stage in stages
+        if stage.get(colname) in colvalue
     )
 
 
@@ -69,7 +71,7 @@ def aggregate_samengevoegde_plannen(data: list[dict[str, Any]]) -> list[dict[str
 
     for project in data:
         project_data = project.get("data", {})
-        naam = project_data.get("naam", "")
+        naam = project_data.get("naam") or ""
 
         if naam == "Samengevoegde plannen":
             samengevoegde.append(project)
@@ -97,26 +99,26 @@ def aggregate_samengevoegde_plannen(data: list[dict[str, Any]]) -> list[dict[str
 
 def _eigendom_filter(prijsklasse_value: str, stages: list[dict]) -> tuple[int, int, int, int]:
     huur_eigendom_corporatie = sum(
-        stage.get("bruto_aantalwoningen", 0)
+        (stage.get("bruto_aantalwoningen") or 0)
         for stage in stages
         if stage.get("prijsklasse") == prijsklasse_value and stage.get("eigendom") == "corporatie"
     )
     huur_eigendom_markt = sum(
-        stage.get("bruto_aantalwoningen", 0)
+        (stage.get("bruto_aantalwoningen") or 0)
         for stage in stages
         if stage.get("prijsklasse") == prijsklasse_value
         and stage.get("eigendom") == "markt"
         and not stage.get("instandhoudingsplicht")
     )
     huur_eigendom_markt_inst = sum(
-        stage.get("bruto_aantalwoningen", 0)
+        (stage.get("bruto_aantalwoningen") or 0)
         for stage in stages
         if stage.get("prijsklasse") == prijsklasse_value
         and stage.get("eigendom") == "markt"
         and stage.get("instandhoudingsplicht")
     )
     huur_eigendom_onbekend = sum(
-        stage.get("bruto_aantalwoningen", 0)
+        (stage.get("bruto_aantalwoningen") or 0)
         for stage in stages
         if stage.get("prijsklasse") == prijsklasse_value
         and (stage.get("eigendom") is None or stage.get("eigendom") == "Onbekend")
@@ -141,7 +143,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
     # data = aggregate_samengevoegde_plannen(data)
 
     # sort projects alphabetically
-    data = sorted(data, key=lambda project: project.get("data", {}).get("naam", ""))
+    data = sorted(data, key=lambda project: project.get("data", {}).get("naam") or "")
 
     # Extract relevant fields
     rows = []
@@ -189,14 +191,14 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         # not used: get_label_or_value(value_to_label, 'planologische_status', planologische_status)
 
         # Extract geometry data
-        geo_data = project_data.get("geo", [])
+        geo_data = project_data.get("geo") or []
         point_coords = None
         polygon_geojson = None
         point_geometry = None
         polygon_geometry = None
 
         for geo_item in geo_data:
-            geometry = geo_item.get("geometry", {})
+            geometry = geo_item.get("geometry") or {}
             geo_type = geometry.get("type")
             coords = geometry.get("coordinates")
 
@@ -240,8 +242,8 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
 
         # Calculate stage counts
         stages = project_data.get("stages", [])
-        bruto = sum(stage.get("bruto_aantalwoningen", 0) for stage in stages)
-        sloop = sum(stage.get("sloop_aantalwoningen", 0) for stage in stages)
+        bruto = sum((stage.get("bruto_aantalwoningen") or 0) for stage in stages)
+        sloop = sum((stage.get("sloop_aantalwoningen") or 0) for stage in stages)
         opleverjaar_2025 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2025])
         opleverjaar_2026 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2026])
         opleverjaar_2027 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2027])
@@ -264,7 +266,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
             stages, "woningtype", ["meergezinswoningen"]
         )
         woningtype_onbekend = sum(
-            stage.get("bruto_aantalwoningen", 0)
+            (stage.get("bruto_aantalwoningen") or 0)
             for stage in stages
             if stage.get("woningtype") is None or stage.get("woningtype") == "Onbekend"
         )
@@ -284,7 +286,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
 
         huur_duur = sum_bruto_aantalwoningen(stages, "prijsklasse", ["huur_duur"])
         huur_onbekend = sum(
-            stage.get("bruto_aantalwoningen", 0)
+            (stage.get("bruto_aantalwoningen") or 0)
             for stage in stages
             if (stage.get("prijsklasse") in [None, "Onbekend"] and stage.get("huur_koop") == "huur")
         )
@@ -294,13 +296,13 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         )
         koop_duur = sum_bruto_aantalwoningen(stages, "prijsklasse", ["koop_duur"])
         koop_onbekend = sum(
-            stage.get("bruto_aantalwoningen", 0)
+            (stage.get("bruto_aantalwoningen") or 0)
             for stage in stages
             if (stage.get("prijsklasse") in [None, "Onbekend"] and stage.get("huur_koop") == "koop")
         )
 
         prijsklasse_onbekend = sum(
-            stage.get("bruto_aantalwoningen", 0)
+            (stage.get("bruto_aantalwoningen") or 0)
             for stage in stages
             if (
                 stage.get("prijsklasse") in [None, "Onbekend"]
