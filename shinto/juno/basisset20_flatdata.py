@@ -154,8 +154,8 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         project_data = project.get("data")
         gemeente_code = project_data.get("gemeente_code")
         naam_gemeente = project_data.get("naam_gemeente")
-        geometrie_aanwezig = project_data.get("geometrie_aanwezig", "False")
-        naam = project_data.get("naam", "Onbekend")
+        geometrie_aanwezig = project_data.get("geometrie_aanwezig") or False
+        naam = project_data.get("naam") or "Onbekend"
         planstatus = project_data.get("planstatus")
 
         # let op; de exp returns string bool!
@@ -178,7 +178,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
 
         plancode = f"{gemeente_code}"
 
-        vertrouwelijk = project_data.get("vertrouwelijk", False)
+        vertrouwelijk = project_data.get("vertrouwelijk") or False
         vertrouwelijk_nice = "Ja" if vertrouwelijk else "Nee"
 
         plantype = project_data.get("plantype")
