@@ -63,3 +63,15 @@ def normalize_timestamp(timestamp: datetime | str | None) -> datetime | None:
 def compare_json(json1: dict, json2: dict) -> bool:
     """Compare two JSON objects for equality, ignoring key order."""
     return json.dumps(json1, sort_keys=True) == json.dumps(json2, sort_keys=True)
+
+
+def sparse_json(json_data: dict) -> dict:
+    """Remove all keys recursively with values that are None, empty lists, empty dictionaries, or empty strings from a JSON object."""
+    if isinstance(json_data, dict):
+        return {k: sparse_json(v) for k, v in json_data.items() if v is not None and v != {} and v != [] and v != ""}
+    elif isinstance(json_data, list):
+        return [sparse_json(v) for v in json_data if v is not None and v != {} and v != [] and v != ""]
+    elif isinstance(json_data, str):
+        return json_data
+    else:
+        return json_data

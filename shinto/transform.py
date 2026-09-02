@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 from glom import PathAccessError, glom
+from shinto.general import sparse_json
 
 TRUE_SET = {"true", "1", "yes", "y", "ja", "j", "waar", "t"}
 FALSE_SET = {"false", "0", "no", "n", "nee", "onwaar", "f"}
@@ -284,7 +285,7 @@ def transform_data(
     """
     if isinstance(transformation, dict) and "data" in transformation:
         transformation = transformation["data"]
-    cur = data
+    cur = sparse_json(data)
 
     for step in transformation:
         init = step.get("init", "copy")
