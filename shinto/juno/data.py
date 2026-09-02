@@ -106,3 +106,43 @@ def stage_data_to_projects(
             project_data["stages"].append(stage_dict)
 
     return list(projects_dict.values())
+
+
+def projects_to_geojson(
+    projects: list[dict[str, Any]],
+    geometry_types: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Create a GeoJSON feature collection from matching project geometries.
+
+    Args:
+        projects: List of project dictionaries
+        geometry_types: Optional list of geometry types to filter by (e.g., ["Polygon", "Point"])
+
+    Returns:
+        A GeoJSON feature collection dictionary containing the filtered project geometries.
+
+    """
+    features = []
+    for project in projects:
+        properties = {key: value for key, value in project.items() if key != "geo"}
+        for geo_item in project.get("geo", []):
+            geometry = geo_item.get("geometry", {})
+            coordinates = geometry.get("coordinates")
+            if geometry_types is not None and geometry.get("type") not in geometry_types:
+                logging.debug(
+                    "Skipping geometry of type %s for project %s",
+                    geometry.get("type"),
+                    project.get("id"),
+                )
+                continue
+            if isinstance(coordinates, list) and coordinates:
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": geometry,
+                        "properties": properties,
+                    }
+                )
+
+    return {"type": "FeatureCollection", "features": features}
