@@ -1,6 +1,6 @@
 services:
   database:
-    image: devteamregistry02.azurecr.io/shinto-mimir:1.4.5
+    image: devteamregistry02.azurecr.io/shinto-mimir:1.4.6
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
       - DATABASE_NAME=mimir
