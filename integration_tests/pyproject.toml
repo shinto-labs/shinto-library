@@ -1,0 +1,15 @@
+[project]
+name = "shinto-integration-tests"
+version = "0.1.0"
+description = "Integration tests for shinto-library against Mimir"
+requires-python = "==3.14.*"
+dependencies = [
+    "shinto @ file:///library",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = false

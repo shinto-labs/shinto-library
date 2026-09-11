@@ -2,10 +2,12 @@
 # ===========================
 FROM python:3.14-slim AS base
 
-LABEL maintainer="Aron Hemmes<aron@shintolabs.nl"
-LABEL url="shintolabs.nl"
+LABEL maintainer="ShintoLabsDevOpsTeam <devops@shintolabs.nl>"
+LABEL url="https://shintolabs.nl"
 ARG BUILD_DATE
 LABEL build-date=$BUILD_DATE
+
+# shinto-library
 
 # build stage
 # ==================
@@ -25,11 +27,11 @@ ENV SAFE_CHAIN_LOGGING=verbose
 RUN pip install pdm && \
     pdm safe-chain-verify
 
-## install shinto-library as a package, plus integration-test dependencies
-COPY pyproject.toml README.md /library/
-COPY shinto /library/shinto/
-COPY integration_tests/pyproject.toml ./pyproject.toml
-RUN pdm lock && pdm sync --no-editable
+## install shinto-library (re-lock in-image: host pdm.lock targets a different
+## python/platform than python:3.14-slim, so sync against the copied lock fails)
+COPY pyproject.toml README.md ./
+COPY shinto ./shinto/
+RUN pdm lock && pdm sync --prod --no-editable
 
 
 # Runtime stage

@@ -1,6 +1,6 @@
 services:
   database:
-    image: devteamregistry02.azurecr.io/shinto-mimir:1.4.6
+    image: devteamregistry02.azurecr.io/shinto-mimir:1.5.0
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
       - DATABASE_NAME=mimir
@@ -25,6 +25,11 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./integration_tests:/integration_tests
+      # Mount package as /library/shinto so PYTHONPATH does not shadow stdlib
+      # modules such as logging (shinto/logging.py).
+      - ./shinto:/library/shinto
+    environment:
+      - PYTHONPATH=/library
     depends_on:
       database:
         condition: service_healthy

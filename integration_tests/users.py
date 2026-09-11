@@ -21,6 +21,9 @@ def check_user_pending(conn, default_user_id):
 
 
 def run_integration_test(conn):
+    logging.info("Clearing user pending table")
+    conn.execute_command("TRUNCATE TABLE base.user_pending CASCADE")
+
     logging.info("Starting users integration test")
     DEFAULT_USER_ID = get_default_user_id(conn)
 
