@@ -236,7 +236,7 @@ async def delete_config_async(
 def config_exists(
     connection: Connection, config_id: UUID, timestamp: datetime | str | None = None
 ) -> bool:
-    """Check if a config exists at a given timestamp."""
+    """Check if a config exists. Accepts timestamp as datetime, ISO 8601 string, or None."""
     params = {"config_id": config_id, "timestamp": normalize_timestamp(timestamp)}
     return execute_query(connection, CONFIG_EXISTS_QUERY, **params)
 
@@ -244,6 +244,6 @@ def config_exists(
 async def config_exists_async(
     connection: AsyncConnection, config_id: UUID, timestamp: datetime | str | None = None
 ) -> bool:
-    """Check if a config exists at a given timestamp."""
+    """Check if a config exists. Accepts timestamp as datetime, ISO 8601 string, or None."""
     params = {"config_id": config_id, "timestamp": normalize_timestamp(timestamp)}
     return await execute_query_async(connection, CONFIG_EXISTS_QUERY, **params)

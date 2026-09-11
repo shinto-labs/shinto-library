@@ -25,6 +25,38 @@ def _get_identifier_from_params(params: dict) -> str:
     )
 
 
+def _rollback(connection: Connection) -> None:
+    """Clear aborted transaction state after a failed statement."""
+    try:
+        connection.rollback()
+    except Exception:
+        logging.debug("rollback after failed query failed", exc_info=True)
+
+
+async def _rollback_async(connection: AsyncConnection) -> None:
+    """Clear aborted transaction state after a failed statement."""
+    try:
+        await connection.rollback()
+    except Exception:
+        logging.debug("rollback after failed query failed", exc_info=True)
+
+
+def _raise_from_pg_exception(e: RaiseException, query: str, params: dict) -> None:
+    """Map a Postgres RAISE EXCEPTION to a Mimir exception (always raises)."""
+    logging.debug("Query: %s failed with params: %s", query, params)
+    msg = e.diag.message_primary
+    if "does not have access" in msg:
+        raise MimirAccessDeniedException(
+            f"User does not have access: {params.get('action_by')}"
+        ) from e
+    if "already in use" in msg:
+        identifier = _get_identifier_from_params(params)
+        raise MimirEntityAlreadyExistsException(
+            f"Entity already exists with: {identifier}"
+        ) from e
+    raise MimirException(msg) from e
+
+
 def execute_query(
     connection: Connection, query: str, return_result: bool = True, **params: dict
 ) -> Any:  # noqa: ANN401
@@ -34,18 +66,8 @@ def execute_query(
             cur.execute(query, params)
             result = cur.fetchall()
     except RaiseException as e:
-        logging.debug("Query: %s failed with params: %s", query, params)
-        msg = e.diag.message_primary
-        if "does not have access" in msg:
-            raise MimirAccessDeniedException(
-                f"User does not have access: {params.get('action_by')}"
-            ) from e
-        if "already in use" in msg:
-            identifier = _get_identifier_from_params(params)
-            raise MimirEntityAlreadyExistsException(
-                f"Entity already exists with: {identifier}"
-            ) from e
-        raise MimirException(msg) from e
+        _rollback(connection)
+        _raise_from_pg_exception(e, query, params)
 
     if not return_result:
         return None
@@ -67,18 +89,8 @@ async def execute_query_async(
             await cur.execute(query, params)
             result = await cur.fetchall()
     except RaiseException as e:
-        logging.debug("Query: %s failed with params: %s", query, params)
-        msg = e.diag.message_primary
-        if "does not have access" in msg:
-            raise MimirAccessDeniedException(
-                f"User does not have access: {params.get('action_by')}"
-            ) from e
-        if "already in use" in msg:
-            identifier = _get_identifier_from_params(params)
-            raise MimirEntityAlreadyExistsException(
-                f"Entity already exists with: {identifier}"
-            ) from e
-        raise MimirException(msg) from e
+        await _rollback_async(connection)
+        _raise_from_pg_exception(e, query, params)
 
     if not return_result:
         return None
