@@ -1,6 +1,6 @@
 [project]
 name = "shinto"
-version = "1.2.43"
+version = "1.2.44"
 description = "Shinto Labs python library"
 authors = [
     {name = "Aron Hemmes", email = "aron@shintolabs.nl"},
@@ -31,6 +31,7 @@ build-backend = "setuptools.build_meta"
 packages = [
     "shinto",
     "shinto.pg",
+    "shinto.qc",
     "shinto.juno",
     "shinto.mimir",
     "shinto.mimir.base",
