@@ -10,6 +10,8 @@ from qc_pack import run_integration_test as run_qc_pack_integration_test
 from schema_package import run_integration_test as run_schema_package_integration_test
 from users import run_integration_test as run_users_integration_test
 
+from qc_run_qc import run_qc_integration_test as run_qc_integration_test
+
 DATABASE_CONFIG = {
     "host": "database",
     "port": 5432,
@@ -29,6 +31,7 @@ def main():
         logging.info(f"Mimir version: {res[0]}")
 
         run_users_integration_test(conn)
+        run_qc_integration_test(conn)
         run_qc_pack_integration_test(conn)
         run_schema_package_integration_test(conn)
 
