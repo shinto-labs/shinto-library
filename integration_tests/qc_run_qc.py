@@ -29,7 +29,7 @@ async def run_qc_integration_test(conn):
             }
         ]
     }
-    result =  run_qc(project_list, taxonomy, pack)
+    result = await run_qc(project_list, taxonomy, pack)
     assert result["issues"] == 0
     assert result["majorIssues"] == 0
     assert result["failedCheckIds"] == []
