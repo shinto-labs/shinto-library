@@ -16,9 +16,8 @@ from uuid import UUID
 
 from shinto.mimir.data import get_project_list_async
 
-from shinto.qc import expression_eval
 from shinto.qc import report
-from shinto.qc import rules
+from shinto.qc import rules as qc_rules
 
 if TYPE_CHECKING:
     from shinto.pg.connection import AsyncConnection
@@ -44,7 +43,7 @@ class _RuleProfiler:
             self.ms[str(rule_id)] += share
 
 
-def run_qc(
+async def run_qc(
     project_list: list[dict],
     taxonomy: dict | None,
     pack: dict | None = None,
@@ -67,7 +66,7 @@ def run_qc(
     )
     if project_count == 0:
         logger.warning("QC run has an empty project list")
-    base_ctx = rules._base_context(settings, taxonomy)
+    base_ctx = qc_rules._base_context(settings, taxonomy)
     profiler = _RuleProfiler(profile_rules)
 
     taxonomy_issues: list[dict] = []
@@ -78,7 +77,7 @@ def run_qc(
         kind = rule.get("kind")
         scope = rule.get("scope")
         if kind == "assert" and scope == "taxonomy":
-            if not rules._eval_bool(rule["expression"], base_ctx):
+            if not qc_rules._eval_bool(rule["expression"], base_ctx):
                 on_fail = rule.get("onFail") or {}
                 taxonomy_issues.append(
                     {
@@ -88,19 +87,19 @@ def run_qc(
                     }
                 )
         elif kind == "unique" and scope == "taxonomy":
-            taxonomy_issues.extend(rules._run_unique(rule, taxonomy))
+            taxonomy_issues.extend(qc_rules._run_unique(rule, taxonomy))
         elif kind == "unique_nested" and scope == "taxonomy":
-            taxonomy_issues.extend(rules._run_unique_nested(rule, taxonomy, settings))
+            taxonomy_issues.extend(qc_rules._run_unique_nested(rule, taxonomy, settings))
         elif kind == "core_fields":
-            taxonomy_issues.extend(rules._run_core_fields(rule, taxonomy, settings))
+            taxonomy_issues.extend(qc_rules._run_core_fields(rule, taxonomy, settings))
         elif kind == "taxonomy_required_props":
-            taxonomy_issues.extend(rules._run_taxonomy_required_props(rule, taxonomy, settings))
+            taxonomy_issues.extend(qc_rules._run_taxonomy_required_props(rule, taxonomy, settings))
         elif kind == "taxonomy_categorical_schema":
             taxonomy_issues.extend(
-                rules._run_taxonomy_categorical_schema(rule, taxonomy, settings)
+                qc_rules._run_taxonomy_categorical_schema(rule, taxonomy, settings)
             )
         elif kind == "taxonomy_default_type":
-            taxonomy_issues.extend(rules._run_taxonomy_default_type(rule, taxonomy, settings))
+            taxonomy_issues.extend(qc_rules._run_taxonomy_default_type(rule, taxonomy, settings))
         profiler.tick(rule.get("id"), t_rule)
 
     field_assert_rules = [
@@ -110,7 +109,7 @@ def run_qc(
     ]
     t_field_asserts = time.perf_counter()
     taxonomy_issues.extend(
-        rules._run_taxonomy_field_asserts(field_assert_rules, taxonomy, settings, base_ctx)
+        qc_rules._run_taxonomy_field_asserts(field_assert_rules, taxonomy, settings, base_ctx)
     )
     profiler.tick_split(
         [str(rule.get("id")) for rule in field_assert_rules if rule.get("id")],
@@ -122,7 +121,7 @@ def run_qc(
         len(field_assert_rules),
     )
 
-    project_fields, stage_fields = rules._partition_fields(taxonomy, settings)
+    project_fields, stage_fields = qc_rules._partition_fields(taxonomy, settings)
     logger.debug(
         "Field partition: project_fields=%s stage_fields=%s",
         len(project_fields),
@@ -221,7 +220,7 @@ def run_qc(
             for field in project_fields:
                 if field.get("field") == "geo":
                     continue
-                rules._validate_field_value(
+                qc_rules._validate_field_value(
                     data.get(field["field"]), field, project_buckets, settings
                 )
 
@@ -229,7 +228,7 @@ def run_qc(
                 check_id, check_code, detail = _detail_for_validate(
                     "project", "missing", field_name
                 )
-                rules._append_detail_issue(
+                qc_rules._append_detail_issue(
                     qc,
                     check_id=check_id,
                     check_code=check_code,
@@ -243,7 +242,7 @@ def run_qc(
                 check_id, check_code, detail = _detail_for_validate(
                     "project", "invalid_type", field_name
                 )
-                rules._append_detail_issue(
+                qc_rules._append_detail_issue(
                     qc,
                     check_id=check_id,
                     check_code=check_code,
@@ -257,7 +256,7 @@ def run_qc(
                 check_id, check_code, detail = _detail_for_validate(
                     "project", "invalid_value", field_name
                 )
-                rules._append_detail_issue(
+                qc_rules._append_detail_issue(
                     qc,
                     check_id=check_id,
                     check_code=check_code,
@@ -276,7 +275,7 @@ def run_qc(
                     "invalidValueFields": set(),
                 }
                 for field in stage_fields:
-                    rules._validate_field_value(
+                    qc_rules._validate_field_value(
                         (stage or {}).get(field["field"]), field, per_stage, settings
                     )
                 if (
@@ -295,7 +294,7 @@ def run_qc(
                     check_id, check_code, detail = _detail_for_validate(
                         "stage", "missing", field_name
                     )
-                    rules._append_detail_issue(
+                    qc_rules._append_detail_issue(
                         qc,
                         check_id=check_id,
                         check_code=check_code,
@@ -311,7 +310,7 @@ def run_qc(
                     check_id, check_code, detail = _detail_for_validate(
                         "stage", "invalid_type", field_name
                     )
-                    rules._append_detail_issue(
+                    qc_rules._append_detail_issue(
                         qc,
                         check_id=check_id,
                         check_code=check_code,
@@ -327,7 +326,7 @@ def run_qc(
                     check_id, check_code, detail = _detail_for_validate(
                         "stage", "invalid_value", field_name
                     )
-                    rules._append_detail_issue(
+                    qc_rules._append_detail_issue(
                         qc,
                         check_id=check_id,
                         check_code=check_code,
@@ -374,16 +373,16 @@ def run_qc(
         # Project assert expressions
         for rule in project_assert_rules:
             t_rule = time.perf_counter()
-            applies = rules._when_applies(rule.get("when"), ctx)
+            applies = qc_rules._when_applies(rule.get("when"), ctx)
             if applies is not False:
-                if applies is None or not rules._eval_bool(rule["expression"], ctx):
-                    rules._record_rule_failure(qc, rule)
+                if applies is None or not qc_rules._eval_bool(rule["expression"], ctx):
+                    qc_rules._record_rule_failure(qc, rule)
                     on_fail = rule.get("onFail") or {}
                     message = on_fail.get("message") or rule.get("id")
                     # Structured row for SPA (badge + field highlight). Skip when the
                     # rule only flips a projectQcFlag without a user-facing message.
                     if message:
-                        rules._emit_rule_detail_issues(
+                        qc_rules._emit_rule_detail_issues(
                             qc,
                             rule,
                             niveau="project",
@@ -407,13 +406,13 @@ def run_qc(
                     **stage,
                     "stage": stage,
                 }
-                applies = rules._when_applies(rule.get("when"), stage_ctx)
+                applies = qc_rules._when_applies(rule.get("when"), stage_ctx)
                 if applies is False:
                     continue
-                if applies is None or not rules._eval_bool(rule["expression"], stage_ctx):
+                if applies is None or not qc_rules._eval_bool(rule["expression"], stage_ctx):
                     any_failed = True
                     stage_uuid = stage.get("stage_uuid") or stage.get("uuid")
-                    rules._emit_rule_detail_issues(
+                    qc_rules._emit_rule_detail_issues(
                         qc,
                         rule,
                         niveau="bouwcluster",
@@ -424,7 +423,7 @@ def run_qc(
                         count_issue=True,
                     )
             if any_failed:
-                rules._record_rule_failure(qc, rule)
+                qc_rules._record_rule_failure(qc, rule)
             profiler.tick(rule.get("id"), t_rule)
 
         # Flag missing mandatory fields as major (D06)
@@ -449,26 +448,26 @@ def run_qc(
             profiler.tick(rule.get("id"), t_rule)
 
         t_hygiene = time.perf_counter()
-        rules._scan_project_hygiene(qc, data, taxonomy, settings, hygiene_rules)
+        qc_rules._scan_project_hygiene(qc, data, taxonomy, settings, hygiene_rules)
         profiler.tick_split(
             [str(rule.get("id")) for rule in hygiene_rules if rule.get("id")],
             t_hygiene,
         )
         if unknown_fields_rule:
             t_rule = time.perf_counter()
-            rules._scan_unknown_fields(qc, data, taxonomy, settings, unknown_fields_rule)
+            qc_rules._scan_unknown_fields(qc, data, taxonomy, settings, unknown_fields_rule)
             profiler.tick(unknown_fields_rule.get("id"), t_rule)
         if level_placement_rule:
             t_rule = time.perf_counter()
-            rules._scan_level_placement(qc, data, taxonomy, settings, level_placement_rule)
+            qc_rules._scan_level_placement(qc, data, taxonomy, settings, level_placement_rule)
             profiler.tick(level_placement_rule.get("id"), t_rule)
         for rule in year_value_matrix_rules:
             t_rule = time.perf_counter()
-            rules._run_year_value_matrix_rules(qc, data, [rule], settings)
+            qc_rules._run_year_value_matrix_rules(qc, data, [rule], settings)
             profiler.tick(rule.get("id"), t_rule)
         for rule in year_field_empty_matrix_rules:
             t_rule = time.perf_counter()
-            rules._run_year_field_empty_matrix_rules(qc, data, [rule], settings)
+            qc_rules._run_year_field_empty_matrix_rules(qc, data, [rule], settings)
             profiler.tick(rule.get("id"), t_rule)
 
         report._finalize_qc(qc)

@@ -277,8 +277,8 @@ def _run_year_value_matrix_rules(
     if not rules:
         return
     for rule in rules:
-        matrix = rule.get("matrix") or {}
-        result = matrix.evaluate_year_value_matrix(data, matrix, settings)
+        matrix_cfg = rule.get("matrix") or {}
+        result = matrix.evaluate_year_value_matrix(data, matrix_cfg, settings)
         severity = result.get("severity") or "ok"
         if severity == "fail":
             _record_rule_failure(qc, rule)
@@ -314,8 +314,8 @@ def _run_year_field_empty_matrix_rules(
     if not rules:
         return
     for rule in rules:
-        matrix = rule.get("matrix") or {}
-        result = matrix.evaluate_year_field_empty_matrix(data, matrix, settings)
+        matrix_cfg = rule.get("matrix") or {}
+        result = matrix.evaluate_year_field_empty_matrix(data, matrix_cfg, settings)
         hits = result.get("hits") or []
         fail_hits = [h for h in hits if h.get("severity") == "fail"]
         warn_hits = [h for h in hits if h.get("severity") == "warn"]
