@@ -31,6 +31,7 @@ build-backend = "setuptools.build_meta"
 packages = [
     "shinto",
     "shinto.pg",
+    "shinto.qc",
     "shinto.juno",
     "shinto.mimir",
     "shinto.mimir.base",
