@@ -6,7 +6,10 @@ __all__ = [
     "JsonSchemaRegistry",
     "QueueError",
     "QueueHandler",
+    "ShintoBadInputException",
     "ShintoException",
+    "ShintoNotFoundException",
+    "ShintoSizeLimitException",
     "ShintoWarning",
     "Taxonomy",
     "TaxonomyComplianceError",
@@ -28,7 +31,13 @@ __all__ = [
 ]
 
 from .config import load_config_file, output_config
-from .exceptions import ShintoException, ShintoWarning
+from .exceptions import (
+    ShintoBadInputException,
+    ShintoException,
+    ShintoNotFoundException,
+    ShintoSizeLimitException,
+    ShintoWarning,
+)
 from .general import calculate_crc32_for_file, get_mimetype_for_file
 from .jsonschema import JsonSchemaRegistry, ValidationErrorGroup
 from .logging import setup_logging
