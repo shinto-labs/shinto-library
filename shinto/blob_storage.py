@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import json
 import logging
 import os
 import uuid
+import zipfile
 from pathlib import Path
 from re import match
-from typing import Any, BinaryIO
+from typing import Any, AsyncGenerator, BinaryIO
 
 import anyio
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
@@ -236,3 +238,28 @@ class BlobStorageContainer:
             raise ShintoNotFoundException(f"File {file_id} not found") from e
 
         return blob_content
+
+    async def zip_stream(self, file_ids: list[str]) -> AsyncGenerator[bytes, None]:
+        """Generate a zip archive containing the specified files."""
+        buf = io.BytesIO()
+        used_filenames = set()
+        with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zipf:
+            for blob_id in file_ids:
+                blob_client = self.container_client.get_blob_client(blob_id)
+                blob_properties = await blob_client.get_blob_properties()
+                blob_download_stream = await blob_client.download_blob()
+                blob_content = await blob_download_stream.readall()
+                filename = blob_properties.metadata.get("name", blob_id)
+                name, ext = Path(filename).stem, Path(filename).suffix
+                counter = 1
+
+                while filename in used_filenames:
+                    filename = f"{name} ({counter}){ext}"
+                    counter += 1
+
+                used_filenames.add(filename)
+
+                zipf.writestr(filename, blob_content)
+
+        buf.seek(0)
+        yield buf.read()
