@@ -8,6 +8,8 @@ __all__ = [
     "get_default_user_id",
     "get_mimir_version",
     "load_table",
+    "load_table_fast",
+    "load_table_slow",
 ]
 
 
@@ -19,4 +21,6 @@ from .base.internal import (
     get_default_user_id,
     get_mimir_version,
     load_table,
+    load_table_fast,
+    load_table_slow,
 )

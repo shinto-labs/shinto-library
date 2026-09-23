@@ -59,6 +59,10 @@ __all__ = [
     "get_user_pending_list_async",
     "load_table",
     "load_table_async",
+    "load_table_fast",
+    "load_table_fast_async",
+    "load_table_slow",
+    "load_table_slow_async",
     "update_role",
     "update_role_async",
     "update_system_default",
@@ -85,6 +89,10 @@ from .internal import (
     get_mimir_version_async,
     load_table,
     load_table_async,
+    load_table_fast,
+    load_table_fast_async,
+    load_table_slow,
+    load_table_slow_async,
 )
 from .role import (
     create_role,
