@@ -61,11 +61,6 @@ def _assert(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def _row_sort_key(row: dict[str, Any]) -> str:
-    """Return a stable ordering key for a dumped row."""
-    return json.dumps(row, sort_keys=True, default=str)
-
-
 def _insert_project(conn: Connection, action_by: object, data: dict[str, Any]) -> None:
     """Insert one project row. The insert trigger assigns id and timestamp."""
     conn.execute_command(
@@ -111,31 +106,31 @@ def _assert_dump_shape(dumped: dict[str, Any]) -> None:
     _assert("data.project" in dumped, "dump is missing data.project")
 
 
+def _describe_dump_difference(fast: dict[str, Any], slow: dict[str, Any]) -> str:
+    """Describe the first difference between two dumps."""
+    fast_keys = set(fast)
+    slow_keys = set(slow)
+    if fast_keys != slow_keys:
+        return f"dump keys differ: {fast_keys ^ slow_keys}"
+    for key in sorted(fast_keys):
+        fast_value = fast[key]
+        slow_value = slow[key]
+        if fast_value == slow_value:
+            continue
+        if isinstance(fast_value, list) and isinstance(slow_value, list):
+            return f"{key} differs (fast {len(fast_value)} rows, slow {len(slow_value)} rows)"
+        return f"{key} differs: fast={fast_value!r} slow={slow_value!r}"
+    return "dumps differ"
+
+
 def _assert_fast_and_slow_match(conn: Connection) -> None:
-    """Check that the row-by-row dump matches the PostgreSQL dump, aside from its timestamp."""
+    """Check that the fast and slow dumps are exactly the same."""
     logging.info("Comparing fast and slow database dumps")
     fast = dump_database_to_json_fast(conn)
     slow = dump_database_to_json_slow(conn)
+    if fast != slow:
+        raise AssertionError(_describe_dump_difference(fast, slow))
     _assert_dump_shape(fast)
-    _assert_dump_shape(slow)
-
-    fast_body = {key: value for key, value in fast.items() if key != "timestamp"}
-    slow_body = {key: value for key, value in slow.items() if key != "timestamp"}
-    _assert(
-        set(fast_body) == set(slow_body),
-        f"dump keys differ: {set(fast_body) ^ set(slow_body)}",
-    )
-    for key, fast_value in fast_body.items():
-        slow_value = slow_body[key]
-        if isinstance(fast_value, list):
-            fast_rows = sorted(fast_value, key=_row_sort_key)
-            slow_rows = sorted(slow_value, key=_row_sort_key)
-            _assert(
-                fast_rows == slow_rows,
-                f"{key} rows differ (fast {len(fast_rows)}, slow {len(slow_rows)})",
-            )
-        else:
-            _assert(fast_value == slow_value, f"{key} differs between fast and slow dumps")
 
     marked = [
         row
