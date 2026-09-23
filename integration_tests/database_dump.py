@@ -16,6 +16,7 @@ from shinto.mimir.base import (
     dump_database_to_json_fast,
     dump_database_to_json_slow,
     get_default_user_id,
+    load_table,
 )
 
 if TYPE_CHECKING:
@@ -123,6 +124,24 @@ def _describe_dump_difference(fast: dict[str, Any], slow: dict[str, Any]) -> str
     return "dumps differ"
 
 
+def _sorted_rows(rows: list[dict]) -> list[dict]:
+    """Return rows in a stable order."""
+    return sorted(rows, key=lambda row: json.dumps(row, sort_keys=True))
+
+
+def _assert_project_trigger_enabled(conn: Connection) -> None:
+    """Check that loading left the project change trigger enabled."""
+    rows = conn.execute_query(
+        """
+        SELECT tgenabled
+        FROM pg_trigger
+        WHERE tgrelid = 'data.project'::regclass
+          AND tgname = 'project_change_trigger'
+        """
+    )
+    _assert(rows[0][0] == "O", f"project change trigger is {rows[0][0]}")
+
+
 def _assert_fast_and_slow_match(conn: Connection) -> None:
     """Check that the fast and slow dumps are exactly the same."""
     logging.info("Comparing fast and slow database dumps")
@@ -138,6 +157,16 @@ def _assert_fast_and_slow_match(conn: Connection) -> None:
         if isinstance(row.get("data"), dict) and row["data"].get("marker") == EQUIVALENCE_MARKER
     ]
     _assert(len(marked) == 1, f"expected one equivalence project, found {len(marked)}")
+
+    logging.info("Reloading data.project and comparing it to the dump")
+    original_projects = fast["data.project"]
+    load_table(conn, "data.project", original_projects)
+    reloaded = dump_database_to_json_fast(conn)
+    _assert(
+        _sorted_rows(reloaded["data.project"]) == _sorted_rows(original_projects),
+        "reloaded data.project does not match the dump",
+    )
+    _assert_project_trigger_enabled(conn)
 
 
 def _assert_size_limit_falls_back(conn: Connection, action_by: object) -> None:
@@ -184,6 +213,20 @@ def _assert_size_limit_falls_back(conn: Connection, action_by: object) -> None:
             len(description) == PAYLOAD_BYTES,
             f"internal_description length {len(description)} != {PAYLOAD_BYTES}",
         )
+
+    logging.info("Reloading the large project dump in batches")
+    load_table(conn, "data.project", dumped["data.project"])
+    rows = conn.execute_query(
+        """
+        SELECT count(*), min(length(data->>'internal_description'))
+        FROM data.project
+        WHERE data->>'marker' = %(marker)s
+        """,
+        {"marker": SIZE_LIMIT_MARKER},
+    )
+    _assert(rows[0][0] == SIZE_LIMIT_ROWS, f"reloaded {rows[0][0]} large projects")
+    _assert(rows[0][1] == PAYLOAD_BYTES, f"reloaded description length {rows[0][1]}")
+    _assert_project_trigger_enabled(conn)
 
 
 def run_integration_test(conn: Connection) -> None:

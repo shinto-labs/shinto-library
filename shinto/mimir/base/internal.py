@@ -6,6 +6,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+import psycopg
 from psycopg import sql
 from psycopg.errors import ProgramLimitExceeded
 
@@ -52,6 +53,30 @@ WHERE t.table_schema = ANY(%(schemas)s)
   )
 """
 GET_SEQUENCES_QUERY = "SELECT data.get_sequences()"
+# PostgreSQL refuses a jsonb value at or above this size.
+JSONB_MAX_BYTES = 268_435_455
+# Keep each slow-load batch under the limit. One larger row is still sent alone.
+JSONB_BATCH_BYTES = 200_000_000
+LOAD_TABLE_COLUMNS_QUERY = """
+SELECT column_name,
+       CASE
+           WHEN data_type = 'ARRAY' THEN udt_name
+           WHEN data_type = 'USER-DEFINED' THEN udt_schema || '.' || udt_name
+           ELSE data_type
+       END AS column_type
+FROM information_schema.columns
+WHERE table_schema = %(schema)s
+  AND table_name = %(table)s
+ORDER BY ordinal_position
+"""
+LOAD_TABLE_PARTITION_QUERY = """
+SELECT c.relkind = 'p'
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = %(schema)s
+  AND c.relname = %(table)s
+"""
+CREATE_LOG_PARTITION_QUERY = "SELECT audit.create_log_partition(%(timestamp)s::timestamptz)"
 
 
 def get_default_user(connection: Connection) -> dict:
@@ -279,10 +304,76 @@ async def dump_database_to_json_async(
         return await dump_database_to_json_slow_async(connection, include_base, include_audit)
 
 
-def load_table(
+def _split_table_name(table_name: str) -> tuple[str, str]:
+    """Split ``schema.table`` the way base.load_json_to_table does."""
+    if "." in table_name:
+        schema, name = table_name.split(".", 1)
+        return schema, name
+    return "base", table_name
+
+
+def _json_payload_size(data: list[dict]) -> int:
+    """Return the UTF-8 size of data as one JSON array."""
+    if not data:
+        return len(b"[]")
+    separators = 2 * (len(data) - 1)
+    row_sizes = sum(len(json.dumps(row).encode()) for row in data)
+    return len(b"[]") + separators + row_sizes
+
+
+def _with_action_by(data: list[dict], columns: list[tuple[str, str]], user_id: UUID) -> list[dict]:
+    """Copy rows with action_by set to the shintolabs user, matching the SQL load."""
+    if not any(name == "action_by" for name, _column_type in columns):
+        columns.append(("action_by", "uuid"))
+    user = str(user_id)
+    return [{**row, "action_by": user} for row in data]
+
+
+def _row_batches(rows: list[dict], max_bytes: int = JSONB_BATCH_BYTES) -> list[list[dict]]:
+    """Split rows so each batch stays under PostgreSQL's jsonb limit."""
+    batches: list[list[dict]] = []
+    current: list[dict] = []
+    current_size = 0
+    for row in rows:
+        row_size = len(json.dumps(row).encode())
+        if row_size >= JSONB_MAX_BYTES:
+            message = (
+                f"A single row is {row_size} bytes, above PostgreSQL's jsonb limit "
+                f"of {JSONB_MAX_BYTES}"
+            )
+            raise ValueError(message)
+        if current and current_size + row_size >= max_bytes:
+            batches.append(current)
+            current = []
+            current_size = 0
+        current.append(row)
+        current_size += row_size
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _qualified_table(schema: str, table: str) -> sql.Composed:
+    """Return a quoted schema.table name."""
+    return sql.SQL("{}.{}").format(sql.Identifier(schema), sql.Identifier(table))
+
+
+def _insert_batch_query(schema: str, table: str, columns: list[tuple[str, str]]) -> sql.Composed:
+    """Build the batched jsonb_to_recordset insert used by the SQL loader."""
+    names = sql.SQL(", ").join(sql.Identifier(name) for name, _column_type in columns)
+    column_types = sql.SQL(", ").join(
+        sql.SQL("{} {}").format(sql.Identifier(name), sql.SQL(column_type))
+        for name, column_type in columns
+    )
+    return sql.SQL(
+        "INSERT INTO {} ({}) SELECT {} FROM jsonb_to_recordset(%(data)s::jsonb) AS t({})"
+    ).format(_qualified_table(schema, table), names, names, column_types)
+
+
+def load_table_fast(
     connection: Connection, table_name: str, data: list[dict], update_action_by: bool = False
 ) -> None:
-    """Load JSON data into a table."""
+    """Load a table by passing all rows to base.load_json_to_table in one call."""
     params = {
         "table_name": table_name,
         "data": json.dumps(data),
@@ -291,13 +382,202 @@ def load_table(
     execute_query(connection, LOAD_JSON_TO_TABLE_QUERY, **params, return_result=False)
 
 
-async def load_table_async(
-    connection: AsyncConnection, table_name: str, data: list[dict], update_action_by: bool = False
+async def load_table_fast_async(
+    connection: AsyncConnection,
+    table_name: str,
+    data: list[dict],
+    update_action_by: bool = False,
 ) -> None:
-    """Load JSON data into a table asynchronously."""
+    """Load a table asynchronously in one base.load_json_to_table call."""
     params = {
         "table_name": table_name,
         "data": json.dumps(data),
         "update_action_by": update_action_by,
     }
     await execute_query_async(connection, LOAD_JSON_TO_TABLE_QUERY, **params, return_result=False)
+
+
+def _prepare_rows(
+    data: list[dict],
+    columns: list[tuple[str, str]],
+    user_id: UUID | None,
+    update_action_by: bool,
+) -> list[dict]:
+    """Return the rows to insert, applying action_by when requested."""
+    if update_action_by:
+        return _with_action_by(data, columns, user_id)
+    return data
+
+
+def _load_table_slow_statements(
+    schema: str, table: str, columns: list[tuple[str, str]], is_partitioned: bool
+) -> tuple[sql.Composed, sql.Composed, sql.Composed, sql.Composed]:
+    """Return clear, disable-triggers, insert, and enable-triggers statements."""
+    table_sql = _qualified_table(schema, table)
+    if is_partitioned:
+        clear = sql.SQL("DELETE FROM {}").format(table_sql)
+    else:
+        clear = sql.SQL("TRUNCATE TABLE {} CASCADE").format(table_sql)
+    disable = sql.SQL("ALTER TABLE {} DISABLE TRIGGER ALL").format(table_sql)
+    enable = sql.SQL("ALTER TABLE {} ENABLE TRIGGER ALL").format(table_sql)
+    return clear, disable, _insert_batch_query(schema, table, columns), enable
+
+
+def load_table_slow(
+    connection: Connection, table_name: str, data: list[dict], update_action_by: bool = False
+) -> None:
+    """
+    Load a table in batches so no single jsonb value exceeds PostgreSQL's size limit.
+
+    Matches ``base.load_json_to_table``: it clears the table, disables triggers,
+    creates audit.log partitions, and optionally rewrites action_by.
+
+    Args:
+        connection: Database connection.
+        table_name: Target table, as ``schema.table``.
+        data: Rows from a database dump.
+        update_action_by: Set action_by to the shintolabs user on every row.
+
+    """
+    schema, table = _split_table_name(table_name)
+    with connection.cursor() as cur:
+        cur.execute(LOAD_TABLE_COLUMNS_QUERY, {"schema": schema, "table": table})
+        columns = [(name, column_type) for name, column_type in cur.fetchall()]
+        if not columns:
+            message = f"Table {table_name} has no columns"
+            raise ValueError(message)
+
+        user_id = None
+        if update_action_by:
+            cur.execute(GET_DEFAULT_USER_ID_QUERY)
+            user_id = cur.fetchone()[0]
+        rows = _prepare_rows(data, columns, user_id, update_action_by)
+
+        if schema == "audit" and table == "log":
+            timestamps = {row.get("timestamp") for row in rows if row.get("timestamp")}
+            for timestamp in timestamps:
+                cur.execute(CREATE_LOG_PARTITION_QUERY, {"timestamp": timestamp})
+                cur.fetchone()
+
+        cur.execute(LOAD_TABLE_PARTITION_QUERY, {"schema": schema, "table": table})
+        partition_row = cur.fetchone()
+        is_partitioned = bool(partition_row and partition_row[0])
+        clear, disable, insert, enable = _load_table_slow_statements(
+            schema, table, columns, is_partitioned
+        )
+        cur.execute(clear)
+        cur.execute(disable)
+        try:
+            for batch in _row_batches(rows):
+                logging.info("Loading %s rows into %s", len(batch), table_name)
+                cur.execute(insert, {"data": json.dumps(batch)})
+        finally:
+            try:
+                cur.execute(enable)
+            except psycopg.Error:
+                connection.rollback()
+
+
+async def load_table_slow_async(
+    connection: AsyncConnection,
+    table_name: str,
+    data: list[dict],
+    update_action_by: bool = False,
+) -> None:
+    """
+    Load a table asynchronously in batches.
+
+    See ``load_table_slow``.
+
+    Args:
+        connection: Database connection.
+        table_name: Target table, as ``schema.table``.
+        data: Rows from a database dump.
+        update_action_by: Set action_by to the shintolabs user on every row.
+
+    """
+    schema, table = _split_table_name(table_name)
+    async with connection.cursor() as cur:
+        await cur.execute(LOAD_TABLE_COLUMNS_QUERY, {"schema": schema, "table": table})
+        columns = [(name, column_type) for name, column_type in await cur.fetchall()]
+        if not columns:
+            message = f"Table {table_name} has no columns"
+            raise ValueError(message)
+
+        user_id = None
+        if update_action_by:
+            await cur.execute(GET_DEFAULT_USER_ID_QUERY)
+            user_id = (await cur.fetchone())[0]
+        rows = _prepare_rows(data, columns, user_id, update_action_by)
+
+        if schema == "audit" and table == "log":
+            timestamps = {row.get("timestamp") for row in rows if row.get("timestamp")}
+            for timestamp in timestamps:
+                await cur.execute(CREATE_LOG_PARTITION_QUERY, {"timestamp": timestamp})
+                await cur.fetchone()
+
+        await cur.execute(LOAD_TABLE_PARTITION_QUERY, {"schema": schema, "table": table})
+        partition_row = await cur.fetchone()
+        is_partitioned = bool(partition_row and partition_row[0])
+        clear, disable, insert, enable = _load_table_slow_statements(
+            schema, table, columns, is_partitioned
+        )
+        await cur.execute(clear)
+        await cur.execute(disable)
+        try:
+            for batch in _row_batches(rows):
+                logging.info("Loading %s rows into %s", len(batch), table_name)
+                await cur.execute(insert, {"data": json.dumps(batch)})
+        finally:
+            try:
+                await cur.execute(enable)
+            except psycopg.Error:
+                await connection.rollback()
+
+
+def load_table(
+    connection: Connection, table_name: str, data: list[dict], update_action_by: bool = False
+) -> None:
+    """
+    Load JSON rows into a table.
+
+    Uses one PostgreSQL call when the serialized rows fit in a jsonb value.
+    Larger dumps are loaded in batches, chosen from that size without trying
+    the single-call load first.
+
+    Args:
+        connection: Database connection.
+        table_name: Target table, as ``schema.table``.
+        data: Rows from a database dump.
+        update_action_by: Set action_by to the shintolabs user on every row.
+
+    """
+    payload_size = _json_payload_size(data)
+    if payload_size >= JSONB_MAX_BYTES:
+        logging.info("Table %s JSON is %s bytes; loading in batches", table_name, payload_size)
+        load_table_slow(connection, table_name, data, update_action_by)
+        return
+    load_table_fast(connection, table_name, data, update_action_by)
+
+
+async def load_table_async(
+    connection: AsyncConnection, table_name: str, data: list[dict], update_action_by: bool = False
+) -> None:
+    """
+    Load JSON rows into a table asynchronously.
+
+    See ``load_table``.
+
+    Args:
+        connection: Database connection.
+        table_name: Target table, as ``schema.table``.
+        data: Rows from a database dump.
+        update_action_by: Set action_by to the shintolabs user on every row.
+
+    """
+    payload_size = _json_payload_size(data)
+    if payload_size >= JSONB_MAX_BYTES:
+        logging.info("Table %s JSON is %s bytes; loading in batches", table_name, payload_size)
+        await load_table_slow_async(connection, table_name, data, update_action_by)
+        return
+    await load_table_fast_async(connection, table_name, data, update_action_by)
