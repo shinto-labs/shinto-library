@@ -244,7 +244,6 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         stages = project_data.get("stages", [])
         bruto = sum((stage.get("bruto_aantalwoningen") or 0) for stage in stages)
         sloop = sum((stage.get("sloop_aantalwoningen") or 0) for stage in stages)
-        opleverjaar_2025 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2025])
         opleverjaar_2026 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2026])
         opleverjaar_2027 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2027])
         opleverjaar_2028 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2028])
@@ -254,11 +253,12 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         opleverjaar_2032 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2032])
         opleverjaar_2033 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2033])
         opleverjaar_2034 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2034])
-        opleverjaar_2035_2039 = sum_bruto_aantalwoningen(
-            stages, "opleverjaar", [2035, 2036, 2037, 2038, 2039]
+        opleverjaar_2035 = sum_bruto_aantalwoningen(stages, "opleverjaar", [2035])
+        opleverjaar_2036_2040 = sum_bruto_aantalwoningen(
+            stages, "opleverjaar", [2036, 2037, 2038, 2039, 2040]
         )
-        opleverjaar_2040_2044 = sum_bruto_aantalwoningen(
-            stages, "opleverjaar", [2040, 2041, 2042, 2043, 2044]
+        opleverjaar_2041_2045 = sum_bruto_aantalwoningen(
+            stages, "opleverjaar", [2041, 2042, 2043, 2044, 2045]
         )
 
         woningtype_eengezins = sum_bruto_aantalwoningen(stages, "woningtype", ["eengezinswoningen"])
@@ -336,7 +336,6 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
                 "sloop_aantalwoningen": sloop,
                 "bruto_aantalwoningen": bruto,
                 "netto_aantalwoningen": bruto - sloop,
-                "opleverjaar_2025": opleverjaar_2025,
                 "opleverjaar_2026": opleverjaar_2026,
                 "opleverjaar_2027": opleverjaar_2027,
                 "opleverjaar_2028": opleverjaar_2028,
@@ -346,10 +345,10 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
                 "opleverjaar_2032": opleverjaar_2032,
                 "opleverjaar_2033": opleverjaar_2033,
                 "opleverjaar_2034": opleverjaar_2034,
-                "opleverjaar_2035_2039": opleverjaar_2035_2039,
-                "opleverjaar_2040_2044": opleverjaar_2040_2044,
+                "opleverjaar_2035": opleverjaar_2035,
+                "opleverjaar_2036_2040": opleverjaar_2036_2040,
+                "opleverjaar_2041_2045": opleverjaar_2041_2045,
                 "c1": bruto
-                - opleverjaar_2025
                 - opleverjaar_2026
                 - opleverjaar_2027
                 - opleverjaar_2028
@@ -359,8 +358,9 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
                 - opleverjaar_2032
                 - opleverjaar_2033
                 - opleverjaar_2034
-                - opleverjaar_2035_2039
-                - opleverjaar_2040_2044,
+                - opleverjaar_2035
+                - opleverjaar_2036_2040
+                - opleverjaar_2041_2045,
                 "plantype": plantype_label,
                 "planologische_status": planologische_status_label,
                 "tijdelijke_woningen": tijdelijke_woningen,
