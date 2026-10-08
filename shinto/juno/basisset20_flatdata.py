@@ -152,6 +152,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
     num = 1
     for project in data:
         project_data = project.get("data")
+        project_plancode = project_data.get("project_plancode")
         gemeente_code = project_data.get("gemeente_code")
         naam_gemeente = project_data.get("naam_gemeente")
         geometrie_aanwezig = project_data.get("geometrie_aanwezig") or False
@@ -163,20 +164,6 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
             geometrie_aanwezig_nice = "Ja" if geometrie_aanwezig else "Nee"
         elif isinstance(geometrie_aanwezig, str):
             geometrie_aanwezig_nice = "Ja" if geometrie_aanwezig == "True" else "Nee"
-        # Check if project should go to 'Gerealiseerd of vervallen' sheet
-        # if planstatus and planstatus.lower() in ['vervallen']:
-        #     plancode = f"{gemeente_code}G{num_gerealiseerd:05d}"
-        #     gerealiseerd_vervallen_rows.append({
-        #         'gemeente': naam_gemeente,
-        #         'status': planstatus,
-        #         'plannaam': naam,
-        #         'plannummer': plancode,
-        #         'locatie': geometrie_aanwezig_nice
-        #     })
-        #     num_gerealiseerd += 1
-        #     continue  # Skip to next project, don't add to main sheet
-
-        plancode = f"{gemeente_code}"
 
         vertrouwelijk = project_data.get("vertrouwelijk") or False
         vertrouwelijk_nice = "Ja" if vertrouwelijk else "Nee"
@@ -216,7 +203,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         if point_coords or polygon_geojson:
             geo_rows.append(
                 {
-                    "plancode": plancode,
+                    "plancode": project_plancode,
                     "point": point_coords or "",
                     "polygon": polygon_geojson or "",
                 }
@@ -227,7 +214,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
                 geojson_features.append(
                     {
                         "type": "Feature",
-                        "properties": {"plancode": plancode, "type": "point"},
+                        "properties": {"plancode": project_plancode, "type": "point"},
                         "geometry": point_geometry,
                     }
                 )
@@ -235,7 +222,7 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
                 geojson_features.append(
                     {
                         "type": "Feature",
-                        "properties": {"plancode": plancode, "type": "polygon"},
+                        "properties": {"plancode": project_plancode, "type": "polygon"},
                         "geometry": polygon_geometry,
                     }
                 )
@@ -328,9 +315,10 @@ def generate_basisset20_flatdata(  # noqa: PLR0915
         rows.append(
             {
                 "naam_gemeente": naam_gemeente,
+                "gemeente_code": gemeente_code,
                 "vertrouwelijk": vertrouwelijk_nice,
                 "naam": naam,
-                "plancode": plancode,
+                "plancode": project_plancode,
                 "planstatus": planstatus_label,
                 "geometrie_aanwezig": geometrie_aanwezig_nice,
                 "sloop_aantalwoningen": sloop,

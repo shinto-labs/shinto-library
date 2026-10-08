@@ -9,6 +9,7 @@ from shinto.pg.connection import get_connection
 from database_dump import run_integration_test as run_database_dump_integration_test
 from qc_pack import run_integration_test as run_qc_pack_integration_test
 from schema_package import run_integration_test as run_schema_package_integration_test
+from transformation import run_integration_test as run_transformation_integration_test
 from users import run_integration_test as run_users_integration_test
 
 from qc_run_qc import run_qc_integration_test as run_qc_integration_test
@@ -35,6 +36,7 @@ def main():
         run_qc_integration_test(conn)
         run_qc_pack_integration_test(conn)
         run_schema_package_integration_test(conn)
+        run_transformation_integration_test(conn)
         run_database_dump_integration_test(conn)
 
         conn.commit()
