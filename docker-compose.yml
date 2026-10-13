@@ -6,7 +6,7 @@ services:
       - DATABASE_NAME=mimir
       - MAKE_DEV_DATA=false
     ports:
-      - "5433:5432"
+      - "6433:5432"
     healthcheck:
       test:
         [
