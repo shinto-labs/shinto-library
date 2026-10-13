@@ -28,6 +28,9 @@ Helpers:
   sum_num(rows, key) — sum of numeric key values across rows (0 if none)
   sum_num_if(rows, sum_key, filter_key, filter_value) — sum sum_key where filter_key == filter_value
   has_polygon_geometry(geo) — Polygon/MultiPolygon with non-empty coordinates
+
+Expressions are compiled (ast.parse + safety validate) once per unique string and
+cached for the process lifetime. Call clear_expression_cache() from tests if needed.
 """
 
 from __future__ import annotations
@@ -38,6 +41,9 @@ import operator
 from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
+
+# Compiled+validated ASTs keyed by exact expression string (process-global).
+_AST_CACHE: dict[str, ast.AST] = {}
 
 _BIN_OPS = {
     ast.Add: operator.add,
@@ -455,18 +461,33 @@ def _eval(node: ast.AST, context: dict[str, Any]) -> Any:
     raise ExpressionError(f"Cannot evaluate node: {type(node).__name__}")
 
 
+def clear_expression_cache() -> None:
+    """Drop all compiled expression ASTs (tests / rare hot-reload)."""
+    _AST_CACHE.clear()
+
+
+def _compile_expression(expression: str) -> ast.AST:
+    """Parse+validate once per unique expression string; reuse cached AST."""
+    cached = _AST_CACHE.get(expression)
+    if cached is not None:
+        return cached
+    try:
+        tree = ast.parse(expression, mode="eval")
+    except SyntaxError as exc:
+        logger.debug("Expression syntax error (%r): %s", expression, exc)
+        raise ExpressionError(f"Syntax error: {exc}") from exc
+    _validate_ast(tree)
+    _AST_CACHE[expression] = tree
+    return tree
+
+
 def evaluate(expression: str, context: dict[str, Any] | None = None) -> Any:
     """Evaluate a pack expression against a context dict."""
     if not isinstance(expression, str) or not expression.strip():
         logger.error("Empty or non-string expression")
         raise ExpressionError("Expression must be a non-empty string")
     try:
-        tree = ast.parse(expression, mode="eval")
-    except SyntaxError as exc:
-        logger.debug("Expression syntax error (%r): %s", expression, exc)
-        raise ExpressionError(f"Syntax error: {exc}") from exc
-    try:
-        _validate_ast(tree)
+        tree = _compile_expression(expression)
         return _eval(tree, context or {})
     except ExpressionError as exc:
         logger.debug("Expression evaluation failed (%r): %s", expression, exc)
