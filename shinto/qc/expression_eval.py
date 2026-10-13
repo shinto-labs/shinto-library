@@ -24,6 +24,10 @@ Helpers:
   starts_with(value, prefix) — str(value).startswith(prefix)
   str_contains(value, needle) — case-insensitive substring
   values_unique(rows, key) — non-empty values of key across row dicts are unique
+  all_equal(rows, key, value) — True when every row has key == value (empty rows list → False)
+  sum_num(rows, key) — sum of numeric key values across rows (0 if none)
+  sum_num_if(rows, sum_key, filter_key, filter_value) — sum sum_key where filter_key == filter_value
+  has_polygon_geometry(geo) — Polygon/MultiPolygon with non-empty coordinates
 """
 
 from __future__ import annotations
@@ -243,6 +247,59 @@ def _values_unique(rows: Any, key: Any) -> bool:
     return True
 
 
+def _all_equal(rows: Any, key: Any, value: Any) -> bool:
+    """True when every row dict has row[key] == value. Empty list → False."""
+    if not isinstance(rows, list) or len(rows) == 0:
+        return False
+    for row in rows:
+        if not isinstance(row, dict):
+            return False
+        if row.get(key) != value:
+            return False
+    return True
+
+
+def _sum_num(rows: Any, key: Any) -> float:
+    """Sum numeric values of key across rows (non-numeric skipped)."""
+    if not isinstance(rows, list) or key is None:
+        return 0.0
+    total = 0.0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        number = _num(row.get(key))
+        if number is not None:
+            total += number
+    return total
+
+
+def _sum_num_if(rows: Any, sum_key: Any, filter_key: Any, filter_value: Any) -> float:
+    """Sum sum_key for rows where filter_key == filter_value."""
+    if not isinstance(rows, list) or sum_key is None:
+        return 0.0
+    total = 0.0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if row.get(filter_key) != filter_value:
+            continue
+        number = _num(row.get(sum_key))
+        if number is not None:
+            total += number
+    return total
+
+
+def _has_polygon_geometry(geo: Any) -> bool:
+    if not isinstance(geo, list):
+        return False
+    for item in geo:
+        geometry = (item or {}).get("geometry") or {}
+        if geometry.get("type") in ("Polygon", "MultiPolygon"):
+            coordinates = geometry.get("coordinates")
+            return isinstance(coordinates, list) and len(coordinates) > 0
+    return False
+
+
 HELPERS: dict[str, Callable[..., Any]] = {
     "is_empty": _is_empty,
     "len": _len,
@@ -261,6 +318,10 @@ HELPERS: dict[str, Callable[..., Any]] = {
     "starts_with": _starts_with,
     "str_contains": _str_contains,
     "values_unique": _values_unique,
+    "all_equal": _all_equal,
+    "sum_num": _sum_num,
+    "sum_num_if": _sum_num_if,
+    "has_polygon_geometry": _has_polygon_geometry,
 }
 
 

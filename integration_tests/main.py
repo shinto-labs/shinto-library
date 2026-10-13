@@ -12,6 +12,8 @@ from schema_package import run_integration_test as run_schema_package_integratio
 from transformation import run_integration_test as run_transformation_integration_test
 from users import run_integration_test as run_users_integration_test
 
+from qc_expression_helpers import run_integration_test as run_qc_expression_helpers_integration_test
+from qc_run_perf import run_integration_test as run_qc_run_perf_integration_test
 from qc_run_qc import run_qc_integration_test as run_qc_integration_test
 
 DATABASE_CONFIG = {
@@ -33,7 +35,9 @@ def main():
         logging.info(f"Mimir version: {res[0]}")
 
         run_users_integration_test(conn)
+        run_qc_expression_helpers_integration_test(conn)
         run_qc_integration_test(conn)
+        run_qc_run_perf_integration_test(conn)
         run_qc_pack_integration_test(conn)
         run_schema_package_integration_test(conn)
         run_transformation_integration_test(conn)
