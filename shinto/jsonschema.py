@@ -52,7 +52,7 @@ class JsonSchemaRegistry:
         for schema_filepath in Path(directory).resolve().glob(pattern):
             self.register_schema(str(schema_filepath))
 
-    def register_schema(self, schema: str | dict) -> str:
+    def register_schema(self, schema: str | dict, overwrite: bool = False) -> str:
         """
         Add a schema to the registry.
 
@@ -63,13 +63,15 @@ class JsonSchemaRegistry:
 
         Args:
             schema (str | dict): JSON schema or filepath to schema.
+            overwrite (bool): Replace an already registered schema with the same ID
+                instead of raising, e.g. for schemas generated at runtime.
 
         Returns:
             str: The schema ID.
 
         Raises:
             ValueError: If the schema does not have a $id. For filepaths,
-            KeyError: If a conflicting schema is already registered.
+            KeyError: If a conflicting schema is already registered and overwrite is False.
 
         """
         schema_filepath = ""
@@ -98,7 +100,13 @@ class JsonSchemaRegistry:
 
         if self.schema_id_in_registry(schema_id):
             if self.contents(schema_id) != schema:
-                raise KeyError(f"Schema '{schema_id}' already registered with different contents.")
+                if not overwrite:
+                    raise KeyError(
+                        f"Schema '{schema_id}' already registered with different contents."
+                    )
+                self._registry = self._registry.remove(schema_id).with_resource(
+                    schema_id, Resource(schema, DRAFT7)
+                )
         else:
             self._registry = self._registry.with_resource(schema_id, Resource(schema, DRAFT7))
 

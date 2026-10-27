@@ -2,6 +2,7 @@
 
 import json
 import unittest
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -490,6 +491,23 @@ class TestJsonSchemaRegistry(unittest.TestCase):
             schema_id2 = self.registry.register_schema(self.test_schema_filepath)
 
             self.assertEqual(schema_id1, schema_id2)
+
+    def test_register_schema_overwrite(self):
+        """Test that a schema with the same ID can be replaced when overwrite is True."""
+        schema_v1 = {"$id": "runtime_schema", "type": "object", "required": ["a"]}
+        schema_v2 = {"$id": "runtime_schema", "type": "object", "required": ["b"]}
+        self.registry.register_schema(deepcopy(schema_v1))
+
+        with self.assertRaises(KeyError):
+            self.registry.register_schema(deepcopy(schema_v2))
+
+        schema_id = self.registry.register_schema(deepcopy(schema_v2), overwrite=True)
+
+        self.assertEqual(schema_id, "runtime_schema")
+        self.assertEqual(self.registry.contents("runtime_schema")["required"], ["b"])
+        self.registry.validate_json_against_schemas({"b": 1}, ["runtime_schema"])
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            self.registry.validate_json_against_schemas({"a": 1}, ["runtime_schema"])
 
     @patch("shinto.jsonschema.Path.open", new_callable=mock_open)
     @patch("shinto.jsonschema.Path.exists", new_callable=MagicMock())
