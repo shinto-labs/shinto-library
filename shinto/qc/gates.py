@@ -10,6 +10,16 @@ from __future__ import annotations
 
 from typing import Any
 
+_MODES = {"create": "onCreate", "update": "onUpdate", "legacy": "onLegacy"}
+_ACTIONS = {"block", "warn", "report"}
+
+
+def _require_mode(mode: str) -> str:
+    gate_key = _MODES.get(mode)
+    if gate_key is None:
+        raise ValueError(f"mode must be one of {sorted(_MODES)}, got {mode!r}")
+    return gate_key
+
 
 def _rule_index(pack: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     rules = (pack or {}).get("rules") or []
@@ -39,19 +49,16 @@ def resolve_gate_action(
     """
     Resolve the effective gate action for one failing check.
 
-    mode: 'create' | 'update' | 'legacy'
+    mode: 'create' | 'update' | 'legacy'. Any other mode raises ValueError.
+    Missing gates stay 'report'. 'block_if_introduced' blocks only when the
+    check id is new. Any other action is treated as 'block'.
     """
+    gate_key = _require_mode(mode)
     gates = gates if isinstance(gates, dict) else {}
-    if mode == "create":
-        return str(gates.get("onCreate") or "report")
-    if mode == "legacy":
-        return str(gates.get("onLegacy") or "report")
-
-    # update
-    action = str(gates.get("onUpdate") or "report")
+    action = str(gates.get(gate_key) or "report")
     if action == "block_if_introduced":
-        if check_id in previous_failed:
-            return "report"
+        return "report" if check_id in previous_failed else "block"
+    if action not in _ACTIONS:
         return "block"
     return action
 
@@ -76,6 +83,7 @@ def evaluate_gates(
         issues: [...],         # all gated failures with action
       }
     """
+    _require_mode(mode)
     qc = qc if isinstance(qc, dict) else {}
     failed_ids = [str(x) for x in (qc.get("failedCheckIds") or []) if x]
     by_id = _rule_index(pack)
@@ -144,6 +152,8 @@ async def evaluate_qc_project(
 
     `project` should look like a mimir project record: `{id?, data:{...}}`.
     """
+    _require_mode(mode)
+
     from shinto.qc.run import run_qc
 
     if not isinstance(project, dict):

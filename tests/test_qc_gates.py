@@ -2,7 +2,7 @@
 
 import unittest
 
-from shinto.qc.gates import evaluate_gates, resolve_gate_action
+from shinto.qc.gates import evaluate_gates, evaluate_qc_project, resolve_gate_action
 
 
 class TestQcGates(unittest.TestCase):
@@ -65,6 +65,85 @@ class TestQcGates(unittest.TestCase):
         self.assertEqual(result["blocking"][0]["checkCode"], "D40")
         self.assertEqual(len(result["warnings"]), 1)
         self.assertEqual(result["warnings"][0]["checkCode"], "D35")
+
+    def test_unknown_mode_raises(self):
+        for mode in ("save", "Create"):
+            with self.assertRaises(ValueError):
+                resolve_gate_action(
+                    mode=mode,
+                    gates={"onCreate": "block"},
+                    check_id="data_missing_name",
+                    previous_failed=set(),
+                )
+        with self.assertRaises(ValueError):
+            evaluate_gates(
+                {"failedCheckIds": ["data_missing_name"]},
+                {"rules": []},
+                mode="save",
+            )
+
+    def test_unknown_action_blocks(self):
+        pack = {
+            "rules": [
+                {
+                    "id": "data_missing_name",
+                    "checkCode": "D01",
+                    "gates": {"onCreate": "blok"},
+                }
+            ]
+        }
+        result = evaluate_gates(
+            {"failedCheckIds": ["data_missing_name"], "detailIssues": []},
+            pack,
+            mode="create",
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(len(result["blocking"]), 1)
+        self.assertEqual(result["blocking"][0]["action"], "block")
+
+    def test_block_if_introduced_on_create(self):
+        for mode, gate_key in (("create", "onCreate"), ("legacy", "onLegacy")):
+            self.assertEqual(
+                resolve_gate_action(
+                    mode=mode,
+                    gates={gate_key: "block_if_introduced"},
+                    check_id="data_missing_name",
+                    previous_failed=set(),
+                ),
+                "block",
+            )
+            self.assertEqual(
+                resolve_gate_action(
+                    mode=mode,
+                    gates={gate_key: "block_if_introduced"},
+                    check_id="data_missing_name",
+                    previous_failed={"data_missing_name"},
+                ),
+                "report",
+            )
+
+    def test_missing_gates_defaults_to_report(self):
+        pack = {"rules": [{"id": "data_missing_name", "checkCode": "D01"}]}
+        result = evaluate_gates(
+            {"failedCheckIds": ["data_missing_name"]},
+            pack,
+            mode="create",
+        )
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["blocking"], [])
+        self.assertEqual(len(result["reports"]), 1)
+        self.assertEqual(result["reports"][0]["action"], "report")
+
+
+class TestEvaluateQcProject(unittest.IsolatedAsyncioTestCase):
+    async def test_unknown_mode_raises_before_run(self):
+        with self.assertRaises(ValueError):
+            await evaluate_qc_project(
+                {"id": "draft", "data": {}},
+                None,
+                {"version": "t", "rules": []},
+                mode="save",
+            )
 
 
 if __name__ == "__main__":
