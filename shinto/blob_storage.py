@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import contextlib
 import io
 import json
 import logging
 import os
 import uuid
 import zipfile
+from http import HTTPStatus
 from pathlib import Path
 from re import match
 from typing import Any, AsyncGenerator, BinaryIO
 
 import anyio
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core.exceptions import HttpResponseError, ResourceExistsError, ResourceNotFoundError
 from azure.identity import ClientSecretCredential as SyncClientSecretCredential
 from azure.identity.aio import ClientSecretCredential
 from azure.storage.blob import ContainerClient as SyncContainerClient
@@ -64,7 +64,7 @@ class BlobStorageContainer:
                 client_secret=client_secret,
             ),
         )
-        with contextlib.suppress(ResourceExistsError):
+        try:
             SyncContainerClient(
                 account_url=f"https://{account_name}.blob.core.windows.net",
                 container_name=container_name,
@@ -74,6 +74,17 @@ class BlobStorageContainer:
                     client_secret=client_secret,
                 ),
             ).create_container()
+        except ResourceExistsError:
+            pass
+        except HttpResponseError as e:
+            if e.status_code != HTTPStatus.FORBIDDEN:
+                raise
+            # Least-privilege setups may not allow creating containers; the container
+            # is then expected to exist already.
+            logging.warning(
+                "Not allowed to create blob container '%s', assuming it already exists",
+                container_name,
+            )
 
         self.container_client = container_client
         self.max_upload_size_bytes = max_upload_size_bytes or 4 * 1024**3
@@ -92,6 +103,21 @@ class BlobStorageContainer:
 
         return total_size
 
+    async def _check_size_limits(self, file_size: int, used_storage_bytes: int | None) -> None:
+        """Raise if the file exceeds the upload limit or would exceed the storage limit."""
+        if file_size > self.max_upload_size_bytes:
+            raise ShintoSizeLimitException(
+                f"File size {file_size:,} bytes exceeds the "
+                f"upload size limit of {self.max_upload_size_bytes:,} bytes"
+            )
+        if used_storage_bytes is None:
+            used_storage_bytes = await self.get_total_container_size()
+        if used_storage_bytes + file_size > self.max_storage_size_bytes:
+            raise ShintoSizeLimitException(
+                f"Uploading this file would exceed the blob storage "
+                f"size limit of {self.max_storage_size_bytes:,} bytes"
+            )
+
     async def upload_file(
         self,
         file: BinaryIO | bytes | Path | str,
@@ -101,8 +127,15 @@ class BlobStorageContainer:
         content_type: str | None = None,
         content_type_regex: str | None = None,
         overwrite: bool = False,
+        used_storage_bytes: int | None = None,
     ) -> dict[str, Any]:
-        """Upload a file to Azure Blob Storage."""
+        """
+        Upload a file to Azure Blob Storage.
+
+        The storage limit is checked against `used_storage_bytes` when given (e.g. the
+        total size of the files known in the database). Otherwise the container is listed
+        to calculate it, which requires permission to list blobs.
+        """
         blob_id = file_id or str(uuid.uuid4())
 
         if isinstance(file, str):
@@ -114,18 +147,7 @@ class BlobStorageContainer:
 
             async with await anyio.open_file(file, "rb") as f:
                 file = await f.read()
-        file_size = _get_file_size(file)
-        if file_size > self.max_upload_size_bytes:
-            raise ShintoSizeLimitException(
-                f"File size {file_size:,} bytes exceeds the "
-                f"upload size limit of {self.max_upload_size_bytes:,} bytes"
-            )
-        container_size = await self.get_total_container_size()
-        if container_size + file_size > self.max_storage_size_bytes:
-            raise ShintoSizeLimitException(
-                f"Uploading this file would exceed the blob storage "
-                f"size limit of {self.max_storage_size_bytes:,} bytes"
-            )
+        await self._check_size_limits(_get_file_size(file), used_storage_bytes)
 
         if content_type_regex and (not content_type or not match(content_type_regex, content_type)):
             raise ShintoBadInputException(
@@ -228,7 +250,7 @@ class BlobStorageContainer:
     async def download_file(
         self,
         file_id: str,
-    ) -> dict[str, Any]:
+    ) -> bytes:
         """Download and return file from Azure Blob Storage."""
         try:
             async with self.container_client.get_blob_client(file_id) as blob_client:

@@ -51,9 +51,7 @@ def _raise_from_pg_exception(e: RaiseException, query: str, params: dict) -> Non
         ) from e
     if "already in use" in msg:
         identifier = _get_identifier_from_params(params)
-        raise MimirEntityAlreadyExistsException(
-            f"Entity already exists with: {identifier}"
-        ) from e
+        raise MimirEntityAlreadyExistsException(f"Entity already exists with: {identifier}") from e
     raise MimirException(msg) from e
 
 

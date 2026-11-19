@@ -32,7 +32,11 @@ def projects_to_stage_data(projects: list[dict[str, Any]]) -> list[dict[str, Any
                     continue
                 if project_key in stage_info and stage_info[project_key] != project_value:
                     logging.warning(
-                        f"Key {project_key} in project data conflicts with stage data. Project data will take precedence.(stage value: {stage_info[project_key]}, project value: {project_value})"
+                        "Key %s in project data conflicts with stage data. Project data will "
+                        "take precedence.(stage value: %s, project value: %s)",
+                        project_key,
+                        stage_info[project_key],
+                        project_value,
                     )
 
                 stage_info[project_key] = project_value
@@ -40,7 +44,7 @@ def projects_to_stage_data(projects: list[dict[str, Any]]) -> list[dict[str, Any
     return stage_data
 
 
-def stage_data_to_projects(
+def stage_data_to_projects(  # noqa: C901, PLR0912
     stage_data: list[dict[str, Any]], taxonomy: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """
@@ -83,7 +87,7 @@ def stage_data_to_projects(
         stage_dict = {}
 
         for key, value in stage.items():
-            if key not in ["_metadata"]:
+            if key != "_metadata":
                 # Check if field has a defined level in taxonomy
                 level = field_level_map.get(key, "stage")  # Default to stage if not in taxonomy
 
@@ -96,7 +100,10 @@ def stage_data_to_projects(
                         project_data[key] = value
                     elif project_data[key] != value:
                         logging.warning(
-                            f"Conflict for project-level field {key} in project {project_id}. Using first occurrence."
+                            "Conflict for project-level field %s in project %s. "
+                            "Using first occurrence.",
+                            key,
+                            project_id,
                         )
 
         # Add the stage to the stages array (only if there are stage fields)

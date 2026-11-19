@@ -18,6 +18,7 @@ ignore = [
     "COM812", # https://docs.astral.sh/ruff/rules/#flake8-commas-com. Trailing comma, makes code less readable in some cases? for now keep disabled
     "TRY003", # https://docs.astral.sh/ruff/rules/#tryceratops-try.
     "LOG015", # Allow calling default logger
+    "CPY001", # We do not need copyright header in every file.
 ]
 
 [lint.per-file-ignores]

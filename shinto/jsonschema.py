@@ -89,9 +89,9 @@ class JsonSchemaRegistry:
         normalized_id = self.normalize_schema_id(schema["$id"])
 
         if schema_filepath:
-            normalized_filepath = self.normalize_schema_id(schema_filepath)
-            if normalized_filepath != normalized_id:
-                self._schema_aliases[normalized_filepath] = normalized_id
+            for normalized_filepath in self._filepath_aliases(schema_filepath):
+                if normalized_filepath != normalized_id:
+                    self._schema_aliases[normalized_filepath] = normalized_id
 
         schema_id = normalized_id
         schema["$id"] = schema_id
@@ -300,6 +300,22 @@ class JsonSchemaRegistry:
             schema_id.replace("/", "_").replace(".json", "").lower(),
         )
         return re.sub(r"_+", "_", schema_id).strip("_")
+
+    def _filepath_aliases(self, schema_filepath: str) -> set[str]:
+        """
+        Get the normalized aliases for a schema filepath.
+
+        Besides the filepath as given, the path relative to the current working directory
+        is added (if the file is below it), so relative references like
+        "schema/foo.json" also resolve when the application does not run from "/".
+        """
+        aliases = {self.normalize_schema_id(schema_filepath)}
+        try:
+            relative = Path(schema_filepath).absolute().relative_to(Path.cwd())
+            aliases.add(self.normalize_schema_id(relative.as_posix()))
+        except ValueError:
+            pass
+        return aliases
 
     def _resolve_alias(self, normalized_id: str) -> str:
         """

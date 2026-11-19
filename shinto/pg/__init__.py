@@ -8,8 +8,8 @@ __all__ = [
     "EmptyQueryResultError",
     "InvalidJsonError",
     "MultipleObjectsReturnedError",
+    "get_connection",
     "parse_json_from_query_result",
-    "get_connection"
 ]
 
 from .connection import AsyncConnection, Connection, get_connection
