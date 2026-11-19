@@ -1,7 +1,7 @@
 """Exceptions for Shinto."""
 
 
-class ShintoException(Exception):
+class ShintoException(Exception):  # noqa: N818 - public base exception, renaming breaks users
     """Base exception for Shinto."""
 
 

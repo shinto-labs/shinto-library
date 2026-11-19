@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Test transformation functionality."""
 
+import unittest
+
 from shinto.transform import resolve_source, transform_data
 
 
-class TestCoalesce:
+class TestCoalesce(unittest.TestCase):
     """Test the coalesce source functionality."""
 
     def test_coalesce_first_value(self):
@@ -34,7 +36,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] == "Alice"
+        self.assertEqual(result[0]["contact_name"], "Alice")
 
     def test_coalesce_skip_empty_string(self):
         """Test that coalesce skips empty strings."""
@@ -58,7 +60,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] == "Bob Jones"
+        self.assertEqual(result[0]["contact_name"], "Bob Jones")
 
     def test_coalesce_skip_missing_field(self):
         """Test that coalesce skips missing fields."""
@@ -80,7 +82,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] == "Charlie Brown"
+        self.assertEqual(result[0]["contact_name"], "Charlie Brown")
 
     def test_coalesce_fallback_to_last(self):
         """Test that coalesce falls back to the last available value."""
@@ -102,7 +104,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] == "diana@example.com"
+        self.assertEqual(result[0]["contact_name"], "diana@example.com")
 
     def test_coalesce_skip_none_values(self):
         """Test that coalesce skips None values."""
@@ -126,7 +128,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] == "eve@example.com"
+        self.assertEqual(result[0]["contact_name"], "eve@example.com")
 
     def test_coalesce_all_empty_returns_none(self):
         """Test that coalesce returns None when all fields are empty or missing."""
@@ -148,7 +150,7 @@ class TestCoalesce:
         ]
 
         result = transform_data(test_data, transformation)
-        assert result[0]["contact_name"] is None
+        self.assertIsNone(result[0]["contact_name"])
 
     def test_coalesce_with_numbers(self):
         """Test that coalesce works with numeric values."""
@@ -178,7 +180,7 @@ class TestCoalesce:
 
         result = transform_data(test_data, transformation)
         # 0 is not None and not "", so it should be returned
-        assert result[0]["final_priority"] == 0
+        self.assertEqual(result[0]["final_priority"], 0)
 
     def test_resolve_source_coalesce_directly(self):
         """Test resolve_source with coalesce directly."""
@@ -187,4 +189,4 @@ class TestCoalesce:
         source = {"coalesce": ["field1", "field2", "field3"]}
 
         result = resolve_source(row, source)
-        assert result == "value3"
+        self.assertEqual(result, "value3")

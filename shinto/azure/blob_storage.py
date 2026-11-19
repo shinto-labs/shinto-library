@@ -40,34 +40,34 @@ def create_blob_storage_container(
 
 
 def get_blob_storage_container_client(
-        account_name: str,
-        tenant_id: str,
-        client_id: str,
-        client_secret: str,
-        container_name: str,
-    ) -> ContainerClient:
-        """get_blob_storage_container_client."""
-
-        container_client = create_blob_storage_container(
-            BlobServiceClient(
-                account_url=f"https://{account_name}.blob.core.windows.net",
-                credential=ClientSecretCredential(
-                    tenant_id=tenant_id,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                )
+    account_name: str,
+    tenant_id: str,
+    client_id: str,
+    client_secret: str,
+    container_name: str,
+) -> ContainerClient:
+    """get_blob_storage_container_client."""
+    container_client = create_blob_storage_container(
+        BlobServiceClient(
+            account_url=f"https://{account_name}.blob.core.windows.net",
+            credential=ClientSecretCredential(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                client_secret=client_secret,
             ),
-            container_name
-        )
+        ),
+        container_name,
+    )
 
-        clear_blob_storage_container(container_client)
+    clear_blob_storage_container(container_client)
 
-        return container_client
+    return container_client
+
 
 def upload_to_blob_storage(container_client: ContainerClient, file_path: str) -> dict:
     """Upload a file to Azure Blob Storage and return a file dict with metadata."""
     file_type = get_mimetype_for_file(file_path)
-    file_name = file_path.split("/")[-1]
+    file_name = file_path.rsplit("/", maxsplit=1)[-1]
     blob_id = str(uuid.uuid4())
 
     with Path(file_path).open("rb") as data:
